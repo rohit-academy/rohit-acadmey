@@ -1,9 +1,7 @@
 import multer from "multer";
 
-/* 📦 Memory storage (direct S3 upload ke liye best) */
 const storage = multer.memoryStorage();
 
-/* 🔐 File filter (sirf PDF allow) */
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === "application/pdf") {
     cb(null, true);
@@ -12,7 +10,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-/* 📏 File size limit (10MB) */
 export const upload = multer({
   storage,
   fileFilter,

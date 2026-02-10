@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  uploadMaterialPDF,   // ⭐ new
   addMaterial,
   getMaterials,
   getMaterialById,
@@ -9,20 +10,28 @@ import {
 
 import authMiddleware from "../middleware/authMiddleware.js";
 import adminMiddleware from "../middleware/adminMiddleware.js";
-import { upload } from "../middleware/uploadMiddleware.js"; // ⭐ FILE UPLOAD
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-/* 🌍 PUBLIC ROUTES */
+/* 🌍 PUBLIC */
 router.get("/", getMaterials);
 router.get("/:id", getMaterialById);
 
-/* 🛠 ADMIN ROUTES */
+/* 📤 PDF UPLOAD (Admin) */
+router.post(
+  "/upload-pdf",
+  authMiddleware,
+  adminMiddleware,
+  upload.single("pdf"),
+  uploadMaterialPDF
+);
+
+/* 🛠 CREATE MATERIAL */
 router.post(
   "/",
   authMiddleware,
   adminMiddleware,
-  upload.single("file"), // ⭐ PDF FILE
   addMaterial
 );
 
