@@ -1,50 +1,42 @@
 import crypto from "crypto";
-import Razorpay from "razorpay";
+// import Razorpay from "razorpay"; ❌ Disabled for now
 import Order from "../models/Order.js";
 import Material from "../models/Material.js";
 import User from "../models/User.js";
 
-/* 🧾 INIT RAZORPAY */
+/* ❌ Razorpay init disabled */
+/*
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-
+*/
 
 
 /* ===============================
-   1️⃣ CREATE RAZORPAY ORDER
+   1️⃣ CREATE ORDER (TEMP MANUAL)
 ================================ */
 export const createOrder = async (req, res) => {
   try {
     const { materials, userId } = req.body;
 
-    /* Validate user */
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    /* Fetch materials */
     const materialDocs = await Material.find({ _id: { $in: materials } });
 
     if (materialDocs.length !== materials.length) {
       return res.status(400).json({ message: "Invalid materials selected" });
     }
 
-    /* Calculate total */
     const totalAmount = materialDocs.reduce((sum, m) => sum + m.price, 0);
 
-    /* Razorpay order */
-    const options = {
-      amount: totalAmount * 100, // paise
-      currency: "INR",
-      receipt: "receipt_" + Date.now(),
-    };
-
-    const order = await razorpay.orders.create(options);
-
+    // ⚠️ Instead of Razorpay order, return fake order
     res.json({
       success: true,
-      order,
+      fakeOrder: true,
+      amount: totalAmount,
+      message: "Payment gateway not configured yet"
     });
 
   } catch (error) {
@@ -56,28 +48,11 @@ export const createOrder = async (req, res) => {
 
 
 /* ===============================
-   2️⃣ VERIFY PAYMENT & SAVE ORDER
+   2️⃣ VERIFY PAYMENT (BYPASS MODE)
 ================================ */
 export const verifyPayment = async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      userId,
-      materials
-    } = req.body;
-
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-
-    const expectedSign = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(sign)
-      .digest("hex");
-
-    if (expectedSign !== razorpay_signature) {
-      return res.status(400).json({ message: "Payment verification failed" });
-    }
+    const { userId, materials } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -86,7 +61,8 @@ export const verifyPayment = async (req, res) => {
 
     const totalAmount = materialDocs.reduce((sum, m) => sum + m.price, 0);
 
-    const existingOrder = await Order.findOne({ razorpay_payment_id });
+    // 🧾 Prevent duplicates
+    const existingOrder = await Order.findOne({ user: userId, materials });
     if (existingOrder) {
       return res.json({ success: true, orderId: existingOrder._id });
     }
@@ -95,14 +71,12 @@ export const verifyPayment = async (req, res) => {
       user: userId,
       materials,
       amount: totalAmount,
-      razorpay_order_id,
-      razorpay_payment_id,
-      paymentStatus: "Paid"
+      paymentStatus: "Manual" // ⭐ Important
     });
 
     res.json({
       success: true,
-      message: "Payment verified & order created",
+      message: "Order created (manual mode)",
       orderId: newOrder._id
     });
 
