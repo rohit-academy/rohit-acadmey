@@ -32,5 +32,3 @@ const adminMiddleware = (req, res, next) => {
     });
   }
 };
-
-export default adminMiddleware;
