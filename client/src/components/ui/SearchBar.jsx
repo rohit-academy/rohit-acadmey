@@ -10,18 +10,21 @@ function SearchBar({
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
 
-  /* 🔍 Search trigger */
+  /* 🔍 Search */
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
     onSearch && onSearch(trimmed);
   };
 
-  /* ⌨️ Enter key */
+  /* ⌨️ Keys */
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleSearch();
+      setOpen(false);
+    }
+    if (e.key === "Escape") {
       setOpen(false);
     }
   };
@@ -30,16 +33,17 @@ function SearchBar({
   const clearSearch = () => {
     setQuery("");
     onSearch && onSearch("");
+    inputRef.current?.focus();
   };
 
-  /* 📱 Auto focus when open */
+  /* 📱 Focus on open */
   useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [open]);
 
-  /* 👆 Click outside to close */
+  /* 👆 Outside click close */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -53,7 +57,7 @@ function SearchBar({
   return (
     <div className="relative flex items-center" ref={wrapperRef}>
       
-      {/* 🔍 Search Icon Button */}
+      {/* 🔍 Button */}
       <button
         onClick={() => setOpen(true)}
         className="p-2 rounded-full hover:bg-gray-100 transition"
@@ -61,15 +65,15 @@ function SearchBar({
         <Search size={22} className="text-gray-600" />
       </button>
 
-      {/* 🔥 EXPANDABLE SEARCH BOX */}
+      {/* 🔥 Expandable Box */}
       <div
         className={`
           absolute right-0 top-1/2 -translate-y-1/2
-          transition-all duration-300 ease-in-out
-          ${open ? "w-[280px] sm:w-[380px] opacity-100" : "w-0 opacity-0"}
+          transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]
+          ${open ? "w-[280px] sm:w-[420px] opacity-100 scale-100" : "w-0 opacity-0 scale-95 pointer-events-none"}
         `}
       >
-        <div className="bg-white shadow-xl border rounded-full flex items-center px-4 py-2 overflow-hidden">
+        <div className="bg-white shadow-2xl border border-gray-200 rounded-full flex items-center px-4 py-2 backdrop-blur-md">
 
           <Search size={18} className="text-gray-400 mr-2" />
 
@@ -81,13 +85,13 @@ function SearchBar({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="flex-1 bg-transparent outline-none text-sm text-gray-700"
+            className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
           />
 
           {query && (
             <button
               onClick={clearSearch}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 transition"
             >
               <X size={18} />
             </button>

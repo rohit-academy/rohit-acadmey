@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -26,15 +26,29 @@ function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const searchRef = useRef(null);
 
   const handleSearch = (query) => {
     console.log("Searching for:", query);
+    setShowSearch(false);
   };
 
-  // 🔒 Prevent background scroll when sidebar open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "auto";
   }, [menuOpen]);
+
+  // 🔹 Outside click close search
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearch(false);
+      }
+    };
+    if (showSearch) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSearch]);
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -52,22 +66,31 @@ function Navbar() {
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between py-3 px-4 gap-4">
 
-        <Link to="/" className="text-xl font-bold text-blue-600 whitespace-nowrap">
-          Rohit Academy
-        </Link>
+        {/* TITLE — hide on mobile search */}
+        {!showSearch && (
+          <Link to="/" className="text-xl font-bold text-blue-600 whitespace-nowrap transition-all duration-300">
+            Rohit Academy
+          </Link>
+        )}
 
         {/* Desktop Search */}
         <div className="hidden md:block flex-1 max-w-md">
           <SearchBar onSearch={handleSearch} />
         </div>
 
+        {/* Mobile Search Input (inside topbar) */}
+        <div
+          ref={searchRef}
+          className={`md:hidden flex-1 transition-all duration-300 ease-in-out ${
+            showSearch ? "opacity-100 scale-100" : "opacity-0 scale-95 w-0 overflow-hidden"
+          }`}
+        >
+          {showSearch && <SearchBar onSearch={handleSearch} />}
+        </div>
+
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-6">
-
-          <Link
-            to="/classes"
-            className={`${isActive("/classes") ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}
-          >
+          <Link to="/classes" className={`${isActive("/classes") ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}>
             Classes
           </Link>
 
@@ -92,7 +115,7 @@ function Navbar() {
         {/* Mobile Icons */}
         <div className="flex items-center gap-4 md:hidden">
           <button onClick={toggleSearch} className="p-1">
-            <Search size={22} />
+            {showSearch ? <X size={24} /> : <Search size={22} />}
           </button>
 
           <Link to="/cart" className="relative p-1">
@@ -109,13 +132,6 @@ function Navbar() {
           </button>
         </div>
       </div>
-
-      {/* Mobile Search */}
-      {showSearch && (
-        <div className="md:hidden bg-white p-4 shadow">
-          <SearchBar onSearch={handleSearch} />
-        </div>
-      )}
 
       {/* Mobile Sidebar */}
       {menuOpen && (
