@@ -37,63 +37,34 @@ function Navbar() {
     document.body.style.overflow = menuOpen ? "hidden" : "auto";
   }, [menuOpen]);
 
-  // 🔹 Outside click close search
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowSearch(false);
-      }
-    };
-    if (showSearch) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showSearch]);
-
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
-    setShowSearch(false);
-  };
-
-  const toggleSearch = () => {
-    setShowSearch(!showSearch);
-    setMenuOpen(false);
-  };
-
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto flex items-center justify-between py-3 px-4 gap-4">
+      <div className="container mx-auto flex items-center justify-between py-3 px-4">
 
-        {/* TITLE — hide on mobile search */}
-        {!showSearch && (
-          <Link to="/" className="text-xl font-bold text-blue-600 whitespace-nowrap transition-all duration-300">
-            Rohit Academy
-          </Link>
-        )}
+        {/* 🔵 LEFT: Logo */}
+        <Link to="/" className="text-xl font-bold text-blue-600 whitespace-nowrap">
+          Rohit Academy
+        </Link>
 
-        {/* Desktop Search */}
-        <div className="hidden md:block flex-1 max-w-md">
-          <SearchBar onSearch={handleSearch} />
-        </div>
+        {/* 🟢 RIGHT SIDE (DESKTOP) */}
+        <div className="hidden md:flex items-center gap-6 relative">
 
-        {/* Mobile Search Input (inside topbar) */}
-        <div
-          ref={searchRef}
-          className={`md:hidden flex-1 transition-all duration-300 ease-in-out ${
-            showSearch ? "opacity-100 scale-100" : "opacity-0 scale-95 w-0 overflow-hidden"
-          }`}
-        >
-          {showSearch && <SearchBar onSearch={handleSearch} />}
-        </div>
-
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link to="/classes" className={`${isActive("/classes") ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}>
+          {/* Classes Link */}
+          <Link
+            to="/classes"
+            className={`${isActive("/classes") ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}
+          >
             Classes
           </Link>
 
+          {/* 🔍 SEARCH ICON + EXPANDABLE SEARCHBAR */}
+          <div className="relative">
+            <SearchBar onSearch={handleSearch} />
+          </div>
+
+          {/* Cart */}
           <Link to="/cart" className="relative">
             <ShoppingCart size={22} />
             {cartItems.length > 0 && (
@@ -103,6 +74,7 @@ function Navbar() {
             )}
           </Link>
 
+          {/* User/Login */}
           {user ? (
             <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full text-blue-700 font-semibold">
               <User size={18} /> {user.name}
@@ -112,9 +84,9 @@ function Navbar() {
           )}
         </div>
 
-        {/* Mobile Icons */}
+        {/* 📱 MOBILE ICONS */}
         <div className="flex items-center gap-4 md:hidden">
-          <button onClick={toggleSearch} className="p-1">
+          <button onClick={() => setShowSearch(!showSearch)} className="p-1">
             {showSearch ? <X size={24} /> : <Search size={22} />}
           </button>
 
@@ -127,15 +99,22 @@ function Navbar() {
             )}
           </Link>
 
-          <button onClick={toggleMenu} className="p-1">
+          <button onClick={() => setMenuOpen(!menuOpen)} className="p-1">
             {menuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* 📱 MOBILE SEARCH BAR */}
+      {showSearch && (
+        <div className="md:hidden px-4 pb-3">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+      )}
+
+      {/* 📱 MOBILE SIDEBAR */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-t px-4 py-4 flex flex-col gap-4 text-lg animate-slideDown">
+        <div className="md:hidden bg-white border-t px-4 py-4 flex flex-col gap-4 text-lg">
 
           <Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
             <Home size={20} /> Home
