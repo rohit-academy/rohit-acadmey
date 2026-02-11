@@ -1,58 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 
-function SearchBar({ placeholder = "Search notes, papers, syllabus...", onSearch }) {
+function SearchBar({
+  placeholder = "Search notes, papers, syllabus...",
+  onSearch,
+}) {
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
+  const wrapperRef = useRef(null);
 
+  /* 🔍 Search trigger */
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
-    if (onSearch) onSearch(trimmed);
+    onSearch && onSearch(trimmed);
   };
 
-  const clearSearch = () => {
-    setQuery("");
-    if (onSearch) onSearch("");
-  };
-
+  /* ⌨️ Enter key */
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      e.preventDefault();   // mobile me double submit rokta hai
+      e.preventDefault();
       handleSearch();
+      setOpen(false);
     }
   };
 
+  /* ❌ Clear */
+  const clearSearch = () => {
+    setQuery("");
+    onSearch && onSearch("");
+  };
+
+  /* 📱 Auto focus when open */
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [open]);
+
+  /* 👆 Click outside to close */
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="w-full px-4 mt-8">
-      <div className="max-w-3xl mx-auto relative">
-        <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-3xl"></div>
+    <div className="relative flex items-center" ref={wrapperRef}>
+      
+      {/* 🔍 Search Icon Button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="p-2 rounded-full hover:bg-gray-100 transition"
+      >
+        <Search size={22} className="text-gray-600" />
+      </button>
 
-        <div className="relative bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg overflow-hidden transition focus-within:shadow-blue-200">
+      {/* 🔥 EXPANDABLE SEARCH BOX */}
+      <div
+        className={`
+          absolute right-0 top-1/2 -translate-y-1/2
+          transition-all duration-300 ease-in-out
+          ${open ? "w-[280px] sm:w-[380px] opacity-100" : "w-0 opacity-0"}
+        `}
+      >
+        <div className="bg-white shadow-xl border rounded-full flex items-center px-4 py-2 overflow-hidden">
 
-          <div className="flex items-center px-5 py-4">
+          <Search size={18} className="text-gray-400 mr-2" />
 
-            <Search className="text-blue-500 mr-3" size={20} />
+          <input
+            ref={inputRef}
+            type="search"
+            enterKeyHint="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className="flex-1 bg-transparent outline-none text-sm text-gray-700"
+          />
 
-            <input
-              type="search"                 // ⭐ mobile me search keyboard
-              enterKeyHint="search"         // ⭐ shows "Search" on mobile keyboard
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400 text-sm"
-            />
-
-            {query && (
-              <button
-                onClick={clearSearch}
-                className="text-gray-400 hover:text-gray-600 ml-2"
-              >
-                <X size={18} />
-              </button>
-            )}
-
-          </div>
+          {query && (
+            <button
+              onClick={clearSearch}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
     </div>
