@@ -61,7 +61,7 @@ function SearchBar({
         <Search size={22} className="text-gray-600" />
       </button>
 
-      {/* 💻 DESKTOP LEFT EXPAND */}
+      {/* 💻 DESKTOP LEFT EXPAND ONLY */}
       <div
         className={`
           hidden md:block absolute right-full mr-2 top-1/2 -translate-y-1/2
@@ -97,32 +97,6 @@ function SearchBar({
         </div>
       </div>
 
-      {/* 📱 MOBILE FULL WIDTH SEARCH */}
-      {open && (
-        <div className="md:hidden fixed top-0 left-0 w-full bg-white z-50 px-4 py-3 shadow-lg animate-slideDown">
-          <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
-            <Search size={18} className="text-gray-400 mr-2" />
-
-            <input
-              ref={inputRef}
-              type="search"
-              enterKeyHint="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="flex-1 bg-transparent outline-none text-sm text-gray-700"
-            />
-
-            <button
-              onClick={() => setOpen(false)}
-              className="text-gray-500 ml-2"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
