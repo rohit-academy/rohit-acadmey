@@ -52,13 +52,10 @@ function Navbar() {
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between py-3 px-4 gap-3">
 
-        {/* 🔵 TITLE (hide only on mobile search) */}
+        {/* 🔵 TITLE */}
         <div className="flex items-center gap-3">
           {!showSearch && (
-            <Link
-              to="/"
-              className="text-xl font-bold text-blue-600 whitespace-nowrap"
-            >
+            <Link to="/" className="text-xl font-bold text-blue-600 whitespace-nowrap">
               Rohit Academy
             </Link>
           )}
@@ -69,8 +66,8 @@ function Navbar() {
           <SearchBar onSearch={handleSearch} />
         </div>
 
-        {/* 📱 MOBILE SEARCH INSIDE NAVBAR */}
-        <div className="mobile-search-area flex-1 md:hidden">
+        {/* 📱 MOBILE SEARCH */}
+        <div className="mobile-search-area flex-1 md:hidden relative z-50">
           {showSearch && (
             <SearchBar onSearch={handleSearch} autoFocus={true} />
           )}
@@ -97,7 +94,7 @@ function Navbar() {
         </div>
 
         {/* 📱 MOBILE ICONS */}
-        <div className="flex items-center gap-4 md:hidden">
+        <div className="flex items-center gap-4 md:hidden shrink-0">
           <button onClick={() => setShowSearch(!showSearch)} className="p-1">
             {showSearch ? <X size={24} /> : <Search size={22} />}
           </button>
