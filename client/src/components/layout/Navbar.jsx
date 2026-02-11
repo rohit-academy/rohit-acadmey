@@ -48,26 +48,36 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showSearch]);
 
-  const isActive = (path) => location.pathname.startsWith(path);
-
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto flex items-center justify-between py-3 px-4">
+      <div className="container mx-auto flex items-center justify-between py-3 px-4 gap-3">
 
-        {/* 🔵 LEFT: Title hide when search open (mobile only) */}
-        {!showSearch && (
-          <Link
-            to="/"
-            className="text-xl font-bold text-blue-600 whitespace-nowrap transition-all duration-300"
-          >
-            Rohit Academy
-          </Link>
-        )}
+        {/* 🔵 TITLE (hide only on mobile search) */}
+        <div className="flex items-center gap-3">
+          {!showSearch && (
+            <Link
+              to="/"
+              className="text-xl font-bold text-blue-600 whitespace-nowrap"
+            >
+              Rohit Academy
+            </Link>
+          )}
+        </div>
 
-        {/* 🟢 DESKTOP RIGHT SIDE */}
-        <div className="hidden md:flex items-center gap-6 relative">
+        {/* 🟢 DESKTOP SEARCH */}
+        <div className="hidden md:block w-[320px]">
           <SearchBar onSearch={handleSearch} />
+        </div>
 
+        {/* 📱 MOBILE SEARCH INSIDE NAVBAR */}
+        <div className="mobile-search-area flex-1 md:hidden">
+          {showSearch && (
+            <SearchBar onSearch={handleSearch} autoFocus={true} />
+          )}
+        </div>
+
+        {/* 🟢 DESKTOP RIGHT */}
+        <div className="hidden md:flex items-center gap-6">
           <Link to="/cart" className="relative">
             <ShoppingCart size={22} />
             {cartItems.length > 0 && (
@@ -84,11 +94,6 @@ function Navbar() {
           ) : (
             <Link to="/login" className="hover:text-blue-600">Login</Link>
           )}
-        </div>
-
-        {/* 📱 MOBILE SEARCH INPUT INSIDE NAVBAR */}
-        <div className="mobile-search-area flex-1 md:hidden transition-all duration-300">
-          {showSearch && <SearchBar onSearch={handleSearch} />}
         </div>
 
         {/* 📱 MOBILE ICONS */}
