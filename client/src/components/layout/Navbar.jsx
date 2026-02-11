@@ -51,14 +51,6 @@ function Navbar() {
         {/* 🟢 RIGHT SIDE (DESKTOP) */}
         <div className="hidden md:flex items-center gap-6 relative">
 
-          {/* Classes Link */}
-          <Link
-            to="/classes"
-            className={`${isActive("/classes") ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}
-          >
-            Classes
-          </Link>
-
           {/* 🔍 SEARCH ICON + EXPANDABLE SEARCHBAR */}
           <div className="relative">
             <SearchBar onSearch={handleSearch} />
@@ -118,10 +110,6 @@ function Navbar() {
 
           <Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
             <Home size={20} /> Home
-          </Link>
-
-          <Link to="/classes" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
-            <BookOpen size={20} /> Classes
           </Link>
 
           <Link to="/downloads" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
