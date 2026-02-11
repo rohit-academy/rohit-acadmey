@@ -10,40 +10,31 @@ function SearchBar({
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
 
-  /* 🔍 Search */
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
     onSearch && onSearch(trimmed);
   };
 
-  /* ⌨️ Keys */
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleSearch();
       setOpen(false);
     }
-    if (e.key === "Escape") {
-      setOpen(false);
-    }
+    if (e.key === "Escape") setOpen(false);
   };
 
-  /* ❌ Clear */
   const clearSearch = () => {
     setQuery("");
     onSearch && onSearch("");
     inputRef.current?.focus();
   };
 
-  /* 📱 Focus on open */
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 150);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 150);
   }, [open]);
 
-  /* 👆 Outside click close */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -57,7 +48,7 @@ function SearchBar({
   return (
     <div className="relative flex items-center" ref={wrapperRef}>
       
-      {/* 🔍 Button */}
+      {/* 🔍 Icon Button */}
       <button
         onClick={() => setOpen(true)}
         className="p-2 rounded-full hover:bg-gray-100 transition"
@@ -65,15 +56,18 @@ function SearchBar({
         <Search size={22} className="text-gray-600" />
       </button>
 
-      {/* 🔥 Expandable Box */}
+      {/* ✨ LEFT EXPANDING SEARCH BOX */}
       <div
         className={`
-          absolute right-0 top-1/2 -translate-y-1/2
+          absolute right-full mr-2 top-1/2 -translate-y-1/2
           transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]
-          ${open ? "w-[280px] sm:w-[420px] opacity-100 scale-100" : "w-0 opacity-0 scale-95 pointer-events-none"}
+          origin-right
+          ${open
+            ? "w-[280px] sm:w-[420px] opacity-100 scale-100"
+            : "w-0 opacity-0 scale-95 pointer-events-none"}
         `}
       >
-        <div className="bg-white shadow-2xl border border-gray-200 rounded-full flex items-center px-4 py-2 backdrop-blur-md">
+        <div className="bg-white/90 backdrop-blur-xl shadow-2xl border border-gray-200 rounded-full flex items-center px-4 py-2">
 
           <Search size={18} className="text-gray-400 mr-2" />
 
