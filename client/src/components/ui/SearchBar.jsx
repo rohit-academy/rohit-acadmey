@@ -4,11 +4,10 @@ import { Search, X } from "lucide-react";
 function SearchBar({
   placeholder = "Search notes, papers, syllabus...",
   onSearch,
+  autoFocus = false   // ⭐ parent control karega
 }) {
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
 
   /* 🔍 Search */
   const handleSearch = () => {
@@ -22,9 +21,7 @@ function SearchBar({
     if (e.key === "Enter") {
       e.preventDefault();
       handleSearch();
-      setOpen(false);
     }
-    if (e.key === "Escape") setOpen(false);
   };
 
   /* ❌ Clear */
@@ -34,69 +31,37 @@ function SearchBar({
     inputRef.current?.focus();
   };
 
-  /* 🎯 Focus when open */
+  /* 🎯 Auto Focus (mobile fix) */
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 120);
-  }, [open]);
-
-  /* 👆 Outside click close */
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    if (autoFocus) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   return (
-    <div className="relative flex items-center" ref={wrapperRef}>
-      
-      {/* 🔍 ICON BUTTON */}
-      <button
-        onClick={() => setOpen(true)}
-        className="p-2 rounded-full hover:bg-gray-100 transition"
-      >
-        <Search size={22} className="text-gray-600" />
-      </button>
+    <div className="bg-white shadow-md border rounded-full flex items-center px-4 py-2 w-full">
 
-      {/* 💻 DESKTOP LEFT EXPAND ONLY */}
-      <div
-        className={`
-          hidden md:block absolute right-full mr-2 top-1/2 -translate-y-1/2
-          transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]
-          origin-right
-          ${open
-            ? "w-[300px] lg:w-[420px] opacity-100 scale-100"
-            : "w-0 opacity-0 scale-95 pointer-events-none"}
-        `}
-      >
-        <div className="bg-white/90 backdrop-blur-xl shadow-2xl border border-gray-200 rounded-full flex items-center px-4 py-2">
-          <Search size={18} className="text-gray-400 mr-2" />
+      <Search size={18} className="text-gray-400 mr-2" />
 
-          <input
-            ref={inputRef}
-            type="search"
-            enterKeyHint="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
-          />
+      <input
+        ref={inputRef}
+        type="search"
+        enterKeyHint="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="flex-1 bg-transparent outline-none text-sm text-gray-700"
+      />
 
-          {query && (
-            <button
-              onClick={clearSearch}
-              className="text-gray-400 hover:text-gray-600 transition"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-      </div>
-
+      {query && (
+        <button onClick={clearSearch} className="text-gray-400 hover:text-gray-600">
+          <X size={18} />
+        </button>
+      )}
     </div>
   );
 }
