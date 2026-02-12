@@ -98,7 +98,7 @@ function MobileNavbar() {
           />
 
           {/* Sidebar Card */}
-          <div className="fixed top-6 right-4 w-[80%] max-w-[280px] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
+          <div className="fixed top-6 right-4 w-[70%] max-w-[250px] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
 
             {/* 🔹 Sidebar Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
