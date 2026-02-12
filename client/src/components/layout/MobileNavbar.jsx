@@ -50,7 +50,7 @@ function MobileNavbar() {
               Rohit Academy
             </Link>
           ) : (
-            <SearchBar onSearch={handleSearch} autoFocus={true} />
+            <SearchBar onSearch={handleSearch} autoFocus />
           )}
         </div>
 
@@ -88,20 +88,28 @@ function MobileNavbar() {
         )}
       </div>
 
-      {/* 🔥 OVERLAY + FLOATING MENU */}
+      {/* 🔥 OVERLAY + SIDEBAR */}
       {menuOpen && (
         <>
-          {/* Background blur */}
+          {/* Background Blur */}
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             onClick={() => setMenuOpen(false)}
           />
 
-          {/* Floating Card */}
-          <div className="fixed top-5 right-5 w-[86%] max-w-xs bg-white rounded-2xl shadow-2xl z-50 p-5 transition-all duration-300 ease-out scale-100">
+          {/* Sidebar Card */}
+          <div className="fixed top-6 right-4 w-[80%] max-w-[280px] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
 
-            {/* Close */}
-            <div className="flex justify-end mb-4">
+            {/* 🔹 Sidebar Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
+
+              <div>
+                <p className="text-sm text-gray-500">Menu</p>
+                <h3 className="text-base font-semibold text-blue-600">
+                  Rohit Academy
+                </h3>
+              </div>
+
               <button
                 onClick={() => setMenuOpen(false)}
                 className="p-2 rounded-full hover:bg-gray-100 transition"
@@ -110,12 +118,13 @@ function MobileNavbar() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 text-[15px]">
+            {/* 🔹 Menu Items */}
+            <div className="flex flex-col py-3">
 
               <Link
                 to="/"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-100 transition"
+                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
               >
                 <Home size={18} />
                 Home
@@ -124,17 +133,17 @@ function MobileNavbar() {
               <Link
                 to="/downloads"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-100 transition"
+                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
               >
                 <Download size={18} />
                 My Downloads
               </Link>
 
-              <div className="border-t my-3 opacity-60" />
+              <div className="border-t my-2 opacity-60" />
 
               {user ? (
                 <>
-                  <div className="bg-blue-50 p-4 rounded-xl border text-sm space-y-2">
+                  <div className="px-5 py-3 bg-blue-50 text-sm space-y-2">
                     <div className="flex items-center gap-2 text-blue-700 font-semibold">
                       <User size={16} />
                       {user.name}
@@ -151,7 +160,7 @@ function MobileNavbar() {
                       setMenuOpen(false);
                       navigate("/");
                     }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 hover:bg-red-50 transition"
+                    className="flex items-center gap-3 px-5 py-3 text-red-500 hover:bg-red-50 transition"
                   >
                     <LogOut size={18} />
                     Logout
@@ -161,7 +170,7 @@ function MobileNavbar() {
                 <Link
                   to="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-100 transition"
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
                 >
                   <LogIn size={18} />
                   Login
