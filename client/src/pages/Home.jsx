@@ -17,15 +17,13 @@ function Home() {
 
   /* 🔥 Mobile Only Scroll Animation */
   useEffect(() => {
-    if (window.innerWidth >= 768) return; // Only mobile
+    if (window.innerWidth >= 768) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.remove("opacity-0");
-            entry.target.classList.remove("translate-x-16");
-            entry.target.classList.remove("-translate-x-16");
+            entry.target.classList.remove("opacity-0", "translate-x-16", "-translate-x-16");
           } else {
             entry.target.classList.add("opacity-0");
             if (entry.target.dataset.side === "left") {
@@ -40,7 +38,6 @@ function Home() {
     );
 
     elementsRef.current.forEach((el) => el && observer.observe(el));
-
     return () => observer.disconnect();
   }, []);
 
@@ -57,23 +54,35 @@ function Home() {
           Notes, Sample Papers & Previous Year Questions for School and College students.
         </p>
 
-        {/* 🔥 Animated Button */}
+        {/* 🔥 PREMIUM CTA BUTTON */}
         <Link
           to="/classes"
-          className="relative inline-flex items-center gap-2 bg-blue-600 text-white px-7 py-3 rounded-xl text-lg shadow-lg overflow-hidden group transition duration-300 hover:scale-105"
+          className="relative inline-flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-medium text-white 
+          bg-gradient-to-r from-blue-600 to-indigo-600 
+          shadow-lg overflow-hidden group 
+          transition-all duration-300 
+          hover:scale-105 hover:shadow-xl 
+          active:scale-95"
         >
+          {/* Text */}
           <span className="relative z-10 flex items-center gap-2">
-            Browse Classes <ArrowRight size={18} />
+            Browse Classes
+            <ArrowRight
+              size={18}
+              className="transition-transform duration-300 group-hover:translate-x-1"
+            />
           </span>
 
-          {/* Shine effect */}
-          <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+          {/* Shine Sweep */}
+          <span className="absolute inset-0 bg-white/20 translate-x-[-120%] group-hover:translate-x-[120%] transition-transform duration-700 ease-out" />
+
+          {/* Glow Pulse */}
+          <span className="absolute inset-0 rounded-xl ring-2 ring-blue-400/30 animate-pulse" />
         </Link>
       </section>
 
       {/* FEATURES */}
       <section className="grid md:grid-cols-4 gap-6 mt-14 text-center">
-
         {[
           {
             icon: <BookOpen size={28} />,
