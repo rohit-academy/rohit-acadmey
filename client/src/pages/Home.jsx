@@ -50,35 +50,52 @@ function Home() {
           All Classes Study Material in One Place
         </h1>
 
-        <p className="text-gray-600 max-w-2xl mx-auto mb-8 text-lg">
+        <p className="text-gray-600 max-w-2xl mx-auto mb-10 text-lg">
           Notes, Sample Papers & Previous Year Questions for School and College students.
         </p>
 
-        {/* 🔥 PREMIUM CTA BUTTON */}
-        <Link
-          to="/classes"
-          className="relative inline-flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-medium text-white 
-          bg-gradient-to-r from-blue-600 to-indigo-600 
-          shadow-lg overflow-hidden group 
-          transition-all duration-300 
-          hover:scale-105 hover:shadow-xl 
-          active:scale-95"
-        >
-          {/* Text */}
-          <span className="relative z-10 flex items-center gap-2">
-            Browse Classes
-            <ArrowRight
-              size={18}
-              className="transition-transform duration-300 group-hover:translate-x-1"
-            />
-          </span>
+        {/* 🔥 PREMIUM CTA BUTTON WITH PARTICLES */}
+        <div className="relative inline-block">
 
-          {/* Shine Sweep */}
-          <span className="absolute inset-0 bg-white/20 translate-x-[-120%] group-hover:translate-x-[120%] transition-transform duration-700 ease-out" />
+          {/* Floating Particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+            {[...Array(8)].map((_, i) => (
+              <span
+                key={i}
+                className="absolute w-2 h-2 bg-white/40 rounded-full animate-float"
+                style={{
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${i * 0.4}s`,
+                }}
+              />
+            ))}
+          </div>
 
-          {/* Glow Pulse */}
-          <span className="absolute inset-0 rounded-xl ring-2 ring-blue-400/30 animate-pulse" />
-        </Link>
+          <Link
+            to="/classes"
+            className="relative inline-flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-medium text-white 
+            bg-gradient-to-r from-blue-600 to-indigo-600 
+            shadow-lg overflow-hidden group 
+            transition-all duration-300 
+            hover:scale-105 hover:shadow-xl 
+            active:scale-95"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              Browse Classes
+              <ArrowRight
+                size={18}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </span>
+
+            {/* Shine Sweep */}
+            <span className="absolute inset-0 bg-white/20 translate-x-[-120%] group-hover:translate-x-[120%] transition-transform duration-700 ease-out" />
+
+            {/* Glow Pulse */}
+            <span className="absolute inset-0 rounded-xl ring-2 ring-blue-400/30 animate-pulse" />
+          </Link>
+        </div>
       </section>
 
       {/* FEATURES */}
