@@ -74,10 +74,10 @@ input, textarea, select {
   @apply py-10 md:py-14;
 }
 
-/* ✨ Subtle Glass Effect (future use) */
+/* ✨ Glass Effect */
 .glass {
-  backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.75);
 }
 
 /* 🖥 Scrollbar */
@@ -90,4 +90,36 @@ input, textarea, select {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ===================================================== */
+/* 🔥 MOBILE SIDEBAR ANIMATION (Chrome Style) */
+/* ===================================================== */
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(40px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.25s ease-out;
+}
+
+.animate-fadeIn {
+  animation: fadeInOverlay 0.2s ease-out;
 }
