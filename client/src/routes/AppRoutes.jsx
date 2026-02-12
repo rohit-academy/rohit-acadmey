@@ -16,8 +16,8 @@ import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
-import Login from "../pages/auth/Login";          // ✅ FIXED
-import AdminLogin from "../pages/AdminLogin"; // ✅ FIXED
+import Login from "../pages/auth/Login";
+import AdminLogin from "../pages/AdminLogin";
 import NotFound from "../pages/NotFound";
 
 /* 🛠 ADMIN LAYOUT */
@@ -38,8 +38,10 @@ import SalesReport from "../admin/finance/SalesReport";
 function AppRoutes() {
   return (
     <Routes>
-      {/* 🌍 USER WEBSITE LAYOUT */}
+
+      {/* 🌍 USER WEBSITE */}
       <Route element={<UserLayout />}>
+
         <Route path="/" element={<Home />} />
         <Route path="/classes" element={<Classes />} />
         <Route path="/streams/:classId" element={<Streams />} />
@@ -53,12 +55,22 @@ function AppRoutes() {
 
         <Route
           path="/downloads"
-          element={<ProtectedRoute><MyDownloads /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <MyDownloads />
+            </ProtectedRoute>
+          }
         />
+
         <Route
           path="/checkout"
-          element={<ProtectedRoute><Checkout /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <Checkout />
+            </ProtectedRoute>
+          }
         />
+
       </Route>
 
       {/* 🔐 ADMIN LOGIN */}
@@ -67,32 +79,37 @@ function AppRoutes() {
       {/* 🛠 ADMIN PANEL */}
       <Route
         path="/admin"
-        element={<AdminRoute><AdminLayout /></AdminRoute>}
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
       >
         <Route index element={<AdminDashboard />} />
 
-        {/* 🎓 Academics */}
+        {/* Academics */}
         <Route path="academics" element={<ManageAcademics />} />
         <Route path="academics/classes" element={<ManageClasses />} />
         <Route path="academics/subjects" element={<ManageSubjects />} />
 
-        {/* 📚 Materials */}
+        {/* Materials */}
         <Route path="materials" element={<ManageMaterials />} />
         <Route path="materials/upload" element={<UploadMaterial />} />
 
-        {/* 👤 Users */}
+        {/* Users */}
         <Route path="users" element={<ManageUsers />} />
 
-        {/* 🛒 Orders */}
+        {/* Orders */}
         <Route path="orders" element={<OrdersAdmin />} />
 
-        {/* 💰 Finance */}
+        {/* Finance */}
         <Route path="coupons" element={<Coupons />} />
         <Route path="sales-report" element={<SalesReport />} />
       </Route>
 
       {/* ❌ 404 */}
       <Route path="*" element={<NotFound />} />
+
     </Routes>
   );
 }
