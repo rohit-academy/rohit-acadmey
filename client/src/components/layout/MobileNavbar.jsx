@@ -35,16 +35,17 @@ function MobileNavbar() {
   }, [menuOpen]);
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50 md:hidden">
+    <nav className="bg-white shadow-sm sticky top-0 z-50 md:hidden">
 
-      <div className="flex items-center justify-between px-4 py-3 gap-2">
+      {/* 🔝 TOP BAR */}
+      <div className="flex items-center justify-between px-4 py-3">
 
-        {/* LEFT SIDE */}
+        {/* LEFT */}
         <div className="flex-1 mobile-search-area">
           {!showSearch ? (
             <Link
               to="/"
-              className="text-xl font-bold text-blue-600 whitespace-nowrap"
+              className="text-lg font-semibold text-blue-600 tracking-tight"
             >
               Rohit Academy
             </Link>
@@ -58,19 +59,22 @@ function MobileNavbar() {
 
         {/* RIGHT ICONS */}
         {!showSearch && (
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-5 shrink-0 ml-3">
 
             <button
               onClick={() => setShowSearch(true)}
-              className="p-1"
+              className="p-2 rounded-full hover:bg-gray-100 transition"
             >
               <Search size={22} />
             </button>
 
-            <Link to="/cart" className="relative p-1">
+            <Link
+              to="/cart"
+              className="relative p-2 rounded-full hover:bg-gray-100 transition"
+            >
               <ShoppingCart size={22} />
               {cartItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
                   {cartItems.length}
                 </span>
               )}
@@ -78,64 +82,69 @@ function MobileNavbar() {
 
             <button
               onClick={() => setMenuOpen(true)}
-              className="p-1"
+              className="p-2 rounded-full hover:bg-gray-100 transition"
             >
-              <Menu size={26} />
+              <Menu size={24} />
             </button>
 
           </div>
         )}
       </div>
 
-      {/* 🔥 OVERLAY */}
+      {/* 🔥 OVERLAY + FLOATING MENU */}
       {menuOpen && (
         <>
-          {/* Background dim */}
+          {/* Background blur */}
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             onClick={() => setMenuOpen(false)}
           />
 
-          {/* Chrome style floating sidebar */}
-          <div className="fixed top-3 right-3 w-[85%] max-w-xs bg-white rounded-2xl shadow-2xl z-50 animate-slideIn p-4">
+          {/* Floating Card */}
+          <div className="fixed top-4 right-4 w-[88%] max-w-xs bg-white rounded-2xl shadow-2xl z-50 p-5 animate-slideIn">
 
-            {/* Close button */}
-            <div className="flex justify-end mb-2">
-              <button onClick={() => setMenuOpen(false)}>
-                <X size={22} />
+            {/* Close */}
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="p-1 rounded-full hover:bg-gray-100 transition"
+              >
+                <X size={20} />
               </button>
             </div>
 
-            <div className="flex flex-col gap-4 text-base">
+            <div className="flex flex-col gap-3 text-[15px]">
 
               <Link
                 to="/"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 transition"
               >
-                <Home size={18} /> Home
+                <Home size={18} />
+                <span>Home</span>
               </Link>
 
               <Link
                 to="/downloads"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 transition"
               >
-                <Download size={18} /> My Downloads
+                <Download size={18} />
+                <span>My Downloads</span>
               </Link>
 
-              <div className="border-t my-2" />
+              <div className="border-t my-2 opacity-70" />
 
               {user ? (
                 <>
-                  <div className="bg-blue-50 p-3 rounded-xl border text-sm">
+                  <div className="bg-blue-50 p-3 rounded-xl border text-sm space-y-2">
                     <div className="flex items-center gap-2 text-blue-700 font-semibold">
-                      <User size={18} />
-                      {user.name}
+                      <User size={16} />
+                      <span>{user.name}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600 mt-1">
+                    <div className="flex items-center gap-2 text-gray-600">
                       <Phone size={14} />
-                      {user.phone}
+                      <span>{user.phone}</span>
                     </div>
                   </div>
 
@@ -145,18 +154,20 @@ function MobileNavbar() {
                       setMenuOpen(false);
                       navigate("/");
                     }}
-                    className="flex items-center gap-3 text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 transition"
                   >
-                    <LogOut size={18} /> Logout
+                    <LogOut size={18} />
+                    Logout
                   </button>
                 </>
               ) : (
                 <Link
                   to="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-lg"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 transition"
                 >
-                  <LogIn size={18} /> Login
+                  <LogIn size={18} />
+                  Login
                 </Link>
               )}
 
