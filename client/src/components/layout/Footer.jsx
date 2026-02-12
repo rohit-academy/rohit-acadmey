@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Phone, BookOpen } from "lucide-react";
+import { Mail, BookOpen, Instagram, Youtube, Send } from "lucide-react";
 
 function Footer() {
   return (
@@ -22,22 +22,54 @@ function Footer() {
           </p>
         </div>
 
-        {/* Contact */}
+        {/* Contact + Social */}
         <div className="bg-slate-50 md:bg-transparent p-4 md:p-0 rounded-lg text-center md:text-left">
-          <h3 className="font-semibold mb-3 text-base">Contact</h3>
 
-          <p className="flex items-center justify-center md:justify-start gap-3 text-gray-600">
+          <h3 className="font-semibold mb-3 text-base">Connect With Us</h3>
+
+          {/* Email */}
+          <a
+            href="mailto:help.rohitacademy@gmail.com"
+            className="flex items-center justify-center md:justify-start gap-3 text-gray-600 hover:text-blue-600 transition"
+          >
             <Mail size={18} className="text-blue-600" />
-            support@rohitacademy.com
-          </p>
+            help.rohitacademy@gmail.com
+          </a>
 
-          <p className="flex items-center justify-center md:justify-start gap-3 text-gray-600 mt-2">
-            <Phone size={18} className="text-blue-600" />
-            +91 00000 00000
-          </p>
+          {/* Social Links */}
+          <div className="flex items-center justify-center md:justify-start gap-5 mt-4">
 
-          <p className="text-gray-400 text-xs mt-3">
-            Support available 10 AM – 7 PM
+            <a
+              href="https://www.instagram.com/rohitacademy1234?igsh=MWJmYXN1b3hyaXc1Yg=="
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-pink-600 transition"
+            >
+              <Instagram size={20} />
+            </a>
+
+            <a
+              href="https://youtube.com/@rohitacademy1234?si=Brwm5lBxX6Rfzr_-"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-red-600 transition"
+            >
+              <Youtube size={20} />
+            </a>
+
+            <a
+              href="https://t.me/RohitAcademy1234"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-blue-500 transition"
+            >
+              <Send size={20} />
+            </a>
+
+          </div>
+
+          <p className="text-gray-400 text-xs mt-4">
+            Follow us for updates & study resources
           </p>
         </div>
       </div>
