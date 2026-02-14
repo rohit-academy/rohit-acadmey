@@ -5,7 +5,7 @@ import logger from "../utils/logger.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
-/* ☁️ Helper: Upload buffer to Cloudinary */
+/* ☁️ Upload buffer → Cloudinary */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -22,27 +22,38 @@ const uploadPDFToCloudinary = (buffer) =>
   });
 
 /* ➕ ADD MATERIAL */
-export const addMaterial = async (req, res) => {
+export const addMaterial = async (req, res, next) => {
   try {
     const { title, classId, subjectId, price, description } = req.body;
 
-    if (!title || !classId || !subjectId || !price)
-      return res.status(400).json({ message: "All required fields must be filled" });
+    if (!title || !classId || !subjectId || !price) {
+      const err = new Error("All required fields must be filled");
+      err.statusCode = 400;
+      return next(err);
+    }
 
-    if (!req.file)
-      return res.status(400).json({ message: "PDF file is required" });
+    if (!req.file) {
+      const err = new Error("PDF file is required");
+      err.statusCode = 400;
+      return next(err);
+    }
 
-    if (req.file.mimetype !== "application/pdf")
-      return res.status(400).json({ message: "Only PDF files allowed" });
-
-    if (price < 1 || price > 5000)
-      return res.status(400).json({ message: "Invalid price range" });
+    if (price < 1 || price > 5000) {
+      const err = new Error("Invalid price range");
+      err.statusCode = 400;
+      return next(err);
+    }
 
     const classExists = await Class.findById(classId);
     const subjectExists = await Subject.findById(subjectId);
-    if (!classExists || !subjectExists)
-      return res.status(400).json({ message: "Invalid class or subject" });
 
+    if (!classExists || !subjectExists) {
+      const err = new Error("Invalid class or subject");
+      err.statusCode = 400;
+      return next(err);
+    }
+
+    /* ☁️ Upload PDF */
     const result = await uploadPDFToCloudinary(req.file.buffer);
 
     const material = await Material.create({
@@ -56,61 +67,80 @@ export const addMaterial = async (req, res) => {
     });
 
     logger.info(`Material added: ${material.title}`);
-    res.status(201).json(material);
 
+    res.status(201).json({
+      success: true,
+      message: "Material added successfully",
+      data: material,
+    });
   } catch (error) {
     logger.error(`Add material error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    next(error);
   }
 };
 
 /* 📄 GET ALL MATERIALS */
-export const getMaterials = async (req, res) => {
+export const getMaterials = async (req, res, next) => {
   try {
     const materials = await Material.find()
       .populate("class", "name")
       .populate("subject", "name")
       .sort({ createdAt: -1 });
 
-    res.json(materials);
+    res.json({
+      success: true,
+      count: materials.length,
+      data: materials,
+    });
   } catch (error) {
     logger.error(`Get materials error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    next(error);
   }
 };
 
 /* 🔍 GET MATERIAL BY ID */
-export const getMaterialById = async (req, res) => {
+export const getMaterialById = async (req, res, next) => {
   try {
     const material = await Material.findById(req.params.id)
       .populate("class", "name")
       .populate("subject", "name");
 
-    if (!material) return res.status(404).json({ message: "Material not found" });
+    if (!material) {
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+    }
 
-    res.json(material);
+    res.json({
+      success: true,
+      data: material,
+    });
   } catch (error) {
     logger.error(`Get material error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    next(error);
   }
 };
 
-/* ✏ UPDATE MATERIAL (PDF replace support) */
-export const updateMaterial = async (req, res) => {
+/* ✏ UPDATE MATERIAL */
+export const updateMaterial = async (req, res, next) => {
   try {
     const updates = req.body;
+
     const material = await Material.findById(req.params.id);
+    if (!material) {
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+    }
 
-    if (!material) return res.status(404).json({ message: "Material not found" });
+    if (updates.price && (updates.price < 1 || updates.price > 5000)) {
+      const err = new Error("Invalid price range");
+      err.statusCode = 400;
+      return next(err);
+    }
 
-    if (updates.price && (updates.price < 1 || updates.price > 5000))
-      return res.status(400).json({ message: "Invalid price range" });
-
-    /* 🔁 Replace PDF if new one uploaded */
+    /* 🔁 Replace PDF */
     if (req.file) {
-      if (req.file.mimetype !== "application/pdf")
-        return res.status(400).json({ message: "Only PDF files allowed" });
-
       if (material.cloudinaryId) {
         await cloudinary.uploader.destroy(material.cloudinaryId, {
           resource_type: "raw",
@@ -131,19 +161,28 @@ export const updateMaterial = async (req, res) => {
     await material.save();
 
     logger.warn(`Material updated: ${material.title}`);
-    res.json(material);
 
+    res.json({
+      success: true,
+      message: "Material updated successfully",
+      data: material,
+    });
   } catch (error) {
     logger.error(`Update material error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    next(error);
   }
 };
 
 /* ❌ DELETE MATERIAL */
-export const deleteMaterial = async (req, res) => {
+export const deleteMaterial = async (req, res, next) => {
   try {
     const material = await Material.findById(req.params.id);
-    if (!material) return res.status(404).json({ message: "Material not found" });
+
+    if (!material) {
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+    }
 
     if (material.cloudinaryId) {
       await cloudinary.uploader.destroy(material.cloudinaryId, {
@@ -154,10 +193,13 @@ export const deleteMaterial = async (req, res) => {
     await material.deleteOne();
 
     logger.warn(`Material deleted: ${material.title}`);
-    res.json({ message: "Material deleted successfully" });
 
+    res.json({
+      success: true,
+      message: "Material deleted successfully",
+    });
   } catch (error) {
     logger.error(`Delete material error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    next(error);
   }
 };

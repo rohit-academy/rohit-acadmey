@@ -9,7 +9,7 @@ import {
 
 import authMiddleware from "../middleware/authMiddleware.js";
 import adminMiddleware from "../middleware/adminMiddleware.js";
-import { upload } from "../middleware/uploadMiddleware.js";
+import { uploadPDF } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -19,16 +19,30 @@ router.get("/:id", getMaterialById);
 
 /* 🛠 ADMIN ROUTES */
 
-/* ➕ CREATE MATERIAL (PDF upload yahi hoga) */
+/* ➕ CREATE MATERIAL */
 router.post(
   "/",
   authMiddleware,
   adminMiddleware,
-  upload.single("pdf"),   // 🔥 multer yahi use hoga
+  uploadPDF.single("file"), // 🔥 PDF upload
   addMaterial
 );
 
-router.put("/:id", authMiddleware, adminMiddleware, updateMaterial);
-router.delete("/:id", authMiddleware, adminMiddleware, deleteMaterial);
+/* ✏️ UPDATE MATERIAL (PDF replace support) */
+router.put(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  uploadPDF.single("file"), // 🔥 MUST for replacing PDF
+  updateMaterial
+);
+
+/* ❌ DELETE MATERIAL */
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  deleteMaterial
+);
 
 export default router;
