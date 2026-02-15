@@ -1,6 +1,5 @@
 import express from "express";
 import {
-  adminLogin,
   getAdminStats,
   getAllUsers,
   deleteUser,
@@ -15,10 +14,7 @@ import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-/* 🔐 ADMIN LOGIN (PUBLIC) */
-router.post("/login", adminLogin);
-
-/* 🔒 PROTECT ALL BELOW ROUTES */
+/* 🔒 ALL ADMIN ROUTES PROTECTED */
 router.use(protect, adminOnly);
 
 /* 📊 DASHBOARD */

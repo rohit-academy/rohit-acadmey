@@ -14,7 +14,10 @@ import subjectRoutes from "./routes/subjectRoutes.js";
 import materialRoutes from "./routes/materialRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
+
+/* 🔐 ADMIN ROUTES */
+import adminAuthRoutes from "./routes/adminAuthRoutes.js"; // ✅ PUBLIC LOGIN
+import adminRoutes from "./routes/adminRoutes.js";         // 🔒 PROTECTED
 
 const app = express();
 
@@ -75,7 +78,10 @@ app.use("/api/materials", materialRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/coupons", couponRoutes);
 
-/* 🔐 ADMIN ROUTES */
+/* 🔐 ADMIN LOGIN (PUBLIC) — MUST COME FIRST */
+app.use("/api/admin", adminAuthRoutes);
+
+/* 🔒 ADMIN PROTECTED ROUTES */
 app.use("/api/admin", adminRoutes);
 
 /* ❌ 404 HANDLER */
