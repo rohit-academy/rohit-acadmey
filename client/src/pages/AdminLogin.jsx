@@ -21,24 +21,26 @@ function AdminLogin() {
     setTimeout(() => {
       if (form.username === "admin" && form.password === "1234") {
 
-        /* ✅ SAVE PROPER ADMIN OBJECT */
-        localStorage.setItem(
-          "admin",
-          JSON.stringify({
-            role: "admin",
-            token: "demo-admin-token", // backend token later
-            name: "Admin"
-          })
-        );
+        const adminData = {
+          token: "temp-admin-token",
+          role: "admin",
+          name: "Admin"
+        };
 
-        navigate("/admin");
+        /* 🔥 SAVE ADMIN PROPERLY */
+        localStorage.setItem("admin", JSON.stringify(adminData));
+
+        /* 🔍 DEBUG LOG */
+        console.log("Saved Admin:", localStorage.getItem("admin"));
+
+        navigate("/admin", { replace: true });
 
       } else {
         setError("Invalid Admin Credentials");
       }
 
       setLoading(false);
-    }, 600);
+    }, 500);
   };
 
   return (
