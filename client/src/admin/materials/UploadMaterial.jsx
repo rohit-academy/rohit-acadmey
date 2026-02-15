@@ -22,11 +22,10 @@ function UploadMaterial() {
     file: null,
   });
 
-  /* 🔐 Safe token */
-  const adminData = JSON.parse(localStorage.getItem("admin"));
-  const token = adminData?.token;
+  /* 🔐 SAFE TOKEN (one-liner) */
+  const token = JSON.parse(localStorage.getItem("admin") || "{}")?.token;
 
-  /* 🚫 Not logged in */
+  /* 🚫 Redirect if not logged in */
   useEffect(() => {
     if (!token) {
       alert("Admin login required");
@@ -40,12 +39,7 @@ function UploadMaterial() {
       try {
         const res = await axios.get("/api/classes");
         const data = res.data?.data || res.data;
-
-        if (Array.isArray(data)) {
-          setClasses(data);
-        } else {
-          setClasses([]);
-        }
+        setClasses(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Class load error:", err);
         setClasses([]);
@@ -55,7 +49,7 @@ function UploadMaterial() {
     fetchClasses();
   }, []);
 
-  /* 📦 Load subjects */
+  /* 📦 Load subjects when class changes */
   useEffect(() => {
     if (!formData.classId) {
       setSubjects([]);
@@ -68,14 +62,8 @@ function UploadMaterial() {
         const res = await axios.get(
           `/api/subjects/class/${formData.classId}`
         );
-
         const data = res.data?.data || res.data;
-
-        if (Array.isArray(data)) {
-          setSubjects(data);
-        } else {
-          setSubjects([]);
-        }
+        setSubjects(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Subject load error:", err);
         setSubjects([]);
@@ -126,7 +114,7 @@ function UploadMaterial() {
 
       alert("✅ Material uploaded successfully");
 
-      /* 🔄 Reset */
+      /* 🔄 Reset form */
       setFormData({
         classId: "",
         subjectId: "",
@@ -139,10 +127,8 @@ function UploadMaterial() {
       });
 
       setSubjects([]);
-
       if (fileRef.current) fileRef.current.value = "";
 
-      /* 🔁 Redirect */
       navigate("/admin/materials");
 
     } catch (err) {
@@ -168,69 +154,54 @@ function UploadMaterial() {
         className="bg-white p-6 rounded-xl shadow space-y-5"
       >
         {/* Class */}
-        <div>
-          <label className="block mb-1 font-semibold">Select Class</label>
-          <select
-            name="classId"
-            value={formData.classId}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            className="border p-3 rounded-lg w-full"
-          >
-            <option value="">Select</option>
-            {classes.length === 0 && (
-              <option disabled>No classes found</option>
-            )}
-            {classes.map((cls) => (
-              <option key={cls._id} value={cls._id}>
-                {cls.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          name="classId"
+          value={formData.classId}
+          onChange={handleChange}
+          required
+          disabled={loading}
+          className="border p-3 rounded-lg w-full"
+        >
+          <option value="">Select Class</option>
+          {classes.map((cls) => (
+            <option key={cls._id} value={cls._id}>
+              {cls.name}
+            </option>
+          ))}
+        </select>
 
         {/* Subject */}
-        <div>
-          <label className="block mb-1 font-semibold">Select Subject</label>
-          <select
-            name="subjectId"
-            value={formData.subjectId}
-            onChange={handleChange}
-            required
-            disabled={!formData.classId || loading}
-            className="border p-3 rounded-lg w-full"
-          >
-            <option value="">Select</option>
-            {subjects.length === 0 && formData.classId && (
-              <option disabled>No subjects found</option>
-            )}
-            {subjects.map((sub) => (
-              <option key={sub._id} value={sub._id}>
-                {sub.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          name="subjectId"
+          value={formData.subjectId}
+          onChange={handleChange}
+          required
+          disabled={!formData.classId || loading}
+          className="border p-3 rounded-lg w-full"
+        >
+          <option value="">Select Subject</option>
+          {subjects.map((sub) => (
+            <option key={sub._id} value={sub._id}>
+              {sub.name}
+            </option>
+          ))}
+        </select>
 
         {/* Type */}
-        <div>
-          <label className="block mb-1 font-semibold">Material Type</label>
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            className="border p-3 rounded-lg w-full"
-          >
-            <option value="">Select</option>
-            <option value="Notes">Notes</option>
-            <option value="Sample Paper">Sample Paper</option>
-            <option value="PYQ">PYQ</option>
-            <option value="Assignment">Assignment</option>
-          </select>
-        </div>
+        <select
+          name="type"
+          value={formData.type}
+          onChange={handleChange}
+          required
+          disabled={loading}
+          className="border p-3 rounded-lg w-full"
+        >
+          <option value="">Material Type</option>
+          <option value="Notes">Notes</option>
+          <option value="Sample Paper">Sample Paper</option>
+          <option value="PYQ">PYQ</option>
+          <option value="Assignment">Assignment</option>
+        </select>
 
         {/* Title */}
         <input
@@ -279,31 +250,25 @@ function UploadMaterial() {
         />
 
         {/* PDF Upload */}
-        <div>
-          <label className="block mb-2 font-semibold">Upload PDF</label>
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 p-6 rounded-xl cursor-pointer hover:bg-blue-50 transition">
+          <FileText size={40} className="text-blue-600 mb-2" />
+          <span className="text-gray-600">Click to upload PDF</span>
+          <input
+            ref={fileRef}
+            type="file"
+            name="file"
+            accept=".pdf"
+            onChange={handleChange}
+            className="hidden"
+            required
+          />
+        </label>
 
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 p-6 rounded-xl cursor-pointer hover:bg-blue-50 transition">
-            <FileText size={40} className="text-blue-600 mb-2" />
-            <span className="text-gray-600">
-              Click to upload or drag PDF file
-            </span>
-            <input
-              ref={fileRef}
-              type="file"
-              name="file"
-              accept=".pdf"
-              onChange={handleChange}
-              className="hidden"
-              required
-            />
-          </label>
-
-          {formData.file && (
-            <p className="text-sm text-green-600 mt-2">
-              Selected: {formData.file.name}
-            </p>
-          )}
-        </div>
+        {formData.file && (
+          <p className="text-sm text-green-600">
+            Selected: {formData.file.name}
+          </p>
+        )}
 
         <button
           type="submit"

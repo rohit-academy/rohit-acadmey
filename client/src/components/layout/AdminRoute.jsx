@@ -1,25 +1,26 @@
 import React from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
 function AdminRoute() {
-  const location = useLocation();
+  const adminData = localStorage.getItem("admin");
+
+  /* ❌ Not logged in */
+  if (!adminData) {
+    return <Navigate to="/admin-login" replace />;
+  }
 
   try {
-    const adminData = localStorage.getItem("admin");
-
-    if (!adminData) {
-      return <Navigate to="/admin-login" replace state={{ from: location }} />;
-    }
-
     const admin = JSON.parse(adminData);
 
-    if (!admin?.token || admin?.role !== "admin") {
-      return <Navigate to="/admin-login" replace state={{ from: location }} />;
+    /* ❌ Token missing */
+    if (!admin?.token) {
+      return <Navigate to="/admin-login" replace />;
     }
 
+    /* ✅ Allow nested admin routes */
     return <Outlet />;
   } catch (error) {
-    console.error("AdminRoute error:", error);
+    console.error("AdminRoute parse error:", error);
     return <Navigate to="/admin-login" replace />;
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
+import axios from "axios";
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -14,33 +15,32 @@ function AdminLogin() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = (e) => {
+  /* 🔐 BACKEND ADMIN LOGIN */
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
-    setTimeout(() => {
-      if (form.username === "admin" && form.password === "1234") {
+    try {
+      const res = await axios.post("/api/admin/login", {
+        username: form.username,
+        password: form.password,
+      });
 
-        const adminData = {
-          token: "temp-admin-token",
-          role: "admin",
-          name: "Admin"
-        };
+      const adminData = res.data;
 
-        /* 🔥 SAVE ADMIN PROPERLY */
-        localStorage.setItem("admin", JSON.stringify(adminData));
+      /* 💾 SAVE TOKEN + ROLE */
+      localStorage.setItem("admin", JSON.stringify(adminData));
 
-        /* 🔍 DEBUG LOG */
-        console.log("Saved Admin:", localStorage.getItem("admin"));
+      navigate("/admin", { replace: true });
 
-        window.location.href = "/admin";
-
-      } else {
-        setError("Invalid Admin Credentials");
-      }
-
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Admin login failed"
+      );
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (

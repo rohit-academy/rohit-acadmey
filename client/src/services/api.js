@@ -1,16 +1,29 @@
 import axios from "axios";
 
-// 🔥 Base URL (backend server)
 const API = axios.create({
-  baseURL: "http://localhost:5000/api", // later env variable me dalenge
+  baseURL: "/api", // 🔥 proxy or same domain
 });
 
-// 🔐 Attach token automatically (login ke baad)
+/* 🔐 Attach USER or ADMIN token automatically */
 API.interceptors.request.use((req) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
+  try {
+    /* 🧑 USER TOKEN */
+    const userToken = localStorage.getItem("token");
+
+    /* 🛡 ADMIN TOKEN */
+    const adminData = JSON.parse(localStorage.getItem("admin") || "{}");
+    const adminToken = adminData?.token;
+
+    const token = adminToken || userToken;
+
+    if (token) {
+      req.headers.Authorization = `Bearer ${token}`;
+    }
+
+  } catch (error) {
+    console.error("Token attach error:", error);
   }
+
   return req;
 });
 

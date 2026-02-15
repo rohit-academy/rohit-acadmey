@@ -1,6 +1,16 @@
 import API from "./api";
 
-// 📚 Get materials by subject (Physics, Maths, etc.)
+/* 🔐 Get admin token */
+const getAuthHeaders = () => {
+  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+  const token = admin?.token;
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+};
+
+// 📚 Get materials by subject
 export const getMaterialsBySubject = (subjectId) => {
   return API.get(`/materials/subject/${subjectId}`);
 };
@@ -18,20 +28,28 @@ export const searchMaterials = (query) => {
 // ➕ Upload new material (Admin)
 export const uploadMaterial = (formData) => {
   return API.post("/materials", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
   });
 };
 
 // ✏ Update material (Admin)
 export const updateMaterial = (id, formData) => {
   return API.put(`/materials/${id}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "multipart/form-data",
+    },
   });
 };
 
 // ❌ Delete material (Admin)
 export const deleteMaterial = (id) => {
-  return API.delete(`/materials/${id}`);
+  return API.delete(`/materials/${id}`, {
+    headers: getAuthHeaders(),
+  });
 };
 
 // ⭐ Rate material
