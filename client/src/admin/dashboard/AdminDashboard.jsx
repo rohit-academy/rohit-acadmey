@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -7,39 +7,88 @@ import {
   ShoppingCart,
   Settings
 } from "lucide-react";
+import axios from "axios";
 
 function AdminDashboard() {
   const navigate = useNavigate();
 
-  const stats = [
+  const [stats, setStats] = useState({
+    totalMaterials: 0,
+    totalUsers: 0,
+    totalOrders: 0,
+    totalDownloads: 0
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const { data } = await axios.get(
+        "/api/admin/stats",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setStats({
+        totalMaterials: data.totalMaterials || 0,
+        totalUsers: data.totalUsers || 0,
+        totalOrders: data.totalOrders || 0,
+        totalDownloads: data.totalDownloads || 0
+      });
+
+    } catch (error) {
+      console.error("Stats fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const statsCards = [
     {
-      title: "Total Products",
-      value: 128,
+      title: "Total Materials",
+      value: stats.totalMaterials,
       icon: <FileText size={28} className="text-blue-600" />
     },
     {
       title: "Total Users",
-      value: 54,
+      value: stats.totalUsers,
       icon: <Users size={28} className="text-green-600" />
     },
     {
       title: "Total Orders",
-      value: 76,
+      value: stats.totalOrders,
       icon: <ShoppingCart size={28} className="text-purple-600" />
     },
     {
       title: "Total Downloads",
-      value: 210,
+      value: stats.totalDownloads,
       icon: <Download size={28} className="text-pink-600" />
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
 
       {/* 📊 Stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {stats.map((item, index) => (
+        {statsCards.map((item, index) => (
           <div
             key={index}
             className="bg-white p-6 rounded-xl shadow flex items-center gap-4"
@@ -101,7 +150,8 @@ function AdminDashboard() {
       <div className="mt-12 bg-white p-6 rounded-xl shadow flex items-center gap-4">
         <Settings className="text-gray-600" />
         <p className="text-sm text-gray-600">
-          System running in <span className="font-semibold">Development Mode</span>
+          System running in{" "}
+          <span className="font-semibold">Development Mode</span>
         </p>
       </div>
     </div>
