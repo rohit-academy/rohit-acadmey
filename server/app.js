@@ -21,7 +21,7 @@ const app = express();
 /* 🔐 SECURITY HEADERS */
 app.use(helmet());
 
-/* 🌍 CORS CONFIG (only your frontend allowed) */
+/* 🌍 CORS CONFIG */
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -36,20 +36,30 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-/* 📲 OTP STRICT LIMIT (spam control) */
+/* 📄 LOGGER */
+app.use(morgan("dev"));
+
+/* ⚠️ Razorpay webhook needs raw body BEFORE json parser */
+app.post(
+  "/api/webhook/razorpay",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    console.log("🔔 Razorpay Webhook Hit");
+    res.status(200).json({ status: "ok" });
+  }
+);
+
+/* 🔹 BODY PARSER (after webhook) */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* 📲 OTP STRICT LIMIT */
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 5,
   message: "Too many OTP requests. Try later.",
 });
 app.use("/api/otp", otpLimiter);
-
-/* 🔹 BODY PARSER */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-/* 📄 LOGGER */
-app.use(morgan("dev"));
 
 /* ❤️ HEALTH CHECK */
 app.get("/", (req, res) => {
@@ -64,17 +74,9 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/materials", materialRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/coupons", couponRoutes);
-app.use("/api/admin", adminRoutes);
 
-/* 💳 RAZORPAY WEBHOOK */
-app.post(
-  "/api/webhook/razorpay",
-  express.raw({ type: "application/json" }),
-  (req, res) => {
-    console.log("🔔 Razorpay Webhook Hit");
-    res.status(200).json({ status: "ok" });
-  }
-);
+/* 🔐 ADMIN ROUTES */
+app.use("/api/admin", adminRoutes);
 
 /* ❌ 404 HANDLER */
 app.use((req, res) => {

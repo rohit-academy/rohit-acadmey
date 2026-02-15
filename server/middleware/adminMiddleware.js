@@ -1,43 +1,46 @@
+import jwt from "jsonwebtoken";
+
 const adminMiddleware = (req, res, next) => {
   try {
-    /* 🔐 USER CHECK */
-    if (!req.user) {
+    /* 🔐 AUTH HEADER CHECK */
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized: No user data"
+        message: "Admin token missing",
       });
     }
 
-    /* ⛔ BLOCKED USER */
-    if (req.user.isBlocked) {
-      return res.status(403).json({
-        success: false,
-        message: "Your account is blocked. Contact support."
-      });
-    }
+    /* 🔑 TOKEN EXTRACT */
+    const token = authHeader.split(" ")[1];
+
+    /* 🔍 VERIFY TOKEN */
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     /* 🛡 ROLE CHECK */
-    if (req.user.role !== "admin") {
+    if (decoded.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Access denied: Admins only"
+        message: "Access denied: Admins only",
       });
     }
 
-    /* ✅ PASS */
-    next();
+    /* ✅ SAVE ADMIN DATA */
+    req.admin = decoded;
 
+    next();
   } catch (error) {
     console.error("🔥 Admin middleware error:", error.message);
 
-    res.status(500).json({
+    return res.status(401).json({
       success: false,
-      message: "Admin authorization failed"
+      message: "Invalid or expired admin token",
     });
   }
 };
 
-/* 🔁 Named export for flexibility */
+/* 🔁 Named export */
 export const adminOnly = adminMiddleware;
 
 /* 🔁 Default export */

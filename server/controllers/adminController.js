@@ -5,6 +5,44 @@ import Subject from "../models/Subject.js";
 import Material from "../models/Material.js";
 import Order from "../models/Order.js";
 import logger from "../utils/logger.js";
+import generateToken from "../utils/generateToken.js";
+
+/* 🔐 ADMIN LOGIN */
+export const adminLogin = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (
+      username !== process.env.ADMIN_USERNAME ||
+      password !== process.env.ADMIN_PASSWORD
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid admin credentials",
+      });
+    }
+
+    const token = generateToken({
+      role: "admin",
+      name: "Admin",
+    });
+
+    logger.info("Admin logged in");
+
+    res.json({
+      success: true,
+      token,
+      role: "admin",
+      name: "Admin",
+    });
+  } catch (error) {
+    logger.error(`Admin login error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Admin login failed",
+    });
+  }
+};
 
 /* 📊 DASHBOARD STATS */
 export const getAdminStats = async (req, res) => {
