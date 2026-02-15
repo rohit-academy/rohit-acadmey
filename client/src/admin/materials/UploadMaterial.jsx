@@ -1,32 +1,114 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { UploadCloud, FileText } from "lucide-react";
+import axios from "axios";
 
 function UploadMaterial() {
+  const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+
   const [formData, setFormData] = useState({
     classId: "",
-    stream: "",
-    subject: "",
+    subjectId: "",
+    type: "",
     title: "",
+    pages: "",
     price: "",
-    file: null
+    description: "",
+    file: null,
   });
 
+  /* 🔐 Admin token */
+  const token = localStorage.getItem("token");
+
+  /* 📦 Load classes */
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const res = await axios.get("/api/classes");
+        setClasses(res.data.data || res.data);
+      } catch (err) {
+        console.error("Class load error");
+      }
+    };
+    fetchClasses();
+  }, []);
+
+  /* 📦 Load subjects when class changes */
+  useEffect(() => {
+    if (!formData.classId) return;
+
+    const fetchSubjects = async () => {
+      try {
+        const res = await axios.get(`/api/subjects/class/${formData.classId}`);
+        setSubjects(res.data.data || res.data);
+      } catch (err) {
+        console.error("Subject load error");
+      }
+    };
+
+    fetchSubjects();
+  }, [formData.classId]);
+
+  /* 🧠 Handle input */
   const handleChange = (e) => {
     const { name, value, files } = e.target;
+
     setFormData({
       ...formData,
-      [name]: files ? files[0] : value
+      [name]: files ? files[0] : value,
     });
   };
 
-  const handleSubmit = (e) => {
+  /* 🚀 Submit */
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Material Upload Data:", formData);
-    alert("Material Uploaded (backend se connect baad me hoga)");
-  };
+    if (!formData.file) {
+      return alert("PDF required");
+    }
 
-  const showStream = formData.classId === "11" || formData.classId === "12";
+    try {
+      setLoading(true);
+
+      const data = new FormData();
+      data.append("title", formData.title);
+      data.append("classId", formData.classId);
+      data.append("subjectId", formData.subjectId);
+      data.append("type", formData.type);
+      data.append("pages", formData.pages);
+      data.append("price", formData.price);
+      data.append("description", formData.description);
+      data.append("file", formData.file); // 🔥 backend expects "file"
+
+      await axios.post("/api/materials", data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      alert("✅ Material uploaded successfully");
+
+      /* 🔄 Reset form */
+      setFormData({
+        classId: "",
+        subjectId: "",
+        type: "",
+        title: "",
+        pages: "",
+        price: "",
+        description: "",
+        file: null,
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -38,7 +120,6 @@ function UploadMaterial() {
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded-xl shadow space-y-5"
       >
-
         {/* Class */}
         <div>
           <label className="block mb-1 font-semibold">Select Class</label>
@@ -47,45 +128,52 @@ function UploadMaterial() {
             value={formData.classId}
             onChange={handleChange}
             required
-            className="border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-500"
+            className="border p-3 rounded-lg w-full"
           >
             <option value="">Select</option>
-            <option value="9">Class 9</option>
-            <option value="10">Class 10</option>
-            <option value="11">Class 11</option>
-            <option value="12">Class 12</option>
+            {classes.map((cls) => (
+              <option key={cls._id} value={cls._id}>
+                {cls.name}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Stream (only 11/12) */}
-        {showStream && (
-          <div>
-            <label className="block mb-1 font-semibold">Select Stream</label>
-            <select
-              name="stream"
-              value={formData.stream}
-              onChange={handleChange}
-              required
-              className="border p-3 rounded-lg w-full"
-            >
-              <option value="">Select</option>
-              <option value="pcb">PCB</option>
-              <option value="pcm">PCM</option>
-              <option value="arts">Arts</option>
-            </select>
-          </div>
-        )}
-
         {/* Subject */}
         <div>
-          <label className="block mb-1 font-semibold">Subject</label>
-          <input
-            type="text"
-            name="subject"
-            required
+          <label className="block mb-1 font-semibold">Select Subject</label>
+          <select
+            name="subjectId"
+            value={formData.subjectId}
             onChange={handleChange}
+            required
             className="border p-3 rounded-lg w-full"
-          />
+          >
+            <option value="">Select</option>
+            {subjects.map((sub) => (
+              <option key={sub._id} value={sub._id}>
+                {sub.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Type */}
+        <div>
+          <label className="block mb-1 font-semibold">Material Type</label>
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            required
+            className="border p-3 rounded-lg w-full"
+          >
+            <option value="">Select</option>
+            <option value="Notes">Notes</option>
+            <option value="Sample Paper">Sample Paper</option>
+            <option value="PYQ">PYQ</option>
+            <option value="Assignment">Assignment</option>
+          </select>
         </div>
 
         {/* Title */}
@@ -94,7 +182,20 @@ function UploadMaterial() {
           <input
             type="text"
             name="title"
+            value={formData.title}
+            onChange={handleChange}
             required
+            className="border p-3 rounded-lg w-full"
+          />
+        </div>
+
+        {/* Pages */}
+        <div>
+          <label className="block mb-1 font-semibold">Total Pages</label>
+          <input
+            type="number"
+            name="pages"
+            value={formData.pages}
             onChange={handleChange}
             className="border p-3 rounded-lg w-full"
           />
@@ -106,8 +207,21 @@ function UploadMaterial() {
           <input
             type="number"
             name="price"
-            required
+            value={formData.price}
             onChange={handleChange}
+            required
+            className="border p-3 rounded-lg w-full"
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="block mb-1 font-semibold">Description</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            rows="3"
             className="border p-3 rounded-lg w-full"
           />
         </div>
@@ -141,11 +255,11 @@ function UploadMaterial() {
         {/* Submit */}
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg w-full hover:bg-blue-700 transition text-lg font-semibold"
+          disabled={loading}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg w-full hover:bg-blue-700 transition text-lg font-semibold disabled:opacity-60"
         >
-          Upload Material
+          {loading ? "Uploading..." : "Upload Material"}
         </button>
-
       </form>
     </div>
   );
