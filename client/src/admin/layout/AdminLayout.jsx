@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   X,
-  BookOpen
+  BookOpen,
+  UploadCloud
 } from "lucide-react";
 
 function AdminLayout() {
@@ -21,10 +22,10 @@ function AdminLayout() {
     navigate("/admin-login");
   };
 
-  // 🔥 Dynamic page title for mobile top bar
   const pageTitleMap = {
     "/admin": "Dashboard",
     "/admin/materials": "Materials",
+    "/admin/materials/upload": "Upload Material",
     "/admin/users": "Users",
     "/admin/orders": "Orders",
     "/admin/academics": "Academics",
@@ -65,6 +66,7 @@ function AdminLayout() {
 
         <nav className="flex flex-col gap-2 text-gray-700 mt-4">
 
+          {/* Dashboard */}
           <NavLink
             to="/admin"
             end
@@ -78,6 +80,7 @@ function AdminLayout() {
             <LayoutDashboard size={18} /> Dashboard
           </NavLink>
 
+          {/* Academics */}
           <NavLink
             to="/admin/academics"
             onClick={() => setSidebarOpen(false)}
@@ -102,6 +105,7 @@ function AdminLayout() {
             🎓 Manage Classes
           </NavLink>
 
+          {/* Materials List */}
           <NavLink
             to="/admin/materials"
             onClick={() => setSidebarOpen(false)}
@@ -114,6 +118,22 @@ function AdminLayout() {
             <FileText size={18} /> Materials
           </NavLink>
 
+          {/* 🔥 Upload Material Button */}
+          <NavLink
+            to="/admin/materials/upload"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `${linkStyle} ml-6 ${
+                isActive
+                  ? "bg-green-100 text-green-700 font-semibold"
+                  : "hover:bg-gray-100 text-green-600"
+              }`
+            }
+          >
+            <UploadCloud size={18} /> Upload Material
+          </NavLink>
+
+          {/* Users */}
           <NavLink
             to="/admin/users"
             onClick={() => setSidebarOpen(false)}
@@ -126,6 +146,7 @@ function AdminLayout() {
             <Users size={18} /> Users
           </NavLink>
 
+          {/* Orders */}
           <NavLink
             to="/admin/orders"
             onClick={() => setSidebarOpen(false)}
@@ -138,6 +159,7 @@ function AdminLayout() {
             <ShoppingCart size={18} /> Orders
           </NavLink>
 
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 text-red-500 hover:text-red-600 mt-8 px-3 py-2"
