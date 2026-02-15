@@ -18,14 +18,25 @@ function AdminLogin() {
     e.preventDefault();
     setLoading(true);
 
-    // 🔐 TEMP ADMIN AUTH (replace with backend later)
+    /* 🔐 TEMP ADMIN AUTH (frontend only) */
     setTimeout(() => {
       if (form.username === "admin" && form.password === "1234") {
-        localStorage.setItem("admin", "true");
+
+        /* ✅ SAVE ADMIN OBJECT (IMPORTANT) */
+        localStorage.setItem(
+          "admin",
+          JSON.stringify({
+            token: "temp-admin-token",
+            role: "admin",
+            name: "Admin"
+          })
+        );
+
         navigate("/admin");
       } else {
         setError("Invalid Admin Credentials");
       }
+
       setLoading(false);
     }, 600);
   };
