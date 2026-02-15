@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
-import axios from "axios";
+import API from "../../services/api"; // 🔥 axios instance
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -22,15 +22,13 @@ function AdminLogin() {
     setError("");
 
     try {
-      const res = await axios.post("/api/admin/login", {
+      const res = await API.post("/admin/login", {
         username: form.username,
         password: form.password,
       });
 
-      const adminData = res.data;
-
       /* 💾 SAVE TOKEN + ROLE */
-      localStorage.setItem("admin", JSON.stringify(adminData));
+      localStorage.setItem("admin", JSON.stringify(res.data));
 
       navigate("/admin", { replace: true });
 
