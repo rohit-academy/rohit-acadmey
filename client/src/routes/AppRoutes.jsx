@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 
 import ProtectedRoute from "../components/layout/ProtectedRoute";
-import AdminRoute from "../components/layout/AdminRoute";   // ✅ REQUIRED
+import AdminRoute from "../components/layout/AdminRoute"; // ✅ REQUIRED
 import UserLayout from "../components/layout/UserLayout";
 
 /* 🌍 USER PAGES */
@@ -79,35 +79,30 @@ function AppRoutes() {
       {/* 🔐 ADMIN LOGIN (PUBLIC) */}
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🛠 ADMIN PANEL (PROTECTED) */}
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
+      {/* 🛠 ADMIN PANEL (PROTECTED NESTED) */}
+      <Route path="/admin" element={<AdminRoute />}>
+        <Route element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
 
-        {/* Academics */}
-        <Route path="academics" element={<ManageAcademics />} />
-        <Route path="academics/classes" element={<ManageClasses />} />
-        <Route path="academics/subjects" element={<ManageSubjects />} />
+          {/* Academics */}
+          <Route path="academics" element={<ManageAcademics />} />
+          <Route path="academics/classes" element={<ManageClasses />} />
+          <Route path="academics/subjects" element={<ManageSubjects />} />
 
-        {/* Materials */}
-        <Route path="materials" element={<ManageMaterials />} />
-        <Route path="materials/upload" element={<UploadMaterial />} />
+          {/* Materials */}
+          <Route path="materials" element={<ManageMaterials />} />
+          <Route path="materials/upload" element={<UploadMaterial />} />
 
-        {/* Users */}
-        <Route path="users" element={<ManageUsers />} />
+          {/* Users */}
+          <Route path="users" element={<ManageUsers />} />
 
-        {/* Orders */}
-        <Route path="orders" element={<OrdersAdmin />} />
+          {/* Orders */}
+          <Route path="orders" element={<OrdersAdmin />} />
 
-        {/* Finance */}
-        <Route path="coupons" element={<Coupons />} />
-        <Route path="sales-report" element={<SalesReport />} />
+          {/* Finance */}
+          <Route path="coupons" element={<Coupons />} />
+          <Route path="sales-report" element={<SalesReport />} />
+        </Route>
       </Route>
 
       {/* ❌ 404 */}

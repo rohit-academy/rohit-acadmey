@@ -1,7 +1,7 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
-function AdminRoute({ children }) {
+function AdminRoute() {
   try {
     const adminData = localStorage.getItem("admin");
 
@@ -18,12 +18,12 @@ function AdminRoute({ children }) {
     }
 
     /* ❌ Not admin role */
-    if (admin?.role !== "admin") {
+    if (admin.role !== "admin") {
       return <Navigate to="/admin-login" replace />;
     }
 
-    /* ✅ Access allowed */
-    return children;
+    /* ✅ Allow access to nested routes */
+    return <Outlet />;
 
   } catch (error) {
     console.error("AdminRoute error:", error);
