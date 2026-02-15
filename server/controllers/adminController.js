@@ -15,53 +15,63 @@ export const getAdminStats = async (req, res) => {
       totalSubjects,
       totalMaterials,
       totalOrders,
+      revenueData,
+      downloadsData
     ] = await Promise.all([
       User.countDocuments(),
       Class.countDocuments(),
       Subject.countDocuments(),
       Material.countDocuments(),
       Order.countDocuments(),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "Paid" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } }
+      ]),
+
+      Material.aggregate([
+        { $group: { _id: null, total: { $sum: "$downloads" } } }
+      ])
     ]);
 
-    const totalRevenueData = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-
-    const totalRevenue = totalRevenueData[0]?.total || 0;
+    const totalRevenue = revenueData[0]?.total || 0;
+    const totalDownloads = downloadsData[0]?.total || 0;
 
     logger.info("Admin stats fetched");
 
     res.json({
       success: true,
-      data: {
-        totalUsers,
-        totalClasses,
-        totalSubjects,
-        totalMaterials,
-        totalOrders,
-        totalRevenue,
-      },
+      totalUsers,
+      totalClasses,
+      totalSubjects,
+      totalMaterials,
+      totalOrders,
+      totalRevenue,
+      totalDownloads
     });
+
   } catch (error) {
     logger.error(`Admin stats error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-/* 👥 GET ALL USERS (with pagination) */
+/* 👥 GET ALL USERS */
 export const getAllUsers = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
 
-    const users = await User.find()
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await User.countDocuments();
+    const [users, total] = await Promise.all([
+      User.find()
+        .select("-password")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments()
+    ]);
 
     logger.info("Admin fetched users list");
 
@@ -71,9 +81,10 @@ export const getAllUsers = async (req, res) => {
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit),
-      },
+        pages: Math.ceil(total / limit)
+      }
     });
+
   } catch (error) {
     logger.error(`Get users error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
@@ -91,6 +102,7 @@ export const blockUser = async (req, res) => {
     logger.warn(`User blocked: ${req.params.id}`);
 
     res.json({ success: true, message: "User blocked" });
+
   } catch (error) {
     logger.error(`Block user error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
@@ -108,6 +120,7 @@ export const unblockUser = async (req, res) => {
     logger.warn(`User unblocked: ${req.params.id}`);
 
     res.json({ success: true, message: "User unblocked" });
+
   } catch (error) {
     logger.error(`Unblock user error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
@@ -125,26 +138,30 @@ export const deleteUser = async (req, res) => {
     logger.warn(`User deleted: ${req.params.id}`);
 
     res.json({ success: true, message: "User removed" });
+
   } catch (error) {
     logger.error(`Delete user error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-/* 📦 ALL ORDERS (with pagination) */
+/* 📦 ALL ORDERS */
 export const getAllOrders = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
 
-    const orders = await Order.find()
-      .populate("user", "name phone")
-      .populate("materials", "title price")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await Order.countDocuments();
+    const [orders, total] = await Promise.all([
+      Order.find()
+        .populate("user", "name phone")
+        .populate("materials", "title price")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Order.countDocuments()
+    ]);
 
     logger.info("Admin fetched orders list");
 
@@ -154,29 +171,33 @@ export const getAllOrders = async (req, res) => {
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit),
-      },
+        pages: Math.ceil(total / limit)
+      }
     });
+
   } catch (error) {
     logger.error(`Get orders error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-/* 📄 ALL MATERIALS (with pagination) */
+/* 📄 ALL MATERIALS */
 export const getAllMaterials = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
 
-    const materials = await Material.find()
-      .populate("class", "name")
-      .populate("subject", "name")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await Material.countDocuments();
+    const [materials, total] = await Promise.all([
+      Material.find()
+        .populate("classId", "name")
+        .populate("subjectId", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Material.countDocuments()
+    ]);
 
     logger.info("Admin fetched materials list");
 
@@ -186,9 +207,10 @@ export const getAllMaterials = async (req, res) => {
       pagination: {
         total,
         page,
-        pages: Math.ceil(total / limit),
-      },
+        pages: Math.ceil(total / limit)
+      }
     });
+
   } catch (error) {
     logger.error(`Get materials error: ${error.message}`);
     res.status(500).json({ success: false, message: "Server Error" });
