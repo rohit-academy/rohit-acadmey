@@ -14,6 +14,7 @@ import { uploadPDF } from "../middleware/uploadMiddleware.js";
 const router = express.Router();
 
 /* 🌍 PUBLIC ROUTES */
+/* Only active materials visible to users */
 router.get("/", getMaterials);
 router.get("/:id", getMaterialById);
 
@@ -24,7 +25,7 @@ router.post(
   "/",
   authMiddleware,
   adminMiddleware,
-  uploadPDF.single("file"), // 🔥 PDF upload
+  uploadPDF.single("file"), // 📄 PDF upload
   addMaterial
 );
 
@@ -33,8 +34,37 @@ router.put(
   "/:id",
   authMiddleware,
   adminMiddleware,
-  uploadPDF.single("file"), // 🔥 MUST for replacing PDF
+  uploadPDF.single("file"), // 📄 Required for PDF replace
   updateMaterial
+);
+
+/* 🔁 TOGGLE ACTIVE / INACTIVE */
+router.patch(
+  "/:id/toggle",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res, next) => {
+    try {
+      const material = await (await import("../models/Material.js")).default.findById(req.params.id);
+
+      if (!material) {
+        const err = new Error("Material not found");
+        err.statusCode = 404;
+        return next(err);
+      }
+
+      material.isActive = !material.isActive;
+      await material.save();
+
+      res.json({
+        success: true,
+        message: `Material ${material.isActive ? "activated" : "deactivated"}`,
+        data: material,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 );
 
 /* ❌ DELETE MATERIAL */

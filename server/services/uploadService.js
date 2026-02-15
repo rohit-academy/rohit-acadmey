@@ -1,16 +1,35 @@
 import cloudinary from "../config/cloudinary.js";
 
-export const uploadPDF = (buffer, name) =>
+/* ☁️ Upload PDF → returns url + public_id */
+export const uploadPDF = (buffer, fileName) =>
   new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(
+    const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: "raw",
-        folder: "rohit-academy",
-        public_id: name,
+        folder: "rohit-academy/materials",
+        public_id: fileName,     // custom name
+        overwrite: true,         // 🔁 replace support
       },
-      (err, result) => {
-        if (err) reject(err);
-        else resolve(result.secure_url);
+      (error, result) => {
+        if (error) return reject(error);
+
+        resolve({
+          url: result.secure_url,
+          public_id: result.public_id,
+          bytes: result.bytes,
+          format: result.format,
+        });
       }
-    ).end(buffer);
+    );
+
+    stream.end(buffer);
   });
+
+/* ❌ Delete PDF from Cloudinary */
+export const deletePDF = async (publicId) => {
+  if (!publicId) return;
+
+  await cloudinary.uploader.destroy(publicId, {
+    resource_type: "raw",
+  });
+};

@@ -24,10 +24,11 @@ const uploadPDFToCloudinary = (buffer) =>
 /* ➕ ADD MATERIAL */
 export const addMaterial = async (req, res, next) => {
   try {
-    const { title, classId, subjectId, price, description } = req.body;
+    const { title, classId, subjectId, price, description, type, pages } =
+      req.body;
 
-    if (!title || !classId || !subjectId || !price) {
-      const err = new Error("All required fields must be filled");
+    if (!title || !classId || !subjectId || !price || !type) {
+      const err = new Error("Required fields missing");
       err.statusCode = 400;
       return next(err);
     }
@@ -38,7 +39,7 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    if (price < 1 || price > 5000) {
+    if (price < 0 || price > 5000) {
       const err = new Error("Invalid price range");
       err.statusCode = 400;
       return next(err);
@@ -58,10 +59,12 @@ export const addMaterial = async (req, res, next) => {
 
     const material = await Material.create({
       title: title.trim(),
-      class: classId,
-      subject: subjectId,
-      price,
       description: description?.trim() || "",
+      classId,
+      subjectId,
+      type,
+      pages: pages || 0,
+      price,
       fileUrl: result.secure_url,
       cloudinaryId: result.public_id,
     });
@@ -79,17 +82,35 @@ export const addMaterial = async (req, res, next) => {
   }
 };
 
-/* 📄 GET ALL MATERIALS */
+/* 📄 GET MATERIALS (Pagination + Search + Filter) */
 export const getMaterials = async (req, res, next) => {
   try {
-    const materials = await Material.find()
-      .populate("class", "name")
-      .populate("subject", "name")
-      .sort({ createdAt: -1 });
+    const { page = 1, limit = 10, search = "", classId, subjectId, type } =
+      req.query;
+
+    const query = {
+      isActive: true,
+      title: { $regex: search, $options: "i" },
+    };
+
+    if (classId) query.classId = classId;
+    if (subjectId) query.subjectId = subjectId;
+    if (type) query.type = type;
+
+    const materials = await Material.find(query)
+      .populate("classId", "name")
+      .populate("subjectId", "name")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Material.countDocuments(query);
 
     res.json({
       success: true,
-      count: materials.length,
+      page: Number(page),
+      totalPages: Math.ceil(total / limit),
+      total,
       data: materials,
     });
   } catch (error) {
@@ -102,8 +123,8 @@ export const getMaterials = async (req, res, next) => {
 export const getMaterialById = async (req, res, next) => {
   try {
     const material = await Material.findById(req.params.id)
-      .populate("class", "name")
-      .populate("subject", "name");
+      .populate("classId", "name")
+      .populate("subjectId", "name");
 
     if (!material) {
       const err = new Error("Material not found");
@@ -133,7 +154,7 @@ export const updateMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    if (updates.price && (updates.price < 1 || updates.price > 5000)) {
+    if (updates.price && (updates.price < 0 || updates.price > 5000)) {
       const err = new Error("Invalid price range");
       err.statusCode = 400;
       return next(err);
@@ -153,10 +174,15 @@ export const updateMaterial = async (req, res, next) => {
     }
 
     material.title = updates.title?.trim() || material.title;
-    material.description = updates.description?.trim() || material.description;
-    material.price = updates.price || material.price;
-    material.class = updates.classId || material.class;
-    material.subject = updates.subjectId || material.subject;
+    material.description =
+      updates.description?.trim() || material.description;
+    material.price = updates.price ?? material.price;
+    material.classId = updates.classId || material.classId;
+    material.subjectId = updates.subjectId || material.subjectId;
+    material.type = updates.type || material.type;
+    material.pages = updates.pages ?? material.pages;
+    material.isActive =
+      updates.isActive !== undefined ? updates.isActive : material.isActive;
 
     await material.save();
 

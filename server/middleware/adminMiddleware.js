@@ -1,35 +1,44 @@
 const adminMiddleware = (req, res, next) => {
   try {
+    /* 🔐 USER CHECK */
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized"
+        message: "Unauthorized: No user data"
       });
     }
 
+    /* ⛔ BLOCKED USER */
     if (req.user.isBlocked) {
       return res.status(403).json({
         success: false,
-        message: "Account is blocked"
+        message: "Your account is blocked. Contact support."
       });
     }
 
+    /* 🛡 ROLE CHECK */
     if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Admin access only"
+        message: "Access denied: Admins only"
       });
     }
 
+    /* ✅ PASS */
     next();
+
   } catch (error) {
+    console.error("🔥 Admin middleware error:", error.message);
+
     res.status(500).json({
       success: false,
-      message: "Admin check failed"
+      message: "Admin authorization failed"
     });
   }
 };
 
-// 🔥 THIS FIXES YOUR ERROR
+/* 🔁 Named export for flexibility */
 export const adminOnly = adminMiddleware;
+
+/* 🔁 Default export */
 export default adminMiddleware;
