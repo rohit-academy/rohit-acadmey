@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { UploadCloud, FileText } from "lucide-react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API from "../../services/api"; // ✅ axios instance with token
 
 function UploadMaterial() {
   const navigate = useNavigate();
@@ -22,10 +22,9 @@ function UploadMaterial() {
     file: null,
   });
 
-  /* 🔐 SAFE TOKEN (one-liner) */
   const token = JSON.parse(localStorage.getItem("admin") || "{}")?.token;
 
-  /* 🚫 Redirect if not logged in */
+  /* 🔐 Redirect if not logged in */
   useEffect(() => {
     if (!token) {
       alert("Admin login required");
@@ -33,15 +32,15 @@ function UploadMaterial() {
     }
   }, [token, navigate]);
 
-  /* 📦 Load classes */
+  /* 📦 Load classes (PROTECTED → token required) */
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const res = await axios.get("/api/classes");
+        const res = await API.get("/classes"); // ✅ token auto attach
         const data = res.data?.data || res.data;
         setClasses(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error("Class load error:", err);
+        console.error("Class load error:", err.response?.data || err.message);
         setClasses([]);
       }
     };
@@ -59,13 +58,13 @@ function UploadMaterial() {
 
     const fetchSubjects = async () => {
       try {
-        const res = await axios.get(
-          `/api/subjects/class/${formData.classId}`
-        );
+        const res = await API.get(
+          `/subjects/class/${formData.classId}`
+        ); // ✅ token auto attach
         const data = res.data?.data || res.data;
         setSubjects(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error("Subject load error:", err);
+        console.error("Subject load error:", err.response?.data || err.message);
         setSubjects([]);
       }
     };
@@ -87,12 +86,7 @@ function UploadMaterial() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!token) return;
-
-    if (!formData.file) {
-      return alert("PDF required");
-    }
-
+    if (!formData.file) return alert("PDF required");
     if (!formData.classId || !formData.subjectId || !formData.type) {
       return alert("All required fields fill karo");
     }
@@ -105,16 +99,14 @@ function UploadMaterial() {
         if (value) data.append(key, value);
       });
 
-      await axios.post("/api/materials", data, {
+      await API.post("/materials", data, {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
 
       alert("✅ Material uploaded successfully");
 
-      /* 🔄 Reset form */
       setFormData({
         classId: "",
         subjectId: "",
@@ -130,13 +122,12 @@ function UploadMaterial() {
       if (fileRef.current) fileRef.current.value = "";
 
       navigate("/admin/materials");
-
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("Upload error:", err.response?.data || err.message);
       alert(
         err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Upload failed"
+          err.response?.data?.error ||
+          "Upload failed"
       );
     } finally {
       setLoading(false);
