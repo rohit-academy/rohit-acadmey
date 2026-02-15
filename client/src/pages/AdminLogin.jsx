@@ -33,7 +33,7 @@ function AdminLogin() {
         /* 🔍 DEBUG LOG */
         console.log("Saved Admin:", localStorage.getItem("admin"));
 
-        navigate("/admin", { replace: true });
+        window.location.href = "/admin";
 
       } else {
         setError("Invalid Admin Credentials");
