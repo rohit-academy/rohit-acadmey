@@ -18,8 +18,8 @@ function UploadMaterial() {
     file: null,
   });
 
-  /* 🔐 Admin token */
-  const token = localStorage.getItem("token");
+  /* 🔐 Get admin token safely */
+  const token = JSON.parse(localStorage.getItem("admin"))?.token;
 
   /* 📦 Load classes */
   useEffect(() => {
@@ -28,7 +28,7 @@ function UploadMaterial() {
         const res = await axios.get("/api/classes");
         setClasses(res.data.data || res.data);
       } catch (err) {
-        console.error("Class load error");
+        console.error("Class load error:", err);
       }
     };
     fetchClasses();
@@ -36,14 +36,20 @@ function UploadMaterial() {
 
   /* 📦 Load subjects when class changes */
   useEffect(() => {
-    if (!formData.classId) return;
+    if (!formData.classId) {
+      setSubjects([]);
+      setFormData((prev) => ({ ...prev, subjectId: "" }));
+      return;
+    }
 
     const fetchSubjects = async () => {
       try {
-        const res = await axios.get(`/api/subjects/class/${formData.classId}`);
+        const res = await axios.get(
+          `/api/subjects/class/${formData.classId}`
+        );
         setSubjects(res.data.data || res.data);
       } catch (err) {
-        console.error("Subject load error");
+        console.error("Subject load error:", err);
       }
     };
 
@@ -54,18 +60,26 @@ function UploadMaterial() {
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: files ? files[0] : value,
-    });
+    }));
   };
 
   /* 🚀 Submit */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!token) {
+      return alert("Admin not logged in");
+    }
+
     if (!formData.file) {
       return alert("PDF required");
+    }
+
+    if (!formData.classId || !formData.subjectId || !formData.type) {
+      return alert("All required fields fill karo");
     }
 
     try {
@@ -79,7 +93,7 @@ function UploadMaterial() {
       data.append("pages", formData.pages);
       data.append("price", formData.price);
       data.append("description", formData.description);
-      data.append("file", formData.file); // 🔥 backend expects "file"
+      data.append("file", formData.file);
 
       await axios.post("/api/materials", data, {
         headers: {
@@ -102,9 +116,19 @@ function UploadMaterial() {
         file: null,
       });
 
+      setSubjects([]);
+
+      /* 🔁 Reset file input visually */
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = "";
+
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Upload failed");
+      console.error("Upload error:", err);
+      alert(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Upload failed"
+      );
     } finally {
       setLoading(false);
     }
