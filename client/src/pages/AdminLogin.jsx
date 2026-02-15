@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
-import API from "../../services/api"; // 🔥 axios instance
+import API from "../services/api"; // 🔥 axios instance
 
 function AdminLogin() {
   const navigate = useNavigate();
