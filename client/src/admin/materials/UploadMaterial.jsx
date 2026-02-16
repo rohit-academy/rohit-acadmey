@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { UploadCloud, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import API from "../../services/api"; // ✅ axios instance with token
+import API from "../../services/api";
 
 function UploadMaterial() {
   const navigate = useNavigate();
@@ -32,13 +32,24 @@ function UploadMaterial() {
     }
   }, [token, navigate]);
 
-  /* 📦 Load classes (PROTECTED → token required) */
+  /* 📦 LOAD CLASSES */
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const res = await API.get("/classes"); // ✅ token auto attach
-        const data = res.data?.data || res.data;
-        setClasses(Array.isArray(data) ? data : []);
+        const res = await API.get("/classes");
+
+        console.log("CLASSES API RESPONSE:", res.data); // 🧪 DEBUG
+
+        // 🔥 handle all formats
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setClasses(res.data.data);
+        } else if (Array.isArray(res.data)) {
+          setClasses(res.data);
+        } else if (Array.isArray(res.data?.classes)) {
+          setClasses(res.data.classes);
+        } else {
+          setClasses([]);
+        }
       } catch (err) {
         console.error("Class load error:", err.response?.data || err.message);
         setClasses([]);
@@ -48,7 +59,7 @@ function UploadMaterial() {
     fetchClasses();
   }, []);
 
-  /* 📦 Load subjects when class changes */
+  /* 📦 LOAD SUBJECTS */
   useEffect(() => {
     if (!formData.classId) {
       setSubjects([]);
@@ -58,11 +69,17 @@ function UploadMaterial() {
 
     const fetchSubjects = async () => {
       try {
-        const res = await API.get(
-          `/subjects/class/${formData.classId}`
-        ); // ✅ token auto attach
-        const data = res.data?.data || res.data;
-        setSubjects(Array.isArray(data) ? data : []);
+        const res = await API.get(`/subjects/class/${formData.classId}`);
+
+        console.log("SUBJECTS API RESPONSE:", res.data); // 🧪 DEBUG
+
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setSubjects(res.data.data);
+        } else if (Array.isArray(res.data)) {
+          setSubjects(res.data);
+        } else {
+          setSubjects([]);
+        }
       } catch (err) {
         console.error("Subject load error:", err.response?.data || err.message);
         setSubjects([]);
@@ -100,9 +117,7 @@ function UploadMaterial() {
       });
 
       await API.post("/materials", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       alert("✅ Material uploaded successfully");
@@ -154,6 +169,11 @@ function UploadMaterial() {
           className="border p-3 rounded-lg w-full"
         >
           <option value="">Select Class</option>
+
+          {classes.length === 0 && (
+            <option disabled>No classes found</option>
+          )}
+
           {classes.map((cls) => (
             <option key={cls._id} value={cls._id}>
               {cls.name}
@@ -171,6 +191,11 @@ function UploadMaterial() {
           className="border p-3 rounded-lg w-full"
         >
           <option value="">Select Subject</option>
+
+          {subjects.length === 0 && formData.classId && (
+            <option disabled>No subjects found</option>
+          )}
+
           {subjects.map((sub) => (
             <option key={sub._id} value={sub._id}>
               {sub.name}
