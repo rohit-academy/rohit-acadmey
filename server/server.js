@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();   // ⭐ SABSE PEHLE
+dotenv.config(); // ⭐ SABSE PEHLE
 
 import mongoose from "mongoose";
 import app from "./app.js";
@@ -7,8 +7,17 @@ import app from "./app.js";
 /* 🔹 MongoDB Connection */
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      dbName: "rohitacademy", // ✅ FIX: force correct DB
+    });
+
     console.log(`🟢 MongoDB Connected: ${conn.connection.host}`);
+    console.log(`📦 DB Name: ${conn.connection.name}`);
+
+    mongoose.connection.on("error", (err) => {
+      console.error("🔴 MongoDB runtime error:", err.message);
+    });
+
   } catch (error) {
     console.error("🔴 DB Connection Failed:", error.message);
     process.exit(1);
