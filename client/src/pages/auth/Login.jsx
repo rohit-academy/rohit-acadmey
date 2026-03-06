@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 function Login() {
   const navigate = useNavigate();
@@ -15,18 +17,18 @@ function Login() {
   const handleSendOtp = (e) => {
     e.preventDefault();
 
-    if (!/^[0-9]{10}$/.test(phone)) {
-      alert("Enter valid 10 digit phone number");
+    if (phone.length < 12) {
+      alert("Enter valid phone number");
       return;
     }
 
     setLoading(true);
 
     setTimeout(() => {
-      alert("OTP sent to " + phone);
+      alert("OTP sent to +" + phone);
       setOtpSent(true);
       setLoading(false);
-    }, 800); // fake delay
+    }, 800);
   };
 
   // ✅ Verify OTP
@@ -43,7 +45,7 @@ function Login() {
     setTimeout(() => {
       login({
         name: "Student",
-        phone: phone
+        phone: "+" + phone
       });
 
       alert("Login Successful ✅");
@@ -51,9 +53,8 @@ function Login() {
     }, 800);
   };
 
-  // 🔁 Resend OTP
   const handleResend = () => {
-    alert("OTP resent to " + phone);
+    alert("OTP resent to +" + phone);
   };
 
   return (
@@ -64,21 +65,18 @@ function Login() {
 
       {!otpSent ? (
         <form onSubmit={handleSendOtp} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Phone Number</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="Enter 10 digit number"
-              required
-              value={phone}
-              onChange={(e) =>
-                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-              }
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
+
+          <label className="block text-sm mb-1">Phone Number</label>
+
+          <PhoneInput
+            country={"in"}
+            value={phone}
+            onChange={(phone) => setPhone(phone)}
+            inputStyle={{
+              width: "100%",
+              height: "50px"
+            }}
+          />
 
           <button
             type="submit"
@@ -87,27 +85,28 @@ function Login() {
           >
             {loading ? "Sending OTP..." : "Send OTP"}
           </button>
+
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp} className="space-y-4">
+
           <p className="text-center text-gray-600">
-            OTP sent to <strong>{phone}</strong>
+            OTP sent to <strong>+{phone}</strong>
           </p>
 
-          <div>
-            <label className="block text-sm mb-1">Enter OTP</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              placeholder="4 digit OTP"
-              required
-              value={otp}
-              onChange={(e) =>
-                setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))
-              }
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center text-lg tracking-widest"
-            />
-          </div>
+          <label className="block text-sm mb-1">Enter OTP</label>
+
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="4 digit OTP"
+            required
+            value={otp}
+            onChange={(e) =>
+              setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))
+            }
+            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-center text-lg tracking-widest"
+          />
 
           <button
             type="submit"
@@ -118,6 +117,7 @@ function Login() {
           </button>
 
           <div className="flex justify-between text-sm mt-2">
+
             <button
               type="button"
               onClick={() => setOtpSent(false)}
@@ -133,7 +133,9 @@ function Login() {
             >
               Resend OTP
             </button>
+
           </div>
+
         </form>
       )}
     </div>
