@@ -5,6 +5,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 
 function Login() {
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -54,11 +55,12 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200">
+
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
 
       <div className="grid w-full max-w-5xl lg:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden">
 
-        {/* LEFT PANEL (Desktop only) */}
+        {/* LEFT PANEL (Desktop Only) */}
         <div className="hidden lg:flex flex-col justify-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-12">
 
           <h1 className="text-5xl font-bold mb-6">
@@ -84,22 +86,33 @@ function Login() {
 
         </div>
 
-        {/* LOGIN PANEL */}
-        <div className="flex items-center justify-center p-8 sm:p-12">
+        {/* RIGHT LOGIN PANEL */}
+        <div className="flex flex-col justify-center items-center p-8 sm:p-12">
+
+          {/* MOBILE HEADER */}
+          <div className="lg:hidden text-center mb-8">
+
+            <img
+              src="/logo.png"
+              alt="Rohit Academy"
+              className="w-16 h-16 mx-auto mb-3"
+            />
+
+            <h1 className="text-2xl font-bold">
+              Login in Rohit Academy
+            </h1>
+
+          </div>
 
           <div className="w-full max-w-md">
 
-            <h2 className="text-3xl font-bold text-center mb-8">
-              Login with OTP
+            <h2 className="text-2xl font-semibold text-center mb-6">
+              Please Enter your phone number
             </h2>
 
             {!otpSent ? (
 
               <form onSubmit={handleSendOtp} className="space-y-6">
-
-                <label className="block text-sm font-medium">
-                  Phone Number
-                </label>
 
                 <PhoneInput
                   country={"in"}
@@ -181,6 +194,7 @@ function Login() {
       </div>
 
     </div>
+
   );
 }
 
