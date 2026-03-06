@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 
 import ProtectedRoute from "../components/layout/ProtectedRoute";
-import AdminRoute from "../components/layout/AdminRoute"; // ✅ REQUIRED
+import AdminRoute from "../components/layout/AdminRoute";
 import UserLayout from "../components/layout/UserLayout";
 
 /* 🌍 USER PAGES */
@@ -43,6 +43,10 @@ function AppRoutes() {
   return (
     <Routes>
 
+      {/* 🔑 AUTH PAGES (NO LAYOUT) */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/admin-login" element={<AdminLogin />} />
+
       {/* 🌍 USER WEBSITE */}
       <Route element={<UserLayout />}>
         <Route path="/" element={<Home />} />
@@ -54,7 +58,6 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/success" element={<Success />} />
-        <Route path="/login" element={<Login />} />
 
         {/* 🔒 USER PROTECTED */}
         <Route
@@ -76,30 +79,21 @@ function AppRoutes() {
         />
       </Route>
 
-      {/* 🔐 ADMIN LOGIN (PUBLIC) */}
-      <Route path="/admin-login" element={<AdminLogin />} />
-
-      {/* 🛠 ADMIN PANEL (PROTECTED NESTED) */}
+      {/* 🛠 ADMIN PANEL */}
       <Route path="/admin" element={<AdminRoute />}>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
 
-          {/* Academics */}
           <Route path="academics" element={<ManageAcademics />} />
           <Route path="academics/classes" element={<ManageClasses />} />
           <Route path="academics/subjects" element={<ManageSubjects />} />
 
-          {/* Materials */}
           <Route path="materials" element={<ManageMaterials />} />
           <Route path="materials/upload" element={<UploadMaterial />} />
 
-          {/* Users */}
           <Route path="users" element={<ManageUsers />} />
-
-          {/* Orders */}
           <Route path="orders" element={<OrdersAdmin />} />
 
-          {/* Finance */}
           <Route path="coupons" element={<Coupons />} />
           <Route path="sales-report" element={<SalesReport />} />
         </Route>
