@@ -38,7 +38,7 @@ export const adminLogin = async (req, res) => {
       logger.info("Admin user created in database");
     }
 
-    /* 🎫 GENERATE TOKEN WITH USER ID */
+    /* 🎫 GENERATE TOKEN */
     const token = generateToken({
       id: admin._id,
       role: "admin",
@@ -253,6 +253,33 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server Error"
+    });
+
+  }
+};
+
+
+/* 📄 GET ALL MATERIALS */
+export const getAllMaterials = async (req, res) => {
+  try {
+
+    const materials = await Material.find()
+      .populate("classId", "name")
+      .populate("subjectId", "name")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: materials
+    });
+
+  } catch (error) {
+
+    logger.error(`Get materials error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch materials"
     });
 
   }
