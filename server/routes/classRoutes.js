@@ -7,7 +7,6 @@ import {
   deleteClass,
 } from "../controllers/classController.js";
 
-import { protect } from "../middleware/authMiddleware.js";
 import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
@@ -17,8 +16,8 @@ router.get("/", getClasses);
 router.get("/:id", getClassById);
 
 /* Admin */
-router.post("/", protect, adminOnly, addClass);
-router.put("/:id", protect, adminOnly, updateClass);
-router.delete("/:id", protect, adminOnly, deleteClass);
+router.post("/", adminOnly, addClass);
+router.put("/:id", adminOnly, updateClass);
+router.delete("/:id", adminOnly, deleteClass);
 
 export default router;
