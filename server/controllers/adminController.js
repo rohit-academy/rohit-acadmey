@@ -284,3 +284,30 @@ export const getAllMaterials = async (req, res) => {
 
   }
 };
+
+
+/* 📦 GET ALL ORDERS */
+export const getAllOrders = async (req, res) => {
+  try {
+
+    const orders = await Order.find()
+      .populate("user", "name phone")
+      .populate("materials", "title price")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: orders
+    });
+
+  } catch (error) {
+
+    logger.error(`Get orders error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders"
+    });
+
+  }
+};
