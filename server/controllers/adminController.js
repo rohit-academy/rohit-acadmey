@@ -10,6 +10,7 @@ import generateToken from "../utils/generateToken.js";
 /* 🔐 ADMIN LOGIN */
 export const adminLogin = async (req, res) => {
   try {
+
     const { username, password } = req.body;
 
     if (
@@ -22,7 +23,24 @@ export const adminLogin = async (req, res) => {
       });
     }
 
+    /* 🔎 CHECK ADMIN IN DB */
+    let admin = await User.findOne({ role: "admin" });
+
+    /* 🆕 CREATE ADMIN IF NOT EXISTS */
+    if (!admin) {
+      admin = await User.create({
+        name: "Admin",
+        phone: "0000000000",
+        role: "admin",
+        isBlocked: false,
+      });
+
+      logger.info("Admin user created in database");
+    }
+
+    /* 🎫 GENERATE TOKEN WITH USER ID */
     const token = generateToken({
+      id: admin._id,
       role: "admin",
       name: "Admin",
     });
@@ -35,18 +53,24 @@ export const adminLogin = async (req, res) => {
       role: "admin",
       name: "Admin",
     });
+
   } catch (error) {
+
     logger.error(`Admin login error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Admin login failed",
     });
+
   }
 };
+
 
 /* 📊 DASHBOARD STATS */
 export const getAdminStats = async (req, res) => {
   try {
+
     const [
       totalUsers,
       totalClasses,
@@ -89,14 +113,22 @@ export const getAdminStats = async (req, res) => {
     });
 
   } catch (error) {
+
     logger.error(`Admin stats error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
   }
 };
+
 
 /* 👥 GET ALL USERS */
 export const getAllUsers = async (req, res) => {
   try {
+
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Number(req.query.limit) || 20);
     const skip = (page - 1) * limit;
@@ -111,8 +143,6 @@ export const getAllUsers = async (req, res) => {
       User.countDocuments()
     ]);
 
-    logger.info("Admin fetched users list");
-
     res.json({
       success: true,
       data: users,
@@ -124,133 +154,106 @@ export const getAllUsers = async (req, res) => {
     });
 
   } catch (error) {
+
     logger.error(`Get users error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
   }
 };
+
 
 /* 🚫 BLOCK USER */
 export const blockUser = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id))
-      return res.status(400).json({ success: false, message: "Invalid user ID" });
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID"
+      });
+    }
 
     await User.findByIdAndUpdate(req.params.id, { isBlocked: true });
 
-    logger.warn(`User blocked: ${req.params.id}`);
-
-    res.json({ success: true, message: "User blocked" });
+    res.json({
+      success: true,
+      message: "User blocked"
+    });
 
   } catch (error) {
+
     logger.error(`Block user error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
   }
 };
+
 
 /* ✅ UNBLOCK USER */
 export const unblockUser = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id))
-      return res.status(400).json({ success: false, message: "Invalid user ID" });
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID"
+      });
+    }
 
     await User.findByIdAndUpdate(req.params.id, { isBlocked: false });
 
-    logger.warn(`User unblocked: ${req.params.id}`);
-
-    res.json({ success: true, message: "User unblocked" });
+    res.json({
+      success: true,
+      message: "User unblocked"
+    });
 
   } catch (error) {
+
     logger.error(`Unblock user error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+
   }
 };
+
 
 /* ❌ DELETE USER */
 export const deleteUser = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id))
-      return res.status(400).json({ success: false, message: "Invalid user ID" });
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID"
+      });
+    }
 
     await User.findByIdAndDelete(req.params.id);
 
-    logger.warn(`User deleted: ${req.params.id}`);
-
-    res.json({ success: true, message: "User removed" });
+    res.json({
+      success: true,
+      message: "User removed"
+    });
 
   } catch (error) {
+
     logger.error(`Delete user error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
 
-/* 📦 ALL ORDERS */
-export const getAllOrders = async (req, res) => {
-  try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.max(1, Number(req.query.limit) || 20);
-    const skip = (page - 1) * limit;
-
-    const [orders, total] = await Promise.all([
-      Order.find()
-        .populate("user", "name phone")
-        .populate("materials", "title price")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Order.countDocuments()
-    ]);
-
-    logger.info("Admin fetched orders list");
-
-    res.json({
-      success: true,
-      data: orders,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      }
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
     });
 
-  } catch (error) {
-    logger.error(`Get orders error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
-
-/* 📄 ALL MATERIALS */
-export const getAllMaterials = async (req, res) => {
-  try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.max(1, Number(req.query.limit) || 20);
-    const skip = (page - 1) * limit;
-
-    const [materials, total] = await Promise.all([
-      Material.find()
-        .populate("classId", "name")
-        .populate("subjectId", "name")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Material.countDocuments()
-    ]);
-
-    logger.info("Admin fetched materials list");
-
-    res.json({
-      success: true,
-      data: materials,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    logger.error(`Get materials error: ${error.message}`);
-    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
