@@ -26,13 +26,13 @@ const subjectSchema = new mongoose.Schema(
     },
 
     icon: {
-      type: String, // optional icon/image URL
+      type: String,
       default: ""
     },
 
     order: {
       type: Number,
-      default: 0   // display order
+      default: 0
     },
 
     isActive: {
@@ -40,7 +40,12 @@ const subjectSchema = new mongoose.Schema(
       default: true
     }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
+
+/* 🔎 Prevent duplicate subject in same class */
+subjectSchema.index({ name: 1, classId: 1, stream: 1 }, { unique: true });
 
 export default mongoose.model("Subject", subjectSchema);

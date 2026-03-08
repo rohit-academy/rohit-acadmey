@@ -4,7 +4,7 @@ import {
   getSubjects,
   getSubjectById,
   updateSubject,
-  deleteSubject,
+  deleteSubject
 } from "../controllers/subjectController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -12,13 +12,29 @@ import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-/* Public */
+/* ========================================
+   📄 PUBLIC ROUTES
+======================================== */
+
+/* Get all subjects */
 router.get("/", getSubjects);
+
+/* Get single subject */
 router.get("/:id", getSubjectById);
 
-/* Admin */
+
+/* ========================================
+   🔐 ADMIN ROUTES
+======================================== */
+
+/* Add subject */
 router.post("/", protect, adminOnly, addSubject);
+
+/* Update subject */
 router.put("/:id", protect, adminOnly, updateSubject);
+
+/* Delete subject */
 router.delete("/:id", protect, adminOnly, deleteSubject);
+
 
 export default router;
