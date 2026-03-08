@@ -1,48 +1,74 @@
-import React, { useState } from "react";
-import { Plus, Trash2, Edit2, BookOpen } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Plus, Trash2, BookOpen } from "lucide-react";
+import axios from "axios";
 
 function ManageSubjects() {
-  const [selectedClass, setSelectedClass] = useState("9");
 
-  const [subjectData, setSubjectData] = useState({
-    "9": ["Hindi", "English", "Science", "Maths"],
-    "10": ["Hindi", "English", "Science", "Maths"],
-    "11": ["Physics", "Chemistry", "Biology"],
-    "12": ["Physics", "Chemistry", "Biology"]
-  });
-
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [subjects, setSubjects] = useState([]);
   const [newSubject, setNewSubject] = useState("");
-  const [editingIndex, setEditingIndex] = useState(null);
 
-  const subjects = subjectData[selectedClass] || [];
+  const token = localStorage.getItem("token");
 
-  // ➕ Add Subject
-  const handleAddSubject = () => {
+  /* 📚 Load Classes */
+  const fetchClasses = async () => {
+    const res = await axios.get("/api/classes");
+    setClasses(res.data);
+    if (res.data.length) setSelectedClass(res.data[0]._id);
+  };
+
+  /* 📄 Load Subjects */
+  const fetchSubjects = async (classId) => {
+    const res = await axios.get(`/api/subjects?classId=${classId}`);
+    setSubjects(res.data);
+  };
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  useEffect(() => {
+    if (selectedClass) fetchSubjects(selectedClass);
+  }, [selectedClass]);
+
+  /* ➕ Add Subject */
+  const handleAddSubject = async () => {
+
     if (!newSubject.trim()) return;
 
-    setSubjectData({
-      ...subjectData,
-      [selectedClass]: [...subjects, newSubject]
-    });
+    await axios.post(
+      "/api/subjects",
+      {
+        name: newSubject,
+        classId: selectedClass
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
     setNewSubject("");
+    fetchSubjects(selectedClass);
   };
 
-  // 🗑 Delete Subject
-  const handleDelete = (index) => {
-    const updated = subjects.filter((_, i) => i !== index);
-    setSubjectData({ ...subjectData, [selectedClass]: updated });
-  };
+  /* ❌ Delete Subject */
+  const handleDelete = async (id) => {
 
-  // ✏ Save Edited Subject
-  const handleEditSave = (index, name) => {
-    const updated = subjects.map((sub, i) => (i === index ? name : sub));
-    setSubjectData({ ...subjectData, [selectedClass]: updated });
-    setEditingIndex(null);
+    await axios.delete(`/api/subjects/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    fetchSubjects(selectedClass);
   };
 
   return (
     <div className="p-6">
+
       <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
         <BookOpen className="text-blue-600" /> Manage Subjects
       </h1>
@@ -50,71 +76,69 @@ function ManageSubjects() {
       {/* Select Class */}
       <div className="mb-6">
         <label className="block mb-2 font-semibold">Select Class</label>
+
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          className="border p-3 rounded-lg"
         >
-          <option value="9">Class 9</option>
-          <option value="10">Class 10</option>
-          <option value="11">Class 11</option>
-          <option value="12">Class 12</option>
+
+          {classes.map((cls) => (
+            <option key={cls._id} value={cls._id}>
+              {cls.name}
+            </option>
+          ))}
+
         </select>
       </div>
 
       {/* Add Subject */}
       <div className="flex gap-3 mb-8">
+
         <input
           type="text"
           placeholder="Enter subject name"
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
-          className="border p-3 rounded-lg flex-1 focus:ring-2 focus:ring-blue-500 outline-none"
+          className="border p-3 rounded-lg flex-1"
         />
+
         <button
           onClick={handleAddSubject}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2"
         >
           <Plus size={18} /> Add
         </button>
+
       </div>
 
       {/* Subject List */}
       <div className="grid md:grid-cols-2 gap-6">
-        {subjects.map((subject, index) => (
+
+        {subjects.map((subject) => (
+
           <div
-            key={index}
+            key={subject._id}
             className="bg-white p-5 rounded-xl shadow flex justify-between items-center"
           >
-            {editingIndex === index ? (
-              <input
-                defaultValue={subject}
-                onBlur={(e) => handleEditSave(index, e.target.value)}
-                autoFocus
-                className="border p-2 rounded w-full mr-3"
-              />
-            ) : (
-              <span className="font-semibold text-lg">{subject}</span>
-            )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setEditingIndex(index)}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                <Edit2 size={18} />
-              </button>
+            <span className="font-semibold text-lg">
+              {subject.name}
+            </span>
 
-              <button
-                onClick={() => handleDelete(index)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
+            <button
+              onClick={() => handleDelete(subject._id)}
+              className="text-red-500"
+            >
+              <Trash2 size={18} />
+            </button>
+
           </div>
+
         ))}
+
       </div>
+
     </div>
   );
 }
