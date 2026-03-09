@@ -2,9 +2,19 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Lock } from "lucide-react";
 
-function ClassCard({ id, name }) {
-  const isStreamClass = id === "11" || id === "12";
-  const isComingSoon = id === "ba" || id === "bsc" || id === "bcom";
+function ClassCard({ cls }) {
+
+  const id = cls._id;        // 🔑 MongoDB ObjectId
+  const name = cls.name;     // Example: "Class 10"
+
+  const classNumber = name.replace("Class ", "");
+
+  const isStreamClass = classNumber === "11" || classNumber === "12";
+
+  const isComingSoon =
+    classNumber === "ba" ||
+    classNumber === "bsc" ||
+    classNumber === "bcom";
 
   const link = isStreamClass
     ? `/streams/${id}`
@@ -12,12 +22,14 @@ function ClassCard({ id, name }) {
 
   return (
     <Link
-      to={isComingSoon ? "#" : link}   // 🚫 disable navigation if coming soon
+      to={isComingSoon ? "#" : link}
       onClick={(e) => isComingSoon && e.preventDefault()}
       className={`relative bg-white p-6 rounded-xl shadow transition flex flex-col items-center gap-3 text-center group
-        ${isComingSoon 
-          ? "opacity-70 cursor-not-allowed" 
-          : "hover:shadow-lg hover:-translate-y-1"}`}
+        ${
+          isComingSoon
+            ? "opacity-70 cursor-not-allowed"
+            : "hover:shadow-lg hover:-translate-y-1"
+        }`}
     >
       {/* Icon */}
       <GraduationCap
@@ -38,7 +50,9 @@ function ClassCard({ id, name }) {
 
       {/* Stream hint */}
       {isStreamClass && !isComingSoon && (
-        <span className="text-xs text-blue-500">Choose Stream</span>
+        <span className="text-xs text-blue-500">
+          Choose Stream
+        </span>
       )}
 
       {/* Coming Soon Badge */}

@@ -6,8 +6,9 @@ function SubjectCard({ subject, streamId }) {
 
   const { classId } = useParams();
 
-  const subjectSlug = subject.name.toLowerCase().replace(/\s+/g, "-");
+  if (!subject) return null;
 
+  /* 🎨 Stream based theme */
   const streamTheme = {
     pcb: {
       icon: "text-green-600",
@@ -34,21 +35,26 @@ function SubjectCard({ subject, streamId }) {
 
   return (
     <Link
-      to={`/materials/${classId}/${subject._id}`}   // 👈 important fix
+      to={`/materials/${classId}/${subject._id}`}   // ✅ correct routing
       className={`group bg-white p-6 rounded-xl shadow hover:shadow-lg transition flex flex-col items-center gap-3 text-center border-t-4 border-transparent ${theme.border} ${theme.bg}`}
     >
+
+      {/* Icon */}
       <BookOpen
         className={`${theme.icon} group-hover:scale-110 transition`}
         size={28}
       />
 
+      {/* Subject Name */}
       <span className="font-semibold">
         {subject.name}
       </span>
 
+      {/* Tag */}
       <span className="text-xs text-gray-500 flex items-center gap-1">
         <Sparkles size={12} /> Study Materials
       </span>
+
     </Link>
   );
 }

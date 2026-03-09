@@ -14,7 +14,6 @@ function Subjects() {
 
   /* 🚧 Coming Soon Courses */
   if (comingSoonCourses.includes(classId)) {
-
     return (
       <div className="text-center py-24 max-w-3xl mx-auto">
 
@@ -32,7 +31,6 @@ function Subjects() {
 
       </div>
     );
-
   }
 
   /* 📦 LOAD SUBJECTS FROM DB */
@@ -52,10 +50,8 @@ function Subjects() {
 
         const res = await API.get(url);
 
-        const subjectList =
-          res.data?.data ||
-          res.data ||
-          [];
+        // ✅ API response structure fix
+        const subjectList = res.data?.data || [];
 
         setSubjects(subjectList);
 
@@ -73,7 +69,9 @@ function Subjects() {
 
     };
 
-    fetchSubjects();
+    if (classId) {
+      fetchSubjects();
+    }
 
   }, [classId, streamId]);
 
@@ -93,18 +91,17 @@ function Subjects() {
 
   /* ⏳ Loading */
   if (loading) {
-
     return (
       <div className="text-center py-24">
-        <p className="text-gray-600 text-lg">Loading subjects...</p>
+        <p className="text-gray-600 text-lg">
+          Loading subjects...
+        </p>
       </div>
     );
-
   }
 
   /* ❌ No Subjects */
   if (!subjects.length) {
-
     return (
       <div className="text-center py-24">
 
@@ -118,7 +115,6 @@ function Subjects() {
 
       </div>
     );
-
   }
 
 
@@ -130,17 +126,15 @@ function Subjects() {
       <div className="text-center mb-8">
 
         <h1 className="text-3xl md:text-4xl font-bold">
-          Class {classId} Subjects
+          Subjects
         </h1>
 
         {streamId && (
-
           <span
             className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-semibold ${streamBadgeStyle[streamId]}`}
           >
             {streamNameMap[streamId]}
           </span>
-
         )}
 
       </div>
