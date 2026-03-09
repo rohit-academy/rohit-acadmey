@@ -1,39 +1,23 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import SubjectCard from "../components/cards/SubjectCard";
+import API from "../services/api";
 
 function Subjects() {
+
   const { classId, streamId } = useParams();
+
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const comingSoonCourses = ["ba", "bsc", "bcom"];
 
-  const subjectData = {
-    "9": ["Hindi","English","Science","Social Science","Mathematics","Sanskrit","Home Science"],
-    "10": ["Hindi","English","Science","Social Science","Mathematics","Sanskrit","Home Science"],
-
-    "11": {
-      pcb: ["General Hindi","English","Physics","Chemistry","Biology"],
-      pcm: ["General Hindi","English","Physics","Chemistry","Mathematics"],
-      arts: [
-        "General Hindi","English","History","Geography","Political Science",
-        "Economics","Sociology","Civics","Education","Sanskrit","Home Science"
-      ]
-    },
-
-    "12": {
-      pcb: ["General Hindi","English","Physics","Chemistry","Biology"],
-      pcm: ["General Hindi","English","Physics","Chemistry","Mathematics"],
-      arts: [
-        "General Hindi","English","History","Geography","Political Science",
-        "Economics","Sociology","Civics","Education","Sanskrit","Home Science"
-      ]
-    }
-  };
-
-  // 🚧 College Coming Soon
+  /* 🚧 Coming Soon Courses */
   if (comingSoonCourses.includes(classId)) {
+
     return (
       <div className="text-center py-24 max-w-3xl mx-auto">
+
         <h1 className="text-4xl font-bold mb-4 uppercase">
           {classId} Study Materials
         </h1>
@@ -45,27 +29,54 @@ function Subjects() {
         <div className="bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full inline-block font-semibold shadow">
           🚧 Coming Soon
         </div>
+
       </div>
     );
+
   }
 
-  let subjects = [];
+  /* 📦 LOAD SUBJECTS FROM DB */
+  useEffect(() => {
 
-  if (streamId && subjectData[classId]?.[streamId]) {
-    subjects = subjectData[classId][streamId];
-  } else if (!streamId && Array.isArray(subjectData[classId])) {
-    subjects = subjectData[classId];
-  }
+    const fetchSubjects = async () => {
 
-  // ❗ Safety
-  if (subjects.length === 0) {
-    return (
-      <div className="text-center py-24">
-        <h1 className="text-3xl font-bold mb-4">Subjects Not Available</h1>
-        <p className="text-gray-600">Content for this category is under preparation.</p>
-      </div>
-    );
-  }
+      try {
+
+        setLoading(true);
+
+        let url = `/subjects?classId=${classId}`;
+
+        if (streamId) {
+          url += `&stream=${streamId.toUpperCase()}`;
+        }
+
+        const res = await API.get(url);
+
+        const subjectList =
+          res.data?.data ||
+          res.data ||
+          [];
+
+        setSubjects(subjectList);
+
+      } catch (error) {
+
+        console.error("Subjects fetch error:", error);
+
+        setSubjects([]);
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    fetchSubjects();
+
+  }, [classId, streamId]);
+
 
   const streamNameMap = {
     pcb: "PCB (Biology)",
@@ -79,30 +90,81 @@ function Subjects() {
     arts: "bg-pink-100 text-pink-700"
   };
 
+
+  /* ⏳ Loading */
+  if (loading) {
+
+    return (
+      <div className="text-center py-24">
+        <p className="text-gray-600 text-lg">Loading subjects...</p>
+      </div>
+    );
+
+  }
+
+  /* ❌ No Subjects */
+  if (!subjects.length) {
+
+    return (
+      <div className="text-center py-24">
+
+        <h1 className="text-3xl font-bold mb-4">
+          Subjects Not Available
+        </h1>
+
+        <p className="text-gray-600">
+          Content for this class is under preparation.
+        </p>
+
+      </div>
+    );
+
+  }
+
+
   return (
+
     <div className="max-w-6xl mx-auto">
 
-      {/* Page Header */}
+      {/* HEADER */}
       <div className="text-center mb-8">
+
         <h1 className="text-3xl md:text-4xl font-bold">
           Class {classId} Subjects
         </h1>
 
         {streamId && (
-          <span className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-semibold ${streamBadgeStyle[streamId]}`}>
+
+          <span
+            className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-semibold ${streamBadgeStyle[streamId]}`}
+          >
             {streamNameMap[streamId]}
           </span>
+
         )}
+
       </div>
 
-      {/* Subject Grid */}
+
+      {/* SUBJECT GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
         {subjects.map((subject) => (
-          <SubjectCard key={subject} subject={subject} streamId={streamId} />
+
+          <SubjectCard
+            key={subject._id}
+            subject={subject}
+            streamId={streamId}
+          />
+
         ))}
+
       </div>
+
     </div>
+
   );
+
 }
 
 export default Subjects;

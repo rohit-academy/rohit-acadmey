@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, BookOpen } from "lucide-react";
-import axios from "axios";
+import API from "../../services/api";
 
 function ManageSubjects() {
 
@@ -9,19 +9,38 @@ function ManageSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [newSubject, setNewSubject] = useState("");
 
-  const token = localStorage.getItem("token");
-
   /* 📚 Load Classes */
   const fetchClasses = async () => {
-    const res = await axios.get("/api/classes");
-    setClasses(res.data);
-    if (res.data.length) setSelectedClass(res.data[0]._id);
+    try {
+
+      const res = await API.get("/classes");
+
+      const classList = res.data?.data || res.data || [];
+
+      setClasses(classList);
+
+      if (classList.length > 0) {
+        setSelectedClass(classList[0]._id);
+      }
+
+    } catch (error) {
+      console.error("Fetch classes error:", error);
+    }
   };
 
   /* 📄 Load Subjects */
   const fetchSubjects = async (classId) => {
-    const res = await axios.get(`/api/subjects?classId=${classId}`);
-    setSubjects(res.data);
+    try {
+
+      const res = await API.get(`/subjects?classId=${classId}`);
+
+      const subjectList = res.data?.data || res.data || [];
+
+      setSubjects(subjectList);
+
+    } catch (error) {
+      console.error("Fetch subjects error:", error);
+    }
   };
 
   useEffect(() => {
@@ -29,7 +48,9 @@ function ManageSubjects() {
   }, []);
 
   useEffect(() => {
-    if (selectedClass) fetchSubjects(selectedClass);
+    if (selectedClass) {
+      fetchSubjects(selectedClass);
+    }
   }, [selectedClass]);
 
   /* ➕ Add Subject */
@@ -37,33 +58,44 @@ function ManageSubjects() {
 
     if (!newSubject.trim()) return;
 
-    await axios.post(
-      "/api/subjects",
-      {
+    try {
+
+      await API.post("/subjects", {
         name: newSubject,
         classId: selectedClass
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+      });
 
-    setNewSubject("");
-    fetchSubjects(selectedClass);
+      setNewSubject("");
+
+      fetchSubjects(selectedClass);
+
+    } catch (error) {
+
+      console.error("Add subject error:", error);
+
+      alert(error.response?.data?.message || "Failed to add subject");
+
+    }
+
   };
 
   /* ❌ Delete Subject */
   const handleDelete = async (id) => {
 
-    await axios.delete(`/api/subjects/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    try {
 
-    fetchSubjects(selectedClass);
+      await API.delete(`/subjects/${id}`);
+
+      fetchSubjects(selectedClass);
+
+    } catch (error) {
+
+      console.error("Delete subject error:", error);
+
+      alert("Failed to delete subject");
+
+    }
+
   };
 
   return (
@@ -75,12 +107,15 @@ function ManageSubjects() {
 
       {/* Select Class */}
       <div className="mb-6">
-        <label className="block mb-2 font-semibold">Select Class</label>
+
+        <label className="block mb-2 font-semibold">
+          Select Class
+        </label>
 
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="border p-3 rounded-lg"
+          className="border p-3 rounded-lg w-full max-w-xs"
         >
 
           {classes.map((cls) => (
@@ -90,10 +125,11 @@ function ManageSubjects() {
           ))}
 
         </select>
+
       </div>
 
       {/* Add Subject */}
-      <div className="flex gap-3 mb-8">
+      <div className="flex gap-3 mb-8 max-w-xl">
 
         <input
           type="text"
@@ -105,7 +141,7 @@ function ManageSubjects() {
 
         <button
           onClick={handleAddSubject}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2"
+          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
         >
           <Plus size={18} /> Add
         </button>
@@ -113,7 +149,11 @@ function ManageSubjects() {
       </div>
 
       {/* Subject List */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {subjects.length === 0 && (
+          <p className="text-gray-500">No subjects found</p>
+        )}
 
         {subjects.map((subject) => (
 
@@ -128,7 +168,7 @@ function ManageSubjects() {
 
             <button
               onClick={() => handleDelete(subject._id)}
-              className="text-red-500"
+              className="text-red-500 hover:text-red-700"
             >
               <Trash2 size={18} />
             </button>
