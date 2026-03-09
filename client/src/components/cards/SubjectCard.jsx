@@ -1,11 +1,13 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { BookOpen, Sparkles } from "lucide-react";
 
 function SubjectCard({ subject, streamId }) {
-  const subjectSlug = subject.toLowerCase().replace(/\s+/g, "-");
 
-  // 🎨 Stream-based theme
+  const { classId } = useParams();
+
+  const subjectSlug = subject.name.toLowerCase().replace(/\s+/g, "-");
+
   const streamTheme = {
     pcb: {
       icon: "text-green-600",
@@ -32,14 +34,18 @@ function SubjectCard({ subject, streamId }) {
 
   return (
     <Link
-      to={`/materials/${subjectSlug}`}
+      to={`/materials/${classId}/${subject._id}`}   // 👈 important fix
       className={`group bg-white p-6 rounded-xl shadow hover:shadow-lg transition flex flex-col items-center gap-3 text-center border-t-4 border-transparent ${theme.border} ${theme.bg}`}
     >
-      <BookOpen className={`${theme.icon} group-hover:scale-110 transition`} size={28} />
+      <BookOpen
+        className={`${theme.icon} group-hover:scale-110 transition`}
+        size={28}
+      />
 
-      <span className="font-semibold">{subject}</span>
+      <span className="font-semibold">
+        {subject.name}
+      </span>
 
-      {/* Small tag */}
       <span className="text-xs text-gray-500 flex items-center gap-1">
         <Sparkles size={12} /> Study Materials
       </span>
