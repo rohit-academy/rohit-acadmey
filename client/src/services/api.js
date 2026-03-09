@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://rohit-acadmey.onrender.com/api", // 🔥 Render backend
+  baseURL: "https://rohit-academy.onrender.com/api", // ✅ correct URL
 });
 
 /* 🔐 Attach USER or ADMIN token automatically */
