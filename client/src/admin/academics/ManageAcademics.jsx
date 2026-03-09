@@ -4,12 +4,40 @@ import API from "../../services/api";
 
 function ManageAcademics() {
 
+  const [classes, setClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
 
-  const fetchSubjects = async () => {
+  /* 📚 LOAD CLASSES */
+  const fetchClasses = async () => {
     try {
 
-      const res = await API.get("/subjects");
+      const res = await API.get("/classes");
+
+      const list = res.data?.data || res.data || [];
+
+      setClasses(list);
+
+      if (list.length) {
+        setSelectedClass(list[0]._id);
+      }
+
+    } catch (error) {
+
+      console.error("Class fetch error:", error);
+
+    }
+  };
+
+
+  /* 📚 LOAD SUBJECTS */
+  const fetchSubjects = async (classId) => {
+
+    if (!classId) return;
+
+    try {
+
+      const res = await API.get(`/subjects?classId=${classId}`);
 
       const list = res.data?.data || res.data || [];
 
@@ -20,13 +48,23 @@ function ManageAcademics() {
       console.error("Subject fetch error:", error);
 
     }
+
   };
 
+
   useEffect(() => {
-    fetchSubjects();
+    fetchClasses();
   }, []);
 
 
+  useEffect(() => {
+    if (selectedClass) {
+      fetchSubjects(selectedClass);
+    }
+  }, [selectedClass]);
+
+
+  /* ➕ ADD SUBJECT */
   const addSubject = async () => {
 
     const name = prompt("Enter subject name");
@@ -37,10 +75,10 @@ function ManageAcademics() {
 
       await API.post("/subjects", {
         name,
-        classId: null
+        classId: selectedClass
       });
 
-      fetchSubjects();
+      fetchSubjects(selectedClass);
 
     } catch (error) {
 
@@ -51,13 +89,14 @@ function ManageAcademics() {
   };
 
 
+  /* ❌ DELETE SUBJECT */
   const deleteSubject = async (id) => {
 
     try {
 
       await API.delete(`/subjects/${id}`);
 
-      fetchSubjects();
+      fetchSubjects(selectedClass);
 
     } catch (error) {
 
@@ -76,6 +115,31 @@ function ManageAcademics() {
         Manage Subjects
       </h1>
 
+
+      {/* SELECT CLASS */}
+      <div className="mb-6">
+
+        <label className="block mb-2 font-semibold">
+          Select Class
+        </label>
+
+        <select
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+          className="border p-3 rounded-lg"
+        >
+
+          {classes.map((cls) => (
+            <option key={cls._id} value={cls._id}>
+              {cls.name}
+            </option>
+          ))}
+
+        </select>
+
+      </div>
+
+
       <div className="bg-white p-5 rounded-xl shadow">
 
         <div className="flex justify-between mb-4">
@@ -92,6 +156,7 @@ function ManageAcademics() {
           </button>
 
         </div>
+
 
         <ul className="space-y-2">
 
