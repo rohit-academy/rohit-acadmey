@@ -1,52 +1,85 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ClassCard from "../components/cards/ClassCard";
-
-const classes = [
-  { id: "9", name: "Class 9" },
-  { id: "10", name: "Class 10" },
-  { id: "11", name: "Class 11" },
-  { id: "12", name: "Class 12" },
-  { id: "ba", name: "BA" },
-  { id: "bsc", name: "BSc" },
-  { id: "bcom", name: "BCom" }
-];
+import API from "../services/api";
+import Loader from "../components/ui/Loader";
 
 function Classes() {
+
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+
+    const fetchClasses = async () => {
+
+      try {
+
+        const res = await API.get("/classes");
+
+        const list =
+          res.data?.data ||
+          res.data ||
+          [];
+
+        setClasses(list);
+
+      } catch (error) {
+
+        console.error("Classes fetch error:", error);
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    fetchClasses();
+
+  }, []);
+
+  if (loading) return <Loader />;
+
   return (
+
     <div>
+
       <h1 className="text-3xl font-bold text-center mb-8">
         Choose Your Class
       </h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
         {classes.map((cls) => {
+
           let route = "";
 
-          // 🎓 Class 11 & 12 → Streams page
-          if (cls.id === "11" || cls.id === "12") {
-            route = `/streams/${cls.id}`;
-          }
-          // 🎓 BA / BSc / BCom → Coming Soon subjects page
-          else if (["ba", "bsc", "bcom"].includes(cls.id)) {
-            route = `/subjects/${cls.id}`;
-          }
-          // 📘 Class 9 & 10 → Direct subjects
-          else {
-            route = `/subjects/${cls.id}`;
+          const className = cls.name.replace("Class ", "");
+
+          if (className === "11" || className === "12") {
+            route = `/streams/${cls._id}`;
+          } else {
+            route = `/subjects/${cls._id}`;
           }
 
           return (
             <ClassCard
-              key={cls.id}
-              id={cls.id}
+              key={cls._id}
+              id={cls._id}
               name={cls.name}
               route={route}
             />
           );
+
         })}
+
       </div>
+
     </div>
+
   );
+
 }
 
 export default Classes;
