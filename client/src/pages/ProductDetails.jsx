@@ -87,19 +87,27 @@ function ProductDetails() {
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
 
-      {/* LEFT */}
+      {/* LEFT SIDE - PDF PREVIEW */}
       <div className="bg-white p-6 rounded-xl shadow">
-        <ProductPreview title={product.title} />
+
+        <ProductPreview
+          fileUrl={product.fileUrl}
+          title={product.title}
+        />
+
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT SIDE */}
       <div className="bg-white p-8 rounded-xl shadow">
 
         <h1 className="text-3xl font-bold mb-1">
           {product.title}
         </h1>
 
-        <RatingStars rating={product.rating || 4.5} reviews={product.reviews || 0} />
+        <RatingStars
+          rating={product.rating || 4.5}
+          reviews={product.reviews || 0}
+        />
 
         <p className="text-gray-600 my-4 leading-relaxed">
           {product.description}
@@ -127,7 +135,9 @@ function ProductDetails() {
         {/* PRICE */}
         <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6">
 
-          <p className="text-sm text-gray-500">Price</p>
+          <p className="text-sm text-gray-500">
+            Price
+          </p>
 
           <p className="text-3xl font-bold text-blue-600">
             ₹{product.price}
@@ -135,7 +145,7 @@ function ProductDetails() {
 
         </div>
 
-        {/* ACTIONS */}
+        {/* ACTION BUTTONS */}
         <div className="flex flex-col sm:flex-row gap-4">
 
           <button
