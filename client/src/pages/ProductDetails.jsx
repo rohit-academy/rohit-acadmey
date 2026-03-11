@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ShoppingCart, Download, ArrowLeft, ShieldCheck } from "lucide-react";
 import Loader from "../components/ui/Loader";
 import ProductPreview from "../components/product/ProductPreview";
@@ -76,12 +76,16 @@ function ProductDetails() {
   const handleAddToCart = () => {
 
     setAdding(true);
-
     addToCart(product);
 
     setTimeout(() => navigate("/cart"), 300);
 
   };
+
+  /* 🔥 Cloudinary inline view */
+  const viewPdfUrl = product.fileUrl
+    ? product.fileUrl.replace("/upload/", "/upload/fl_inline/")
+    : "";
 
   return (
 
@@ -158,7 +162,7 @@ function ProductDetails() {
           </button>
 
           <a
-            href={product.fileUrl}
+            href={viewPdfUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-blue-600 text-white text-center py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-semibold"
