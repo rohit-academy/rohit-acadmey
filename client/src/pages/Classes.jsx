@@ -11,7 +11,6 @@ function Classes() {
   useEffect(() => {
 
     const fetchClasses = async () => {
-
       try {
 
         const res = await API.get("/classes");
@@ -34,7 +33,6 @@ function Classes() {
         setLoading(false);
 
       }
-
     };
 
     fetchClasses();
@@ -44,7 +42,6 @@ function Classes() {
   if (loading) return <Loader />;
 
   return (
-
     <div className="max-w-6xl mx-auto">
 
       <h1 className="text-3xl font-bold text-center mb-8">
@@ -53,9 +50,10 @@ function Classes() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 
-        {classes
-          .filter((cls) => cls && cls._id)   // 🔥 crash fix
-          .map((cls) => {
+        {classes?.length > 0 &&
+          classes.map((cls) => {
+
+            if (!cls || !cls._id) return null; // 🔥 crash fix
 
             const className = cls?.name?.replace("Class ", "") || "";
 
@@ -75,15 +73,12 @@ function Classes() {
                 route={route}
               />
             );
-
           })}
 
       </div>
 
     </div>
-
   );
-
 }
 
 export default Classes;
