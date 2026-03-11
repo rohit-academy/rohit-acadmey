@@ -13,14 +13,11 @@ function StudyMaterials() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
 
-  /* 📦 LOAD MATERIALS FROM API */
   useEffect(() => {
 
     const fetchMaterials = async () => {
 
       try {
-
-        setLoading(true);
 
         const res = await API.get(
           `/materials?classId=${classId}&subjectId=${subjectId}`
@@ -36,7 +33,6 @@ function StudyMaterials() {
       } catch (error) {
 
         console.error("Materials fetch error:", error);
-
         setMaterials([]);
 
       } finally {
@@ -47,9 +43,7 @@ function StudyMaterials() {
 
     };
 
-    if (classId && subjectId) {
-      fetchMaterials();
-    }
+    if (classId && subjectId) fetchMaterials();
 
   }, [classId, subjectId]);
 
@@ -63,9 +57,9 @@ function StudyMaterials() {
   if (loading) return <Loader />;
 
   return (
+
     <div className="max-w-6xl mx-auto">
 
-      {/* Page Header */}
       <div className="text-center mb-8">
 
         <h1 className="text-3xl md:text-4xl font-bold">
@@ -78,14 +72,12 @@ function StudyMaterials() {
 
       </div>
 
-      {/* Filters */}
       <FilterBar
         filters={filters}
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
       />
 
-      {/* Content */}
       {filteredMaterials.length === 0 ? (
 
         <div className="text-center py-16">
@@ -118,6 +110,7 @@ function StudyMaterials() {
       )}
 
     </div>
+
   );
 
 }
