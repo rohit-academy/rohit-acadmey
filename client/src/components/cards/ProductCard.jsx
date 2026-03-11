@@ -2,13 +2,23 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FileText, Star, Download } from "lucide-react";
 
-function ProductCard({ _id, title, type, pages, price, rating = 4.5 }) {
+function ProductCard({
+  _id,
+  title = "Untitled Material",
+  type = "Notes",
+  pages = 0,
+  price = 0,
+  rating = 4.5
+}) {
+
+  /* safety check */
+  if (!_id) return null;
 
   return (
 
     <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-5 flex flex-col justify-between border border-gray-100">
 
-      {/* TOP */}
+      {/* TOP SECTION */}
       <div>
 
         <div className="flex items-center justify-between mb-2">
@@ -22,7 +32,7 @@ function ProductCard({ _id, title, type, pages, price, rating = 4.5 }) {
 
         </div>
 
-        <h2 className="font-semibold text-lg leading-tight">
+        <h2 className="font-semibold text-lg leading-tight line-clamp-2">
           {title}
         </h2>
 
@@ -44,7 +54,7 @@ function ProductCard({ _id, title, type, pages, price, rating = 4.5 }) {
 
       </div>
 
-      {/* BOTTOM */}
+      {/* BOTTOM CTA */}
       <div className="mt-5">
 
         <p className="text-2xl font-bold text-blue-600 mb-3">
@@ -55,7 +65,8 @@ function ProductCard({ _id, title, type, pages, price, rating = 4.5 }) {
           to={`/product/${_id}`}
           className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-medium"
         >
-          <Download size={16} /> View Details
+          <Download size={16} />
+          View Details
         </Link>
 
       </div>
