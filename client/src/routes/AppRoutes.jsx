@@ -43,23 +43,41 @@ function AppRoutes() {
   return (
     <Routes>
 
-      {/* 🔑 AUTH PAGES (NO LAYOUT) */}
+      {/* 🔑 AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* 🌍 USER WEBSITE */}
       <Route element={<UserLayout />}>
+
         <Route path="/" element={<Home />} />
+
+        {/* Classes */}
         <Route path="/classes" element={<Classes />} />
+
+        {/* Streams (11/12) */}
         <Route path="/streams/:classId" element={<Streams />} />
+
+        {/* Subjects */}
         <Route path="/subjects/:classId" element={<Subjects />} />
         <Route path="/subjects/:classId/:streamId" element={<Subjects />} />
-        <Route path="/materials/:subjectId" element={<StudyMaterials />} />
+
+        {/* ✅ FIXED MATERIAL ROUTE */}
+        <Route
+          path="/materials/:classId/:subjectId"
+          element={<StudyMaterials />}
+        />
+
+        {/* Product Page */}
         <Route path="/product/:id" element={<ProductDetails />} />
+
+        {/* Cart */}
         <Route path="/cart" element={<Cart />} />
+
+        {/* Success */}
         <Route path="/success" element={<Success />} />
 
-        {/* 🔒 USER PROTECTED */}
+        {/* 🔒 Protected */}
         <Route
           path="/downloads"
           element={
@@ -77,11 +95,13 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
       </Route>
 
       {/* 🛠 ADMIN PANEL */}
       <Route path="/admin" element={<AdminRoute />}>
         <Route element={<AdminLayout />}>
+
           <Route index element={<AdminDashboard />} />
 
           <Route path="academics" element={<ManageAcademics />} />
@@ -96,6 +116,7 @@ function AppRoutes() {
 
           <Route path="coupons" element={<Coupons />} />
           <Route path="sales-report" element={<SalesReport />} />
+
         </Route>
       </Route>
 
