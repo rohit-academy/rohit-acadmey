@@ -17,15 +17,20 @@ function Classes() {
         const res = await API.get("/classes");
 
         const list =
-          res.data?.data ||
-          res.data ||
+          res?.data?.data ||
+          res?.data ||
           [];
 
-        setClasses(list);
+        if (Array.isArray(list)) {
+          setClasses(list);
+        } else {
+          setClasses([]);
+        }
 
       } catch (error) {
 
         console.error("Classes fetch error:", error);
+        setClasses([]);
 
       } finally {
 
@@ -43,38 +48,50 @@ function Classes() {
 
   return (
 
-    <div>
+    <div className="max-w-6xl mx-auto">
 
       <h1 className="text-3xl font-bold text-center mb-8">
         Choose Your Class
       </h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      {classes.length === 0 ? (
 
-        {classes.map((cls) => {
+        <div className="text-center py-20 text-gray-500">
+          Classes not available
+        </div>
 
-          let route = "";
+      ) : (
 
-          const className = cls.name.replace("Class ", "");
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 
-          if (className === "11" || className === "12") {
-            route = `/streams/${cls._id}`;
-          } else {
-            route = `/subjects/${cls._id}`;
-          }
+          {classes.map((cls) => {
 
-          return (
-            <ClassCard
-              key={cls._id}
-              id={cls._id}
-              name={cls.name}
-              route={route}
-            />
-          );
+            if (!cls) return null;
 
-        })}
+            const className = cls?.name?.replace("Class ", "") || "";
 
-      </div>
+            let route = "";
+
+            if (className === "11" || className === "12") {
+              route = `/streams/${cls._id}`;
+            } else {
+              route = `/subjects/${cls._id}`;
+            }
+
+            return (
+              <ClassCard
+                key={cls._id}
+                id={cls._id}
+                name={cls?.name}
+                route={route}
+              />
+            );
+
+          })}
+
+        </div>
+
+      )}
 
     </div>
 
