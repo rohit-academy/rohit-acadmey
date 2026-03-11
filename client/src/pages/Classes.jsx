@@ -16,10 +16,7 @@ function Classes() {
 
         const res = await API.get("/classes");
 
-        const list =
-          res?.data?.data ||
-          res?.data ||
-          [];
+        const list = res?.data?.data || res?.data || [];
 
         if (Array.isArray(list)) {
           setClasses(list);
@@ -54,19 +51,11 @@ function Classes() {
         Choose Your Class
       </h1>
 
-      {classes.length === 0 ? (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 
-        <div className="text-center py-20 text-gray-500">
-          Classes not available
-        </div>
-
-      ) : (
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-
-          {classes.map((cls) => {
-
-            if (!cls) return null;
+        {classes
+          .filter((cls) => cls && cls._id)   // 🔥 crash fix
+          .map((cls) => {
 
             const className = cls?.name?.replace("Class ", "") || "";
 
@@ -82,16 +71,14 @@ function Classes() {
               <ClassCard
                 key={cls._id}
                 id={cls._id}
-                name={cls?.name}
+                name={cls.name}
                 route={route}
               />
             );
 
           })}
 
-        </div>
-
-      )}
+      </div>
 
     </div>
 
