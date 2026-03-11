@@ -82,11 +82,6 @@ function ProductDetails() {
 
   };
 
-  /* 🔥 Cloudinary inline view */
-  const viewPdfUrl = product.fileUrl
-    ? product.fileUrl.replace("/upload/", "/upload/fl_inline/")
-    : "";
-
   return (
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
@@ -161,8 +156,9 @@ function ProductDetails() {
             {adding ? "Adding..." : "Add to Cart"}
           </button>
 
+          {/* VIEW PDF */}
           <a
-            href={viewPdfUrl}
+            href={product.fileUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-blue-600 text-white text-center py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-semibold"
