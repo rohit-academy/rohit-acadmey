@@ -8,10 +8,12 @@ import streamifier from "streamifier";
 /* ☁️ Upload buffer → Cloudinary */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
+
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "materials",
-        resource_type: "raw",
+        resource_type: "auto", // 🔥 FIX (important)
+        format: "pdf"
       },
       (error, result) => {
         if (error) reject(error);
@@ -20,13 +22,23 @@ const uploadPDFToCloudinary = (buffer) =>
     );
 
     streamifier.createReadStream(buffer).pipe(stream);
+
   });
 
 /* ➕ ADD MATERIAL */
 export const addMaterial = async (req, res, next) => {
+
   try {
-    const { title, classId, subjectId, price, description, type, pages } =
-      req.body;
+
+    const {
+      title,
+      classId,
+      subjectId,
+      price,
+      description,
+      type,
+      pages
+    } = req.body;
 
     if (!title || !classId || !subjectId || !price || !type) {
       const err = new Error("Required fields missing");
@@ -40,6 +52,20 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
+    /* Validate file type */
+    if (!req.file.mimetype.includes("pdf")) {
+      const err = new Error("Only PDF files allowed");
+      err.statusCode = 400;
+      return next(err);
+    }
+
+    /* Validate size (10MB) */
+    if (req.file.size > 10 * 1024 * 1024) {
+      const err = new Error("File size must be under 10MB");
+      err.statusCode = 400;
+      return next(err);
+    }
+
     const classExists = await Class.findById(classId);
     const subjectExists = await Subject.findById(subjectId);
 
@@ -49,10 +75,11 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    /* ☁️ Upload PDF */
+    /* Upload PDF */
     const result = await uploadPDFToCloudinary(req.file.buffer);
 
     const material = await Material.create({
+
       title: title.trim(),
       description: description?.trim() || "",
       classId,
@@ -60,8 +87,10 @@ export const addMaterial = async (req, res, next) => {
       type,
       pages: pages || 0,
       price,
+
       fileUrl: result.secure_url,
-      cloudinaryId: result.public_id,
+      cloudinaryId: result.public_id
+
     });
 
     logger.info(`Material added: ${material.title}`);
@@ -69,17 +98,21 @@ export const addMaterial = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Material added successfully",
-      data: material,
+      data: material
     });
 
   } catch (error) {
+
     logger.error(`Add material error: ${error.message}`);
     next(error);
+
   }
+
 };
 
-/* 📄 GET MATERIALS (Filter + Pagination) */
+/* 📄 GET MATERIALS */
 export const getMaterials = async (req, res, next) => {
+
   try {
 
     const {
@@ -91,9 +124,7 @@ export const getMaterials = async (req, res, next) => {
       search = ""
     } = req.query;
 
-    const filter = {
-      isActive: true
-    };
+    const filter = { isActive: true };
 
     if (classId) filter.classId = classId;
     if (subjectId) filter.subjectId = subjectId;
@@ -106,11 +137,13 @@ export const getMaterials = async (req, res, next) => {
       };
     }
 
+    const skip = (Number(page) - 1) * Number(limit);
+
     const materials = await Material.find(filter)
       .populate("classId", "name")
       .populate("subjectId", "name")
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .skip(skip)
       .limit(Number(limit));
 
     const total = await Material.countDocuments(filter);
@@ -124,13 +157,17 @@ export const getMaterials = async (req, res, next) => {
     });
 
   } catch (error) {
+
     logger.error(`Get materials error: ${error.message}`);
     next(error);
+
   }
+
 };
 
 /* 🔍 GET MATERIAL BY ID */
 export const getMaterialById = async (req, res, next) => {
+
   try {
 
     const material = await Material.findById(req.params.id)
@@ -149,13 +186,17 @@ export const getMaterialById = async (req, res, next) => {
     });
 
   } catch (error) {
+
     logger.error(`Get material error: ${error.message}`);
     next(error);
+
   }
+
 };
 
 /* ✏ UPDATE MATERIAL */
 export const updateMaterial = async (req, res, next) => {
+
   try {
 
     const material = await Material.findById(req.params.id);
@@ -174,19 +215,17 @@ export const updateMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    /* 🔁 Replace PDF */
     if (req.file) {
 
       if (material.cloudinaryId) {
-        await cloudinary.uploader.destroy(material.cloudinaryId, {
-          resource_type: "raw"
-        });
+        await cloudinary.uploader.destroy(material.cloudinaryId);
       }
 
       const result = await uploadPDFToCloudinary(req.file.buffer);
 
       material.fileUrl = result.secure_url;
       material.cloudinaryId = result.public_id;
+
     }
 
     material.title = updates.title?.trim() || material.title;
@@ -208,13 +247,17 @@ export const updateMaterial = async (req, res, next) => {
     });
 
   } catch (error) {
+
     logger.error(`Update material error: ${error.message}`);
     next(error);
+
   }
+
 };
 
 /* ❌ DELETE MATERIAL */
 export const deleteMaterial = async (req, res, next) => {
+
   try {
 
     const material = await Material.findById(req.params.id);
@@ -226,9 +269,7 @@ export const deleteMaterial = async (req, res, next) => {
     }
 
     if (material.cloudinaryId) {
-      await cloudinary.uploader.destroy(material.cloudinaryId, {
-        resource_type: "raw"
-      });
+      await cloudinary.uploader.destroy(material.cloudinaryId);
     }
 
     await material.deleteOne();
@@ -241,7 +282,10 @@ export const deleteMaterial = async (req, res, next) => {
     });
 
   } catch (error) {
+
     logger.error(`Delete material error: ${error.message}`);
     next(error);
+
   }
+
 };
