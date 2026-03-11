@@ -76,6 +76,7 @@ function ProductDetails() {
   const handleAddToCart = () => {
 
     setAdding(true);
+
     addToCart(product);
 
     setTimeout(() => navigate("/cart"), 300);
@@ -90,7 +91,7 @@ function ProductDetails() {
       <div className="bg-white p-6 rounded-xl shadow">
 
         <ProductPreview
-          fileUrl={product.fileUrl}
+          previews={product.previewImages}
           title={product.title}
         />
 
@@ -144,7 +145,7 @@ function ProductDetails() {
 
         </div>
 
-        {/* ONLY ADD TO CART BUTTON */}
+        {/* ADD TO CART BUTTON */}
         <button
           onClick={handleAddToCart}
           disabled={adding}
