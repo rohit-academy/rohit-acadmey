@@ -2,10 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Lock } from "lucide-react";
 
-function ClassCard({ cls }) {
+function ClassCard({ id, name, route }) {
 
-  const id = cls._id;        // 🔑 MongoDB ObjectId
-  const name = cls.name;     // Example: "Class 10"
+  if (!id || !name) return null;
 
   const classNumber = name.replace("Class ", "");
 
@@ -16,13 +15,9 @@ function ClassCard({ cls }) {
     classNumber === "bsc" ||
     classNumber === "bcom";
 
-  const link = isStreamClass
-    ? `/streams/${id}`
-    : `/subjects/${id}`;
-
   return (
     <Link
-      to={isComingSoon ? "#" : link}
+      to={isComingSoon ? "#" : route}
       onClick={(e) => isComingSoon && e.preventDefault()}
       className={`relative bg-white p-6 rounded-xl shadow transition flex flex-col items-center gap-3 text-center group
         ${
@@ -31,6 +26,7 @@ function ClassCard({ cls }) {
             : "hover:shadow-lg hover:-translate-y-1"
         }`}
     >
+
       {/* Icon */}
       <GraduationCap
         className={`transition group-hover:scale-110 ${
@@ -61,6 +57,7 @@ function ClassCard({ cls }) {
           <Lock size={12} /> Soon
         </span>
       )}
+
     </Link>
   );
 }
