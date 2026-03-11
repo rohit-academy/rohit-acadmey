@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ShoppingCart, Download, ArrowLeft, ShieldCheck, X } from "lucide-react";
+import { ShoppingCart, ArrowLeft, ShieldCheck } from "lucide-react";
 import Loader from "../components/ui/Loader";
 import ProductPreview from "../components/product/ProductPreview";
 import RatingStars from "../components/product/RatingStars";
@@ -16,7 +16,6 @@ function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const [showPdf, setShowPdf] = useState(false);
 
   /* FETCH PRODUCT */
   useEffect(() => {
@@ -87,7 +86,7 @@ function ProductDetails() {
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
 
-      {/* LEFT SIDE */}
+      {/* LEFT SIDE - PREVIEW ONLY */}
       <div className="bg-white p-6 rounded-xl shadow">
 
         <ProductPreview
@@ -127,7 +126,7 @@ function ProductDetails() {
           </p>
 
           <p className="flex items-center gap-2 text-green-600 font-medium">
-            <ShieldCheck size={16} /> Instant & Secure Download
+            <ShieldCheck size={16} /> Instant & Secure Download after purchase
           </p>
 
         </div>
@@ -145,54 +144,17 @@ function ProductDetails() {
 
         </div>
 
-        {/* BUTTONS */}
-        <div className="flex flex-col sm:flex-row gap-4">
-
-          <button
-            onClick={handleAddToCart}
-            disabled={adding}
-            className="flex-1 bg-gray-200 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-300 transition disabled:opacity-60 font-semibold"
-          >
-            <ShoppingCart size={18} />
-            {adding ? "Adding..." : "Add to Cart"}
-          </button>
-
-          <button
-            onClick={() => setShowPdf(true)}
-            className="flex-1 bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-semibold"
-          >
-            <Download size={18} /> View PDF
-          </button>
-
-        </div>
+        {/* ONLY ADD TO CART BUTTON */}
+        <button
+          onClick={handleAddToCart}
+          disabled={adding}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-60 font-semibold"
+        >
+          <ShoppingCart size={18} />
+          {adding ? "Adding..." : "Add to Cart"}
+        </button>
 
       </div>
-
-      {/* PDF MODAL */}
-      {showPdf && (
-
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-
-          <div className="bg-white w-[90%] h-[90%] rounded-xl relative">
-
-            <button
-              onClick={() => setShowPdf(false)}
-              className="absolute top-3 right-3 bg-gray-200 p-2 rounded-full"
-            >
-              <X size={18} />
-            </button>
-
-            <iframe
-              src={product.fileUrl}
-              title="PDF Viewer"
-              className="w-full h-full rounded-xl"
-            />
-
-          </div>
-
-        </div>
-
-      )}
 
     </div>
 
