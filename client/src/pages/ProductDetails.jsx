@@ -158,13 +158,13 @@ function ProductDetails() {
 
           {/* VIEW PDF */}
           <a
-            href={product.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 bg-blue-600 text-white text-center py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-semibold"
-          >
-            <Download size={18} /> View PDF
-          </a>
+  href={viewPdfUrl}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="flex-1 bg-blue-600 text-white text-center py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition font-semibold"
+>
+  <Download size={18} /> View PDF
+</a>
 
         </div>
 
