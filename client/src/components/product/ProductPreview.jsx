@@ -1,17 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { FileText } from "lucide-react";
-import { Document, Page, pdfjs } from "react-pdf";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min?url";
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 function ProductPreview({ fileUrl, title = "PDF Preview" }) {
-
-  const [numPages, setNumPages] = useState(null);
-
-  const onLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
 
   if (!fileUrl) {
     return (
@@ -29,33 +19,34 @@ function ProductPreview({ fileUrl, title = "PDF Preview" }) {
     );
   }
 
+  /* 🔥 Cloudinary page preview images */
+  const page1 = fileUrl
+    .replace("/raw/upload/", "/image/upload/pg_1/")
+    + ".jpg";
+
+  const page2 = fileUrl
+    .replace("/raw/upload/", "/image/upload/pg_2/")
+    + ".jpg";
+
   return (
 
     <div className="bg-white p-6 rounded-xl shadow">
 
-      <div className="overflow-auto max-h-[600px] flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4">
 
-        <Document
-          file={{
-            url: fileUrl,
-            httpHeaders: {
-              "Cache-Control": "no-cache"
-            }
-          }}
-          onLoadSuccess={onLoadSuccess}
-          loading={<p>Loading preview...</p>}
-          error={<p className="text-red-500">Failed to load PDF file.</p>}
-        >
+        {/* Page 1 */}
+        <img
+          src={page1}
+          alt="Preview page 1"
+          className="rounded-lg shadow max-h-[500px]"
+        />
 
-          {/* First Page */}
-          <Page pageNumber={1} width={450} />
-
-          {/* Second Page */}
-          {numPages > 1 && (
-            <Page pageNumber={2} width={450} />
-          )}
-
-        </Document>
+        {/* Page 2 */}
+        <img
+          src={page2}
+          alt="Preview page 2"
+          className="rounded-lg shadow max-h-[500px]"
+        />
 
       </div>
 
