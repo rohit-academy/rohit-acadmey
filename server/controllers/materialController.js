@@ -5,6 +5,10 @@ import logger from "../utils/logger.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
+import fs from "fs";
+import path from "path";
+import { generatePreview } from "../utils/pdfPreview.js";
+
 /* ☁️ Upload PDF → Cloudinary */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
@@ -12,17 +16,14 @@ const uploadPDFToCloudinary = (buffer) =>
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "materials",
-        resource_type: "raw",   // ✅ correct for PDF
+        resource_type: "raw",
         use_filename: true,
         unique_filename: true
       },
       (error, result) => {
 
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
+        if (error) reject(error);
+        else resolve(result);
 
       }
     );
@@ -48,6 +49,7 @@ export const addMaterial = async (req, res, next) => {
     } = req.body;
 
     /* Validation */
+
     if (!title || !classId || !subjectId || !price || !type) {
       const err = new Error("Required fields missing");
       err.statusCode = 400;
@@ -73,6 +75,7 @@ export const addMaterial = async (req, res, next) => {
     }
 
     /* Check class + subject */
+
     const classExists = await Class.findById(classId);
     const subjectExists = await Subject.findById(subjectId);
 
@@ -82,8 +85,45 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
+    /* TEMP PDF SAVE */
+
+    const uploadsDir = path.join("uploads");
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir);
+    }
+
+    const tempPdfPath = `uploads/${Date.now()}.pdf`;
+
+    fs.writeFileSync(tempPdfPath, req.file.buffer);
+
+    /* GENERATE PREVIEW IMAGES */
+
+    await generatePreview(tempPdfPath, "uploads");
+
+    /*
+    creates:
+    uploads/preview-1.jpg
+    uploads/preview-2.jpg
+    */
+
     /* Upload PDF */
+
     const result = await uploadPDFToCloudinary(req.file.buffer);
+
+    /* Upload preview images */
+
+    const preview1 = await cloudinary.uploader.upload(
+      "uploads/preview-1.jpg",
+      { folder: "materials/previews" }
+    );
+
+    const preview2 = await cloudinary.uploader.upload(
+      "uploads/preview-2.jpg",
+      { folder: "materials/previews" }
+    );
+
+    /* SAVE MATERIAL */
 
     const material = await Material.create({
 
@@ -96,9 +136,20 @@ export const addMaterial = async (req, res, next) => {
       price,
 
       fileUrl: result.secure_url,
-      cloudinaryId: result.public_id
+      cloudinaryId: result.public_id,
+
+      previewImages: [
+        preview1.secure_url,
+        preview2.secure_url
+      ]
 
     });
+
+    /* DELETE TEMP FILES */
+
+    fs.unlinkSync(tempPdfPath);
+    fs.unlinkSync("uploads/preview-1.jpg");
+    fs.unlinkSync("uploads/preview-2.jpg");
 
     logger.info(`Material added: ${material.title}`);
 
@@ -111,199 +162,6 @@ export const addMaterial = async (req, res, next) => {
   } catch (error) {
 
     logger.error(`Add material error: ${error.message}`);
-    next(error);
-
-  }
-
-};
-
-
-/* 📄 GET MATERIALS */
-export const getMaterials = async (req, res, next) => {
-
-  try {
-
-    const {
-      page = 1,
-      limit = 12,
-      classId,
-      subjectId,
-      type,
-      search = ""
-    } = req.query;
-
-    const filter = { isActive: true };
-
-    if (classId) filter.classId = classId;
-    if (subjectId) filter.subjectId = subjectId;
-    if (type) filter.type = type;
-
-    if (search) {
-      filter.title = {
-        $regex: search,
-        $options: "i"
-      };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const materials = await Material.find(filter)
-      .populate("classId", "name")
-      .populate("subjectId", "name")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
-
-    const total = await Material.countDocuments(filter);
-
-    res.json({
-      success: true,
-      page: Number(page),
-      totalPages: Math.ceil(total / limit),
-      total,
-      data: materials
-    });
-
-  } catch (error) {
-
-    logger.error(`Get materials error: ${error.message}`);
-    next(error);
-
-  }
-
-};
-
-
-/* 🔍 GET MATERIAL BY ID */
-export const getMaterialById = async (req, res, next) => {
-
-  try {
-
-    const material = await Material.findById(req.params.id)
-      .populate("classId", "name")
-      .populate("subjectId", "name");
-
-    if (!material) {
-
-      const err = new Error("Material not found");
-      err.statusCode = 404;
-      return next(err);
-
-    }
-
-    res.json({
-      success: true,
-      data: material
-    });
-
-  } catch (error) {
-
-    logger.error(`Get material error: ${error.message}`);
-    next(error);
-
-  }
-
-};
-
-
-/* ✏ UPDATE MATERIAL */
-export const updateMaterial = async (req, res, next) => {
-
-  try {
-
-    const material = await Material.findById(req.params.id);
-
-    if (!material) {
-      const err = new Error("Material not found");
-      err.statusCode = 404;
-      return next(err);
-    }
-
-    const updates = req.body;
-
-    if (updates.price && (updates.price < 0 || updates.price > 5000)) {
-      const err = new Error("Invalid price range");
-      err.statusCode = 400;
-      return next(err);
-    }
-
-    /* Replace PDF */
-    if (req.file) {
-
-      if (material.cloudinaryId) {
-        await cloudinary.uploader.destroy(material.cloudinaryId, {
-          resource_type: "raw"
-        });
-      }
-
-      const result = await uploadPDFToCloudinary(req.file.buffer);
-
-      material.fileUrl = result.secure_url;
-      material.cloudinaryId = result.public_id;
-
-    }
-
-    material.title = updates.title?.trim() || material.title;
-    material.description = updates.description?.trim() || material.description;
-    material.price = updates.price ?? material.price;
-    material.classId = updates.classId || material.classId;
-    material.subjectId = updates.subjectId || material.subjectId;
-    material.type = updates.type || material.type;
-    material.pages = updates.pages ?? material.pages;
-
-    await material.save();
-
-    logger.warn(`Material updated: ${material.title}`);
-
-    res.json({
-      success: true,
-      message: "Material updated successfully",
-      data: material
-    });
-
-  } catch (error) {
-
-    logger.error(`Update material error: ${error.message}`);
-    next(error);
-
-  }
-
-};
-
-
-/* ❌ DELETE MATERIAL */
-export const deleteMaterial = async (req, res, next) => {
-
-  try {
-
-    const material = await Material.findById(req.params.id);
-
-    if (!material) {
-      const err = new Error("Material not found");
-      err.statusCode = 404;
-      return next(err);
-    }
-
-    if (material.cloudinaryId) {
-
-      await cloudinary.uploader.destroy(material.cloudinaryId, {
-        resource_type: "raw"
-      });
-
-    }
-
-    await material.deleteOne();
-
-    logger.warn(`Material deleted: ${material.title}`);
-
-    res.json({
-      success: true,
-      message: "Material deleted successfully"
-    });
-
-  } catch (error) {
-
-    logger.error(`Delete material error: ${error.message}`);
     next(error);
 
   }

@@ -20,6 +20,7 @@
     "mongoose": "^9.1.6",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "pdf-poppler": "^0.2.3",
     "razorpay": "^2.9.0",
     "streamifier": "^0.1.1",
     "winston": "^3.19.0"

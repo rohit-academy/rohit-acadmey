@@ -6,7 +6,7 @@ const materialSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      index: true, // 🔍 search fast
+      index: true,
     },
 
     description: {
@@ -47,25 +47,27 @@ const materialSchema = new mongoose.Schema(
       required: true,
       min: 0,
       max: 5000,
-      index: true, // 💰 price filter fast
+      index: true,
     },
 
+    /* 📄 Full PDF */
     fileUrl: {
       type: String,
       required: true,
     },
 
+    /* ☁️ Cloudinary ID */
     cloudinaryId: {
       type: String,
       default: "",
-      index: true, // 🔁 delete/replace fast
+      index: true,
     },
 
-    previewImages: [
-      {
-        type: String,
-      },
-    ],
+    /* 🖼 Preview Images (First 2 Pages) */
+    previewImages: {
+      type: [String],
+      default: [],
+    },
 
     isActive: {
       type: Boolean,
@@ -95,10 +97,15 @@ const materialSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* 🔍 Compound index for filters */
-materialSchema.index({ classId: 1, subjectId: 1, type: 1, isActive: 1 });
+/* 🔍 Fast filters */
+materialSchema.index({
+  classId: 1,
+  subjectId: 1,
+  type: 1,
+  isActive: 1,
+});
 
-/* 🔎 Text search (title + description) */
+/* 🔎 Text search */
 materialSchema.index({
   title: "text",
   description: "text",
