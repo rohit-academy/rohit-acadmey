@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FileText } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min?url";
@@ -8,48 +8,27 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 function ProductPreview({ fileUrl, title = "PDF Preview" }) {
 
   const [numPages, setNumPages] = useState(null);
-  const [pdfBlob, setPdfBlob] = useState(null);
 
-  useEffect(() => {
+  if (!fileUrl) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow">
+        <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center rounded-lg">
+          <FileText size={70} className="text-blue-600" />
+        </div>
 
-    const loadPdf = async () => {
+        <p className="text-sm text-gray-500 mt-3 text-center">
+          Preview not available
+        </p>
+      </div>
+    );
+  }
 
-      try {
-
-        const response = await fetch(fileUrl);
-        const blob = await response.blob();
-
-        const blobUrl = URL.createObjectURL(blob);
-
-        setPdfBlob(blobUrl);
-
-      } catch (error) {
-
-        console.error("PDF load error:", error);
-
-      }
-
-    };
-
-    if (fileUrl) {
-      loadPdf();
-    }
-
-  }, [fileUrl]);
+  // 🔥 convert raw → previewable pdf
+  const pdfUrl = fileUrl.replace("/raw/upload/", "/image/upload/fl_attachment/");
 
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
-
-  if (!pdfBlob) {
-
-    return (
-      <div className="bg-white p-6 rounded-xl shadow text-center">
-        <p className="text-gray-500">Loading preview...</p>
-      </div>
-    );
-
-  }
 
   return (
 
@@ -58,8 +37,10 @@ function ProductPreview({ fileUrl, title = "PDF Preview" }) {
       <div className="overflow-auto max-h-[600px] flex flex-col items-center gap-4">
 
         <Document
-          file={pdfBlob}
+          file={pdfUrl}
           onLoadSuccess={onLoadSuccess}
+          loading={<p>Loading preview...</p>}
+          error={<p className="text-red-500">Failed to load PDF file.</p>}
         >
 
           <Page pageNumber={1} width={450} />
