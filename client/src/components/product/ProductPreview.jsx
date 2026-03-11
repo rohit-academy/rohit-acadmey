@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { FileText } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 
-pdfjs.GlobalWorkerOptions.workerSrc =
-  `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+/* local worker (fixes CORS issue) */
+import workerSrc from "pdfjs-dist/build/pdf.worker.min?url";
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 function ProductPreview({ fileUrl, title = "PDF Preview" }) {
 
@@ -16,6 +18,7 @@ function ProductPreview({ fileUrl, title = "PDF Preview" }) {
   if (!fileUrl) {
     return (
       <div className="bg-white p-6 rounded-xl shadow">
+
         <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center rounded-lg">
           <FileText size={70} className="text-blue-600" />
         </div>
@@ -23,6 +26,7 @@ function ProductPreview({ fileUrl, title = "PDF Preview" }) {
         <p className="text-sm text-gray-500 mt-3 text-center">
           Preview not available
         </p>
+
       </div>
     );
   }
@@ -36,11 +40,14 @@ function ProductPreview({ fileUrl, title = "PDF Preview" }) {
         <Document
           file={fileUrl}
           onLoadSuccess={onLoadSuccess}
-          loading={<p>Loading preview...</p>}
+          loading={<p className="text-gray-500">Loading preview...</p>}
+          error={<p className="text-red-500">Failed to load PDF file.</p>}
         >
 
+          {/* Page 1 */}
           <Page pageNumber={1} width={450} />
 
+          {/* Page 2 */}
           {numPages > 1 && (
             <Page pageNumber={2} width={450} />
           )}
