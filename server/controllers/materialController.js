@@ -5,25 +5,32 @@ import logger from "../utils/logger.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
-/* ☁️ Upload buffer → Cloudinary */
+/* ☁️ Upload PDF → Cloudinary */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
 
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "materials",
-        resource_type: "auto", // 🔥 FIX (important)
-        format: "pdf"
+        resource_type: "raw",   // ✅ correct for PDF
+        use_filename: true,
+        unique_filename: true
       },
       (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
+
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+
       }
     );
 
     streamifier.createReadStream(buffer).pipe(stream);
 
   });
+
 
 /* ➕ ADD MATERIAL */
 export const addMaterial = async (req, res, next) => {
@@ -40,6 +47,7 @@ export const addMaterial = async (req, res, next) => {
       pages
     } = req.body;
 
+    /* Validation */
     if (!title || !classId || !subjectId || !price || !type) {
       const err = new Error("Required fields missing");
       err.statusCode = 400;
@@ -52,20 +60,19 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    /* Validate file type */
     if (!req.file.mimetype.includes("pdf")) {
       const err = new Error("Only PDF files allowed");
       err.statusCode = 400;
       return next(err);
     }
 
-    /* Validate size (10MB) */
     if (req.file.size > 10 * 1024 * 1024) {
       const err = new Error("File size must be under 10MB");
       err.statusCode = 400;
       return next(err);
     }
 
+    /* Check class + subject */
     const classExists = await Class.findById(classId);
     const subjectExists = await Subject.findById(subjectId);
 
@@ -109,6 +116,7 @@ export const addMaterial = async (req, res, next) => {
   }
 
 };
+
 
 /* 📄 GET MATERIALS */
 export const getMaterials = async (req, res, next) => {
@@ -165,6 +173,7 @@ export const getMaterials = async (req, res, next) => {
 
 };
 
+
 /* 🔍 GET MATERIAL BY ID */
 export const getMaterialById = async (req, res, next) => {
 
@@ -175,9 +184,11 @@ export const getMaterialById = async (req, res, next) => {
       .populate("subjectId", "name");
 
     if (!material) {
+
       const err = new Error("Material not found");
       err.statusCode = 404;
       return next(err);
+
     }
 
     res.json({
@@ -193,6 +204,7 @@ export const getMaterialById = async (req, res, next) => {
   }
 
 };
+
 
 /* ✏ UPDATE MATERIAL */
 export const updateMaterial = async (req, res, next) => {
@@ -215,10 +227,13 @@ export const updateMaterial = async (req, res, next) => {
       return next(err);
     }
 
+    /* Replace PDF */
     if (req.file) {
 
       if (material.cloudinaryId) {
-        await cloudinary.uploader.destroy(material.cloudinaryId);
+        await cloudinary.uploader.destroy(material.cloudinaryId, {
+          resource_type: "raw"
+        });
       }
 
       const result = await uploadPDFToCloudinary(req.file.buffer);
@@ -255,6 +270,7 @@ export const updateMaterial = async (req, res, next) => {
 
 };
 
+
 /* ❌ DELETE MATERIAL */
 export const deleteMaterial = async (req, res, next) => {
 
@@ -269,7 +285,11 @@ export const deleteMaterial = async (req, res, next) => {
     }
 
     if (material.cloudinaryId) {
-      await cloudinary.uploader.destroy(material.cloudinaryId);
+
+      await cloudinary.uploader.destroy(material.cloudinaryId, {
+        resource_type: "raw"
+      });
+
     }
 
     await material.deleteOne();
