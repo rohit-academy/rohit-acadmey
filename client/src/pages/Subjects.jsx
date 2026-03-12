@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import SubjectCard from "../components/cards/SubjectCard";
+import SubjectsSkeleton from "../components/loaders/SubjectsSkeleton";
 import API from "../services/api";
 
 function Subjects() {
@@ -15,7 +16,7 @@ function Subjects() {
   /* 🚧 Coming Soon Courses */
   if (comingSoonCourses.includes(classId)) {
     return (
-      <div className="text-center py-24 max-w-3xl mx-auto">
+      <div className="text-center py-24 max-w-3xl mx-auto px-4">
 
         <h1 className="text-4xl font-bold mb-4 uppercase">
           {classId} Study Materials
@@ -25,7 +26,7 @@ function Subjects() {
           Important Questions & Answers for all semesters will be available soon.
         </p>
 
-        <div className="bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full inline-block font-semibold shadow">
+        <div className="inline-block bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full font-semibold shadow-sm">
           🚧 Coming Soon
         </div>
 
@@ -33,7 +34,7 @@ function Subjects() {
     );
   }
 
-  /* 📦 LOAD SUBJECTS FROM DB */
+  /* 📦 LOAD SUBJECTS */
   useEffect(() => {
 
     const fetchSubjects = async () => {
@@ -50,7 +51,6 @@ function Subjects() {
 
         const res = await API.get(url);
 
-        // ✅ API response structure fix
         const subjectList = res.data?.data || [];
 
         setSubjects(subjectList);
@@ -89,13 +89,11 @@ function Subjects() {
   };
 
 
-  /* ⏳ Loading */
+  /* ⏳ Skeleton Loader */
   if (loading) {
     return (
-      <div className="text-center py-24">
-        <p className="text-gray-600 text-lg">
-          Loading subjects...
-        </p>
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <SubjectsSkeleton />
       </div>
     );
   }
@@ -103,14 +101,14 @@ function Subjects() {
   /* ❌ No Subjects */
   if (!subjects.length) {
     return (
-      <div className="text-center py-24">
+      <div className="text-center py-24 px-4">
 
-        <h1 className="text-3xl font-bold mb-4">
+        <h1 className="text-3xl font-bold mb-3">
           Subjects Not Available
         </h1>
 
         <p className="text-gray-600">
-          Content for this class is under preparation.
+          Content for this class is currently under preparation.
         </p>
 
       </div>
@@ -120,10 +118,10 @@ function Subjects() {
 
   return (
 
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4">
 
       {/* HEADER */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-10">
 
         <h1 className="text-3xl md:text-4xl font-bold">
           Subjects
@@ -141,7 +139,7 @@ function Subjects() {
 
 
       {/* SUBJECT GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 animate-fadeIn">
 
         {subjects.map((subject) => (
 
