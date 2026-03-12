@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 function AdminLayout() {
+
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,12 +36,14 @@ function AdminLayout() {
   const pageTitle = pageTitleMap[location.pathname] || "Admin";
 
   const linkStyle =
-    "flex items-center gap-3 px-3 py-2 rounded-lg transition";
+    "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200";
 
   return (
+
     <div className="flex min-h-screen bg-slate-100">
 
-      {/* 📱 Overlay */}
+      {/* MOBILE OVERLAY */}
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 md:hidden"
@@ -48,32 +51,58 @@ function AdminLayout() {
         />
       )}
 
-      {/* 🔹 SIDEBAR */}
+      {/* SIDEBAR */}
+
       <aside
-        className={`fixed md:static z-40 top-0 left-0 h-full w-64 bg-white shadow-md p-6
+        className={`
+        fixed md:sticky top-0 left-0 z-40
+        w-64 h-screen
+        bg-white border-r shadow-sm
+        p-6
+        flex flex-col
         transform transition-transform duration-300
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
       >
+
+        {/* HEADER */}
+
         <div className="flex items-center justify-between md:block">
+
           <div>
-            <h2 className="text-xl font-bold text-blue-600 mb-1">Rohit Academy</h2>
-            <p className="text-xs text-gray-500 mb-6">Admin Panel</p>
+            <h2 className="text-xl font-bold text-blue-600 mb-1">
+              Rohit Academy
+            </h2>
+
+            <p className="text-xs text-gray-500 mb-6">
+              Admin Panel
+            </p>
           </div>
-          <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
+
+          <button
+            className="md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
             <X size={22} />
           </button>
+
         </div>
 
-        <nav className="flex flex-col gap-2 text-gray-700 mt-4">
+        {/* NAVIGATION */}
+
+        <nav className="flex flex-col gap-2 text-gray-700 flex-1 overflow-y-auto">
 
           {/* Dashboard */}
+
           <NavLink
             to="/admin"
             end
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
@@ -81,12 +110,15 @@ function AdminLayout() {
           </NavLink>
 
           {/* Academics */}
+
           <NavLink
             to="/admin/academics"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
@@ -98,27 +130,31 @@ function AdminLayout() {
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ml-6 ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
             🎓 Manage Classes
           </NavLink>
 
-          {/* Materials List */}
+          {/* MATERIALS */}
+
           <NavLink
             to="/admin/materials"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
             <FileText size={18} /> Materials
           </NavLink>
 
-          {/* 🔥 Upload Material Button */}
           <NavLink
             to="/admin/materials/upload"
             onClick={() => setSidebarOpen(false)}
@@ -133,61 +169,91 @@ function AdminLayout() {
             <UploadCloud size={18} /> Upload Material
           </NavLink>
 
-          {/* Users */}
+          {/* USERS */}
+
           <NavLink
             to="/admin/users"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
             <Users size={18} /> Users
           </NavLink>
 
-          {/* Orders */}
+          {/* ORDERS */}
+
           <NavLink
             to="/admin/orders"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               `${linkStyle} ${
-                isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"
+                isActive
+                  ? "bg-blue-100 text-blue-700 font-semibold"
+                  : "hover:bg-gray-100"
               }`
             }
           >
             <ShoppingCart size={18} /> Orders
           </NavLink>
 
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-red-500 hover:text-red-600 mt-8 px-3 py-2"
-          >
-            <LogOut size={18} /> Logout
-          </button>
-
         </nav>
+
+        {/* LOGOUT */}
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 text-red-500 hover:text-red-600 px-3 py-2 mt-4"
+        >
+          <LogOut size={18} /> Logout
+        </button>
+
       </aside>
 
-      {/* 🔹 MAIN AREA */}
+      {/* MAIN AREA */}
+
       <div className="flex-1 flex flex-col">
 
-        {/* 🔝 Mobile Top Bar */}
-        <header className="bg-white shadow-sm px-4 py-3 flex items-center justify-between md:hidden">
+        {/* MOBILE HEADER */}
+
+        <header className="bg-white border-b px-4 py-3 flex items-center justify-between md:hidden">
+
           <button onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h1 className="font-semibold text-blue-600">{pageTitle}</h1>
+
+          <h1 className="font-semibold text-blue-600">
+            {pageTitle}
+          </h1>
+
         </header>
 
-        <main className="p-6 md:p-10">
+        {/* DESKTOP PAGE HEADER */}
+
+        <div className="hidden md:flex items-center justify-between px-10 py-6">
+
+          <h1 className="text-2xl font-semibold text-gray-800">
+            {pageTitle}
+          </h1>
+
+        </div>
+
+        {/* PAGE CONTENT */}
+
+        <main className="flex-1 px-6 md:px-10 pb-10 overflow-y-auto">
           <Outlet />
         </main>
 
       </div>
+
     </div>
+
   );
+
 }
 
 export default AdminLayout;
