@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CheckCircle } from "lucide-react";
+import { ShieldCheck, CheckCircle, Eye, EyeOff } from "lucide-react";
 import API from "../services/api";
 
 function AdminLogin() {
@@ -17,12 +17,17 @@ function AdminLogin() {
   const [shake, setShake] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleChange = (e) => {
+
     setError("");
+
     setForm({
       ...form,
       [e.target.name]: e.target.value
     });
+
   };
 
   /* LOGIN */
@@ -64,7 +69,9 @@ function AdminLogin() {
       }, 450);
 
     } finally {
+
       setLoading(false);
+
     }
 
   };
@@ -101,6 +108,8 @@ function AdminLogin() {
 
         <form onSubmit={handleLogin} className="space-y-4">
 
+          {/* USERNAME */}
+
           <input
             name="username"
             placeholder="Admin Username"
@@ -110,20 +119,48 @@ function AdminLogin() {
             className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
           />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-            disabled={success}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
-          />
+          {/* PASSWORD FIELD */}
+
+          <div className="relative">
+
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              required
+              disabled={success}
+              onChange={handleChange}
+              className="w-full border p-3 pr-10 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+            />
+
+            {/* EYE BUTTON */}
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+            >
+
+              <span className="inline-block transition-transform duration-200 hover:scale-110">
+
+                {showPassword ? (
+                  <EyeOff size={20} />
+                ) : (
+                  <Eye size={20} />
+                )}
+
+              </span>
+
+            </button>
+
+          </div>
 
           {error && (
+
             <p className="text-red-500 text-sm text-center">
               {error}
             </p>
+
           )}
 
           {/* BUTTON */}
@@ -163,6 +200,7 @@ function AdminLogin() {
       {/* CUSTOM ANIMATIONS */}
 
       <style>
+
         {`
         @keyframes shake {
           0% { transform: translateX(0); }
@@ -178,6 +216,7 @@ function AdminLogin() {
           100% { transform: translateX(100%); }
         }
         `}
+
       </style>
 
     </div>
