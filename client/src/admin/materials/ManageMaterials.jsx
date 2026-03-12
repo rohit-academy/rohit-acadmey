@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Trash2, Pencil, FileText, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = "https://rohit-acadmey.onrender.com/api";
+
 function ManageMaterials() {
 
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
+
   const token = JSON.parse(localStorage.getItem("admin"))?.token;
 
   /* FETCH MATERIALS */
@@ -18,7 +21,7 @@ function ManageMaterials() {
 
       setLoading(true);
 
-      const res = await fetch("/api/materials?admin=true", {
+      const res = await fetch(`${API_URL}/materials?admin=true`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -54,7 +57,7 @@ function ManageMaterials() {
 
     try {
 
-      const res = await fetch(`/api/materials/${id}`, {
+      const res = await fetch(`${API_URL}/materials/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`
@@ -175,7 +178,10 @@ function ManageMaterials() {
 
                   <td className="p-3 flex justify-center gap-4">
 
-                    <button className="text-blue-600 hover:text-blue-800">
+                    <button
+                      onClick={() => navigate(`/admin/materials/edit/${m._id}`)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
                       <Pencil size={18} />
                     </button>
 
@@ -238,7 +244,10 @@ function ManageMaterials() {
 
               <div className="flex gap-4">
 
-                <button className="text-blue-600 hover:text-blue-800">
+                <button
+                  onClick={() => navigate(`/admin/materials/edit/${m._id}`)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
                   <Pencil size={18} />
                 </button>
 
