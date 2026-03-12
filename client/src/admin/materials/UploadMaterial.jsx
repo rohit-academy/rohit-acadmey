@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { UploadCloud, FileText } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../services/api";
 
@@ -9,6 +9,10 @@ function UploadMaterial() {
   const fileRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
@@ -26,17 +30,15 @@ function UploadMaterial() {
   const token = JSON.parse(localStorage.getItem("admin") || "{}")?.token;
 
   /* 🔐 Redirect if admin not logged */
-  useEffect(() => {
 
+  useEffect(() => {
     if (!token) {
-      alert("Admin login required");
       navigate("/admin-login");
     }
-
   }, [token, navigate]);
 
-
   /* 📚 LOAD CLASSES */
+
   useEffect(() => {
 
     const fetchClasses = async () => {
@@ -45,19 +47,15 @@ function UploadMaterial() {
 
         const res = await API.get("/classes");
 
-        const classList =
+        setClasses(
           res.data?.data ||
-          res.data?.classes ||
           res.data ||
-          [];
-
-        setClasses(classList);
+          []
+        );
 
       } catch (error) {
 
         console.error("Class fetch error:", error);
-
-        setClasses([]);
 
       }
 
@@ -67,19 +65,21 @@ function UploadMaterial() {
 
   }, []);
 
-
   /* 📄 LOAD SUBJECTS */
+
   useEffect(() => {
 
     if (!formData.classId) {
 
       setSubjects([]);
+
       setFormData((prev) => ({
         ...prev,
         subjectId: ""
       }));
 
       return;
+
     }
 
     const fetchSubjects = async () => {
@@ -90,18 +90,15 @@ function UploadMaterial() {
           `/subjects?classId=${formData.classId}`
         );
 
-        const subjectList =
+        setSubjects(
           res.data?.data ||
           res.data ||
-          [];
-
-        setSubjects(subjectList);
+          []
+        );
 
       } catch (error) {
 
         console.error("Subject fetch error:", error);
-
-        setSubjects([]);
 
       }
 
@@ -111,8 +108,8 @@ function UploadMaterial() {
 
   }, [formData.classId]);
 
+  /* INPUT HANDLER */
 
-  /* 🧠 Handle Input */
   const handleChange = (e) => {
 
     const { name, value, files } = e.target;
@@ -124,43 +121,55 @@ function UploadMaterial() {
 
   };
 
+  /* 🚀 UPLOAD MATERIAL */
 
-  /* 🚀 Upload Material */
   const handleSubmit = async (e) => {
 
     e.preventDefault();
 
     if (!formData.file) {
-      alert("PDF required");
-      return;
-    }
-
-    if (!formData.classId || !formData.subjectId || !formData.type) {
-      alert("Fill all required fields");
+      setError("PDF required");
       return;
     }
 
     try {
 
       setLoading(true);
+      setProgress(0);
+      setError("");
+      setSuccess(false);
 
       const data = new FormData();
 
       Object.entries(formData).forEach(([key, value]) => {
-
-        if (value) {
-          data.append(key, value);
-        }
-
+        if (value) data.append(key, value);
       });
 
-      await API.post("/materials", data, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
+      await API.post(
+        "/materials",
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data"
+          },
 
-      alert("Material uploaded successfully");
+          onUploadProgress: (progressEvent) => {
+
+            const percent = Math.round(
+              (progressEvent.loaded * 100) /
+              progressEvent.total
+            );
+
+            setProgress(percent);
+
+          }
+
+        }
+      );
+
+      setSuccess(true);
+
+      /* reset form */
 
       setFormData({
         classId: "",
@@ -179,13 +188,17 @@ function UploadMaterial() {
         fileRef.current.value = "";
       }
 
-      navigate("/admin/materials");
+      /* redirect */
+
+      setTimeout(() => {
+        navigate("/admin/materials");
+      }, 1200);
 
     } catch (error) {
 
       console.error("Upload error:", error);
 
-      alert(
+      setError(
         error.response?.data?.message ||
         "Material upload failed"
       );
@@ -198,7 +211,6 @@ function UploadMaterial() {
 
   };
 
-
   return (
 
     <div className="p-6 max-w-3xl mx-auto">
@@ -208,6 +220,33 @@ function UploadMaterial() {
         Upload Study Material
       </h1>
 
+      {/* SUCCESS MESSAGE */}
+
+      {success && (
+        <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex items-center gap-2">
+          <CheckCircle size={18} />
+          Material uploaded successfully
+        </div>
+      )}
+
+      {/* ERROR MESSAGE */}
+
+      {error && (
+        <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+
+      {/* PROGRESS BAR */}
+
+      {loading && (
+        <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+          <div
+            className="bg-blue-600 h-3 rounded-full transition-all"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -215,6 +254,7 @@ function UploadMaterial() {
       >
 
         {/* CLASS */}
+
         <select
           name="classId"
           value={formData.classId}
@@ -222,23 +262,18 @@ function UploadMaterial() {
           className="border p-3 rounded-lg w-full"
           required
         >
-
-          <option value="">
-            Select Class
-          </option>
+          <option value="">Select Class</option>
 
           {classes.map((cls) => (
-
             <option key={cls._id} value={cls._id}>
               {cls.name}
             </option>
-
           ))}
 
         </select>
 
-
         {/* SUBJECT */}
+
         <select
           name="subjectId"
           value={formData.subjectId}
@@ -248,22 +283,18 @@ function UploadMaterial() {
           disabled={!formData.classId}
         >
 
-          <option value="">
-            Select Subject
-          </option>
+          <option value="">Select Subject</option>
 
           {subjects.map((sub) => (
-
             <option key={sub._id} value={sub._id}>
               {sub.name}
             </option>
-
           ))}
 
         </select>
 
+        {/* TYPE */}
 
-        {/* MATERIAL TYPE */}
         <select
           name="type"
           value={formData.type}
@@ -272,30 +303,16 @@ function UploadMaterial() {
           required
         >
 
-          <option value="">
-            Material Type
-          </option>
-
-          <option value="Notes">
-            Notes
-          </option>
-
-          <option value="Sample Paper">
-            Sample Paper
-          </option>
-
-          <option value="PYQ">
-            PYQ
-          </option>
-
-          <option value="Assignment">
-            Assignment
-          </option>
+          <option value="">Material Type</option>
+          <option value="Notes">Notes</option>
+          <option value="Sample Paper">Sample Paper</option>
+          <option value="PYQ">PYQ</option>
+          <option value="Assignment">Assignment</option>
 
         </select>
 
-
         {/* TITLE */}
+
         <input
           type="text"
           name="title"
@@ -306,8 +323,8 @@ function UploadMaterial() {
           required
         />
 
-
         {/* PAGES */}
+
         <input
           type="number"
           name="pages"
@@ -317,8 +334,8 @@ function UploadMaterial() {
           className="border p-3 rounded-lg w-full"
         />
 
-
         {/* PRICE */}
+
         <input
           type="number"
           name="price"
@@ -329,8 +346,8 @@ function UploadMaterial() {
           required
         />
 
-
         {/* DESCRIPTION */}
+
         <textarea
           name="description"
           placeholder="Description"
@@ -340,8 +357,8 @@ function UploadMaterial() {
           className="border p-3 rounded-lg w-full"
         />
 
-
         {/* FILE UPLOAD */}
+
         <label className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 p-6 rounded-xl cursor-pointer hover:bg-blue-50 transition">
 
           <FileText
@@ -365,26 +382,28 @@ function UploadMaterial() {
 
         </label>
 
-
         {formData.file && (
-
           <p className="text-sm text-green-600">
             Selected: {formData.file.name}
           </p>
-
         )}
 
-
         {/* SUBMIT */}
+
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg w-full hover:bg-blue-700 transition text-lg font-semibold"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg w-full hover:bg-blue-700 transition text-lg font-semibold flex items-center justify-center gap-2"
         >
 
-          {loading
-            ? "Uploading..."
-            : "Upload Material"}
+          {loading ? (
+            <>
+              <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+              Uploading {progress}%
+            </>
+          ) : (
+            "Upload Material"
+          )}
 
         </button>
 
