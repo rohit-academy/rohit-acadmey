@@ -18,7 +18,7 @@ function ManageMaterials() {
 
       setLoading(true);
 
-      const res = await fetch("/api/materials?admin=true", {
+      const res = await fetch("/materials?admin=true", {
         headers: {
           Authorization: `Bearer ${token}`
         }
