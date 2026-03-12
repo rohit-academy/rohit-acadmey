@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import { generatePreview } from "../utils/pdfPreview.js";
 
+
 /* ☁️ Upload PDF → Cloudinary */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
@@ -33,6 +34,7 @@ const uploadPDFToCloudinary = (buffer) =>
   });
 
 
+
 /* ➕ ADD MATERIAL */
 export const addMaterial = async (req, res, next) => {
 
@@ -47,8 +49,6 @@ export const addMaterial = async (req, res, next) => {
       type,
       pages
     } = req.body;
-
-    /* Validation */
 
     if (!title || !classId || !subjectId || !price || !type) {
       const err = new Error("Required fields missing");
@@ -74,8 +74,6 @@ export const addMaterial = async (req, res, next) => {
       return next(err);
     }
 
-    /* Check class + subject */
-
     const classExists = await Class.findById(classId);
     const subjectExists = await Subject.findById(subjectId);
 
@@ -97,15 +95,9 @@ export const addMaterial = async (req, res, next) => {
 
     fs.writeFileSync(tempPdfPath, req.file.buffer);
 
-    /* GENERATE PREVIEW IMAGES */
+    /* GENERATE PREVIEW */
 
     await generatePreview(tempPdfPath, "uploads");
-
-    /*
-    creates:
-    uploads/preview-1.jpg
-    uploads/preview-2.jpg
-    */
 
     /* Upload PDF */
 
@@ -122,8 +114,6 @@ export const addMaterial = async (req, res, next) => {
       "uploads/preview-2.jpg",
       { folder: "materials/previews" }
     );
-
-    /* SAVE MATERIAL */
 
     const material = await Material.create({
 
@@ -162,6 +152,183 @@ export const addMaterial = async (req, res, next) => {
   } catch (error) {
 
     logger.error(`Add material error: ${error.message}`);
+    next(error);
+
+  }
+
+};
+
+
+
+/* 📄 GET MATERIALS */
+
+export const getMaterials = async (req, res, next) => {
+
+  try {
+
+    const {
+      page = 1,
+      limit = 12,
+      classId,
+      subjectId,
+      type,
+      search = "",
+      admin
+    } = req.query;
+
+    const filter = {};
+
+    if (!admin) {
+      filter.isActive = true;
+    }
+
+    if (classId) filter.classId = classId;
+    if (subjectId) filter.subjectId = subjectId;
+    if (type) filter.type = type;
+
+    if (search) {
+      filter.title = {
+        $regex: search,
+        $options: "i"
+      };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const materials = await Material.find(filter)
+      .populate("classId", "name")
+      .populate("subjectId", "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Material.countDocuments(filter);
+
+    res.json({
+      success: true,
+      page: Number(page),
+      totalPages: Math.ceil(total / limit),
+      total,
+      data: materials
+    });
+
+  } catch (error) {
+
+    logger.error(`Get materials error: ${error.message}`);
+    next(error);
+
+  }
+
+};
+
+
+
+/* 🔍 GET MATERIAL BY ID */
+
+export const getMaterialById = async (req, res, next) => {
+
+  try {
+
+    const material = await Material.findById(req.params.id)
+      .populate("classId", "name")
+      .populate("subjectId", "name");
+
+    if (!material) {
+
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+
+    }
+
+    res.json({
+      success: true,
+      data: material
+    });
+
+  } catch (error) {
+
+    next(error);
+
+  }
+
+};
+
+
+
+/* ✏ UPDATE MATERIAL */
+
+export const updateMaterial = async (req, res, next) => {
+
+  try {
+
+    const material = await Material.findById(req.params.id);
+
+    if (!material) {
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+    }
+
+    const updates = req.body;
+
+    material.title = updates.title || material.title;
+    material.description = updates.description || material.description;
+    material.price = updates.price ?? material.price;
+    material.classId = updates.classId || material.classId;
+    material.subjectId = updates.subjectId || material.subjectId;
+    material.type = updates.type || material.type;
+    material.pages = updates.pages ?? material.pages;
+
+    await material.save();
+
+    res.json({
+      success: true,
+      message: "Material updated successfully",
+      data: material
+    });
+
+  } catch (error) {
+
+    next(error);
+
+  }
+
+};
+
+
+
+/* ❌ DELETE MATERIAL */
+
+export const deleteMaterial = async (req, res, next) => {
+
+  try {
+
+    const material = await Material.findById(req.params.id);
+
+    if (!material) {
+      const err = new Error("Material not found");
+      err.statusCode = 404;
+      return next(err);
+    }
+
+    if (material.cloudinaryId) {
+
+      await cloudinary.uploader.destroy(material.cloudinaryId, {
+        resource_type: "raw"
+      });
+
+    }
+
+    await material.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Material deleted successfully"
+    });
+
+  } catch (error) {
+
     next(error);
 
   }
