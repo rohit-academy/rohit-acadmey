@@ -16,18 +16,14 @@ function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
   const [success, setSuccess] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-
     setError("");
-
     setForm({
       ...form,
       [e.target.name]: e.target.value
     });
-
   };
 
   /* LOGIN */
@@ -59,14 +55,12 @@ function AdminLogin() {
     } catch (err) {
 
       setError(
-        err.response?.data?.message || "Admin login failed"
+        err.response?.data?.message || "🔐 Wrong credentials"
       );
 
       setShake(true);
 
-      setTimeout(() => {
-        setShake(false);
-      }, 450);
+      setTimeout(() => setShake(false), 450);
 
     } finally {
 
@@ -78,12 +72,20 @@ function AdminLogin() {
 
   return (
 
-    <div className="min-h-[70vh] flex items-center justify-center bg-gray-50">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden
+    bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+
+      {/* 🔥 FLOATING BLOBS */}
+
+      <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 top-[-50px] left-[-50px] animate-pulse"></div>
+      <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 bottom-[-50px] right-[-50px] animate-pulse"></div>
+
+      {/* CARD */}
 
       <div
-        className={`max-w-md w-full bg-white p-8 rounded-xl shadow-lg transition-all duration-300
+        className={`relative z-10 max-w-md w-full bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-xl transition-all duration-300
         ${shake ? "animate-[shake_.45s]" : ""}
-        ${success ? "border-2 border-green-500" : ""}`}
+        ${success ? "animate-[success_.4s] border-2 border-green-500" : ""}`}
       >
 
         {/* HEADER */}
@@ -116,10 +118,10 @@ function AdminLogin() {
             required
             disabled={success}
             onChange={handleChange}
-            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+            className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:scale-[1.01] transition outline-none disabled:bg-gray-100"
           />
 
-          {/* PASSWORD FIELD */}
+          {/* PASSWORD */}
 
           <div className="relative">
 
@@ -130,37 +132,25 @@ function AdminLogin() {
               required
               disabled={success}
               onChange={handleChange}
-              className="w-full border p-3 pr-10 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
+              className="w-full border p-3 pr-10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:scale-[1.01] transition outline-none disabled:bg-gray-100"
             />
-
-            {/* EYE BUTTON */}
 
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
-
-              <span className="inline-block transition-transform duration-200 hover:scale-110">
-
-                {showPassword ? (
-                  <EyeOff size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
-
+              <span className="transition-transform duration-200 hover:scale-110">
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </span>
-
             </button>
 
           </div>
 
           {error && (
-
             <p className="text-red-500 text-sm text-center">
               {error}
             </p>
-
           )}
 
           {/* BUTTON */}
@@ -168,10 +158,33 @@ function AdminLogin() {
           <button
             type="submit"
             disabled={loading || success}
-            className="relative w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-60 overflow-hidden"
+            className="relative w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition overflow-hidden"
+            onClick={(e) => {
+
+              const circle = document.createElement("span");
+
+              const diameter = Math.max(
+                e.currentTarget.clientWidth,
+                e.currentTarget.clientHeight
+              );
+
+              const radius = diameter / 2;
+
+              circle.style.width = circle.style.height = `${diameter}px`;
+              circle.style.left = `${e.clientX - e.currentTarget.offsetLeft - radius}px`;
+              circle.style.top = `${e.clientY - e.currentTarget.offsetTop - radius}px`;
+              circle.classList.add("ripple");
+
+              const ripple = e.currentTarget.getElementsByClassName("ripple")[0];
+
+              if (ripple) ripple.remove();
+
+              e.currentTarget.appendChild(circle);
+
+            }}
           >
 
-            {/* PROGRESS BAR */}
+            {/* PROGRESS */}
 
             {loading && (
               <span className="absolute bottom-0 left-0 h-1 bg-white/70 animate-[progress_1.5s_linear_infinite] w-full"></span>
@@ -185,7 +198,7 @@ function AdminLogin() {
             ) : loading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                Checking... Please wait
+                🚀 Logging you in...
               </>
             ) : (
               "Login as Admin"
@@ -197,11 +210,9 @@ function AdminLogin() {
 
       </div>
 
-      {/* CUSTOM ANIMATIONS */}
+      {/* ANIMATIONS */}
 
-      <style>
-
-        {`
+      <style>{`
         @keyframes shake {
           0% { transform: translateX(0); }
           20% { transform: translateX(-7px); }
@@ -215,9 +226,28 @@ function AdminLogin() {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-        `}
 
-      </style>
+        @keyframes success {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+
+        .ripple {
+          position: absolute;
+          border-radius: 50%;
+          transform: scale(0);
+          animation: ripple 600ms linear;
+          background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes ripple {
+          to {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+      `}</style>
 
     </div>
 
