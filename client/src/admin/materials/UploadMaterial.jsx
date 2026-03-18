@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { UploadCloud, FileText, CheckCircle } from "lucide-react";
+import { UploadCloud, FileText, Image, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../services/api";
 
@@ -7,11 +7,14 @@ function UploadMaterial() {
 
   const navigate = useNavigate();
   const fileRef = useRef(null);
+  const thumbRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
 
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -24,105 +27,56 @@ function UploadMaterial() {
     pages: "",
     price: "",
     description: "",
-    file: null
+    file: null,
+    thumbnail: null
   });
 
   const token = JSON.parse(localStorage.getItem("admin") || "{}")?.token;
 
-  /* 🔐 Redirect if admin not logged */
-
+  /* 🔐 Redirect */
   useEffect(() => {
-    if (!token) {
-      navigate("/admin-login");
-    }
+    if (!token) navigate("/admin-login");
   }, [token, navigate]);
 
-  /* 📚 LOAD CLASSES */
-
+  /* 📚 Classes */
   useEffect(() => {
-
-    const fetchClasses = async () => {
-
-      try {
-
-        const res = await API.get("/classes");
-
-        setClasses(
-          res.data?.data ||
-          res.data ||
-          []
-        );
-
-      } catch (error) {
-
-        console.error("Class fetch error:", error);
-
-      }
-
-    };
-
-    fetchClasses();
-
+    API.get("/classes").then(res => {
+      setClasses(res.data?.data || res.data || []);
+    });
   }, []);
 
-  /* 📄 LOAD SUBJECTS */
-
+  /* 📄 Subjects */
   useEffect(() => {
 
     if (!formData.classId) {
-
       setSubjects([]);
-
-      setFormData((prev) => ({
-        ...prev,
-        subjectId: ""
-      }));
-
       return;
-
     }
 
-    const fetchSubjects = async () => {
-
-      try {
-
-        const res = await API.get(
-          `/subjects?classId=${formData.classId}`
-        );
-
-        setSubjects(
-          res.data?.data ||
-          res.data ||
-          []
-        );
-
-      } catch (error) {
-
-        console.error("Subject fetch error:", error);
-
-      }
-
-    };
-
-    fetchSubjects();
+    API.get(`/subjects?classId=${formData.classId}`)
+      .then(res => {
+        setSubjects(res.data?.data || res.data || []);
+      });
 
   }, [formData.classId]);
 
-  /* INPUT HANDLER */
-
+  /* INPUT */
   const handleChange = (e) => {
 
     const { name, value, files } = e.target;
 
-    setFormData((prev) => ({
+    if (name === "thumbnail" && files?.[0]) {
+      setThumbnailPreview(URL.createObjectURL(files[0]));
+    }
+
+    setFormData(prev => ({
       ...prev,
       [name]: files ? files[0] : value
     }));
 
   };
 
-  /* 🚀 UPLOAD MATERIAL */
-
+  /* 🚀 SUBMIT */
   const handleSubmit = async (e) => {
 
     e.preventDefault();
@@ -145,31 +99,20 @@ function UploadMaterial() {
         if (value) data.append(key, value);
       });
 
-      await API.post(
-        "/materials",
-        data,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data"
-          },
+      await API.post("/materials", data, {
 
-          onUploadProgress: (progressEvent) => {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        },
 
-            const percent = Math.round(
-              (progressEvent.loaded * 100) /
-              progressEvent.total
-            );
-
-            setProgress(percent);
-
-          }
-
+        onUploadProgress: (e) => {
+          const percent = Math.round((e.loaded * 100) / e.total);
+          setProgress(percent);
         }
-      );
+
+      });
 
       setSuccess(true);
-
-      /* reset form */
 
       setFormData({
         classId: "",
@@ -179,29 +122,22 @@ function UploadMaterial() {
         pages: "",
         price: "",
         description: "",
-        file: null
+        file: null,
+        thumbnail: null
       });
 
-      setSubjects([]);
+      setThumbnailPreview(null);
 
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
-
-      /* redirect */
+      if (fileRef.current) fileRef.current.value = "";
+      if (thumbRef.current) thumbRef.current.value = "";
 
       setTimeout(() => {
         navigate("/admin/materials");
       }, 1200);
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Upload error:", error);
-
-      setError(
-        error.response?.data?.message ||
-        "Material upload failed"
-      );
+      setError(err.response?.data?.message || "Upload failed");
 
     } finally {
 
@@ -220,16 +156,11 @@ function UploadMaterial() {
         Upload Study Material
       </h1>
 
-      {/* SUCCESS MESSAGE */}
-
       {success && (
-        <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex items-center gap-2">
-          <CheckCircle size={18} />
-          Material uploaded successfully
+        <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex gap-2 items-center">
+          <CheckCircle size={18} /> Uploaded successfully
         </div>
       )}
-
-      {/* ERROR MESSAGE */}
 
       {error && (
         <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
@@ -237,174 +168,80 @@ function UploadMaterial() {
         </div>
       )}
 
-      {/* PROGRESS BAR */}
-
       {loading && (
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+        <div className="w-full bg-gray-200 h-3 rounded-full mb-4">
           <div
-            className="bg-blue-600 h-3 rounded-full transition-all"
+            className="bg-blue-600 h-3 rounded-full"
             style={{ width: `${progress}%` }}
-          ></div>
+          />
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-xl shadow space-y-5"
-      >
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow space-y-5">
 
         {/* CLASS */}
-
-        <select
-          name="classId"
-          value={formData.classId}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-          required
-        >
+        <select name="classId" value={formData.classId} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
           <option value="">Select Class</option>
-
-          {classes.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              {cls.name}
-            </option>
-          ))}
-
+          {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
 
         {/* SUBJECT */}
-
-        <select
-          name="subjectId"
-          value={formData.subjectId}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-          required
-          disabled={!formData.classId}
-        >
-
+        <select name="subjectId" value={formData.subjectId} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
           <option value="">Select Subject</option>
-
-          {subjects.map((sub) => (
-            <option key={sub._id} value={sub._id}>
-              {sub.name}
-            </option>
-          ))}
-
+          {subjects.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
 
         {/* TYPE */}
-
-        <select
-          name="type"
-          value={formData.type}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-          required
-        >
-
-          <option value="">Material Type</option>
+        <select name="type" value={formData.type} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
+          <option value="">Type</option>
           <option value="Notes">Notes</option>
-          <option value="Sample Paper">Sample Paper</option>
           <option value="PYQ">PYQ</option>
-          <option value="Assignment">Assignment</option>
-
         </select>
 
-        {/* TITLE */}
+        <input name="title" placeholder="Title" onChange={handleChange} className="border p-3 rounded-lg w-full" required />
+        <input name="price" type="number" placeholder="Price" onChange={handleChange} className="border p-3 rounded-lg w-full" required />
 
-        <input
-          type="text"
-          name="title"
-          placeholder="Material Title"
-          value={formData.title}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-          required
-        />
+        {/* PDF */}
+        <label className="border-2 border-dashed p-6 rounded-xl text-center cursor-pointer hover:bg-blue-50">
+          <FileText className="mx-auto mb-2 text-blue-600" />
+          Upload PDF
+          <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} hidden />
+        </label>
 
-        {/* PAGES */}
+        {formData.file && <p className="text-green-600 text-sm">{formData.file.name}</p>}
 
-        <input
-          type="number"
-          name="pages"
-          placeholder="Total Pages"
-          value={formData.pages}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-        />
+        {/* 🖼 THUMBNAIL */}
+        <label className="border-2 border-dashed p-6 rounded-xl text-center cursor-pointer hover:bg-green-50">
 
-        {/* PRICE */}
+          <Image className="mx-auto mb-2 text-green-600" />
 
-        <input
-          type="number"
-          name="price"
-          placeholder="Price ₹"
-          value={formData.price}
-          onChange={handleChange}
-          className="border p-3 rounded-lg w-full"
-          required
-        />
-
-        {/* DESCRIPTION */}
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-          rows="3"
-          className="border p-3 rounded-lg w-full"
-        />
-
-        {/* FILE UPLOAD */}
-
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 p-6 rounded-xl cursor-pointer hover:bg-blue-50 transition">
-
-          <FileText
-            size={40}
-            className="text-blue-600 mb-2"
-          />
-
-          <span className="text-gray-600">
-            Click to upload PDF
-          </span>
+          Upload Thumbnail (optional)
 
           <input
-            ref={fileRef}
+            ref={thumbRef}
             type="file"
-            name="file"
-            accept=".pdf"
+            name="thumbnail"
+            accept="image/*"
             onChange={handleChange}
-            className="hidden"
-            required
+            hidden
           />
 
         </label>
 
-        {formData.file && (
-          <p className="text-sm text-green-600">
-            Selected: {formData.file.name}
-          </p>
+        {/* PREVIEW */}
+        {thumbnailPreview && (
+          <img
+            src={thumbnailPreview}
+            className="w-full h-40 object-cover rounded-lg shadow"
+          />
         )}
-
-        {/* SUBMIT */}
 
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg w-full hover:bg-blue-700 transition text-lg font-semibold flex items-center justify-center gap-2"
+          className="bg-blue-600 text-white w-full py-3 rounded-lg font-semibold"
         >
-
-          {loading ? (
-            <>
-              <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-              Uploading {progress}%
-            </>
-          ) : (
-            "Upload Material"
-          )}
-
+          {loading ? `Uploading ${progress}%` : "Upload Material"}
         </button>
 
       </form>
