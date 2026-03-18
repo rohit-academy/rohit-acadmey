@@ -17,7 +17,7 @@ function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
-  /* FETCH PRODUCT */
+  /* 📦 FETCH PRODUCT */
   useEffect(() => {
 
     const fetchProduct = async () => {
@@ -50,8 +50,10 @@ function ProductDetails() {
 
   }, [id]);
 
+  /* ⏳ LOADING */
   if (loading) return <Loader />;
 
+  /* ❌ NOT FOUND */
   if (!product) {
 
     return (
@@ -73,6 +75,7 @@ function ProductDetails() {
 
   }
 
+  /* 🛒 ADD TO CART */
   const handleAddToCart = () => {
 
     setAdding(true);
@@ -87,17 +90,18 @@ function ProductDetails() {
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
 
-      {/* LEFT SIDE - PREVIEW ONLY */}
+      {/* 🔹 LEFT SIDE - PREVIEW */}
       <div className="bg-white p-6 rounded-xl shadow">
 
         <ProductPreview
           previews={product.previewImages}
+          thumbnail={product.thumbnail}   // ✅ NEW
           title={product.title}
         />
 
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* 🔹 RIGHT SIDE */}
       <div className="bg-white p-8 rounded-xl shadow">
 
         <h1 className="text-3xl font-bold mb-1">
@@ -106,13 +110,14 @@ function ProductDetails() {
 
         <RatingStars
           rating={product.rating || 4.5}
-          reviews={product.reviews || 0}
+          reviews={product.reviewsCount || 0} // ✅ FIX
         />
 
         <p className="text-gray-600 my-4 leading-relaxed">
           {product.description}
         </p>
 
+        {/* 📊 DETAILS */}
         <div className="space-y-2 text-sm text-gray-600 mb-6">
 
           <p>
@@ -132,7 +137,7 @@ function ProductDetails() {
 
         </div>
 
-        {/* PRICE */}
+        {/* 💰 PRICE */}
         <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6">
 
           <p className="text-sm text-gray-500">
@@ -145,14 +150,17 @@ function ProductDetails() {
 
         </div>
 
-        {/* ADD TO CART BUTTON */}
+        {/* 🛒 BUTTON */}
         <button
           onClick={handleAddToCart}
           disabled={adding}
           className="w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-60 font-semibold"
         >
+
           <ShoppingCart size={18} />
+
           {adding ? "Adding..." : "Add to Cart"}
+
         </button>
 
       </div>
