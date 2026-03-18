@@ -63,6 +63,12 @@ const materialSchema = new mongoose.Schema(
       index: true,
     },
 
+    /* 🖼 Thumbnail (Main Cover Image) */
+    thumbnail: {
+      type: String,
+      default: "",
+    },
+
     /* 🖼 Preview Images (First 2 Pages) */
     previewImages: {
       type: [String],
