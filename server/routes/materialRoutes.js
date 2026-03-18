@@ -12,26 +12,37 @@ import { uploadPDF } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
-/* 🌍 PUBLIC ROUTES */
+/* =====================================
+   🌍 PUBLIC ROUTES
+===================================== */
+
 /* Only active materials visible to users */
 router.get("/", getMaterials);
 router.get("/:id", getMaterialById);
 
-/* 🛠 ADMIN ROUTES */
+/* =====================================
+   🛠 ADMIN ROUTES
+===================================== */
 
-/* ➕ CREATE MATERIAL */
+/* ➕ CREATE MATERIAL (PDF + Thumbnail) */
 router.post(
   "/",
   adminMiddleware,
-  uploadPDF.single("file"), // 📄 PDF upload
+  uploadPDF.fields([
+    { name: "file", maxCount: 1 },        // 📄 PDF
+    { name: "thumbnail", maxCount: 1 },   // 🖼 Thumbnail
+  ]),
   addMaterial
 );
 
-/* ✏️ UPDATE MATERIAL (PDF replace support) */
+/* ✏️ UPDATE MATERIAL (PDF + Thumbnail replace support) */
 router.put(
   "/:id",
   adminMiddleware,
-  uploadPDF.single("file"),
+  uploadPDF.fields([
+    { name: "file", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+  ]),
   updateMaterial
 );
 
@@ -58,6 +69,7 @@ router.patch("/:id/toggle", adminMiddleware, async (req, res, next) => {
       }`,
       data: material,
     });
+
   } catch (error) {
     next(error);
   }
