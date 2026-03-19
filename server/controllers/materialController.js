@@ -64,8 +64,6 @@ export const addMaterial = async (req, res, next) => {
     const pdfFile = req.files?.file?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0];
 
-    /* ✅ VALIDATION */
-
     if (!title || !classId || !subjectId || !price || !type) {
       return next(new Error("Required fields missing"));
     }
@@ -74,7 +72,6 @@ export const addMaterial = async (req, res, next) => {
       return next(new Error("PDF file is required"));
     }
 
-    /* 🔥 FIXED PDF VALIDATION */
     const isPDF =
       pdfFile.mimetype === "application/pdf" ||
       pdfFile.originalname.toLowerCase().endsWith(".pdf");
@@ -94,7 +91,7 @@ export const addMaterial = async (req, res, next) => {
       return next(new Error("Invalid class or subject"));
     }
 
-    /* 📂 TEMP FILE */
+    /* TEMP FILE */
     const uploadsDir = path.join("uploads");
 
     if (!fs.existsSync(uploadsDir)) {
@@ -104,13 +101,13 @@ export const addMaterial = async (req, res, next) => {
     const tempPdfPath = `uploads/${Date.now()}.pdf`;
     fs.writeFileSync(tempPdfPath, pdfFile.buffer);
 
-    /* 🖼 GENERATE PREVIEW */
+    /* PREVIEW */
     await generatePreview(tempPdfPath, "uploads");
 
-    /* ☁️ UPLOAD PDF */
+    /* PDF UPLOAD */
     const pdfResult = await uploadPDFToCloudinary(pdfFile.buffer);
 
-    /* 🖼 PREVIEW IMAGES */
+    /* PREVIEW IMAGES */
     const preview1 = await cloudinary.uploader.upload(
       "uploads/preview-1.jpg",
       { folder: "materials/previews" }
@@ -121,7 +118,7 @@ export const addMaterial = async (req, res, next) => {
       { folder: "materials/previews" }
     );
 
-    /* 🖼 THUMBNAIL */
+    /* THUMBNAIL */
     let thumbnailUrl = "";
 
     if (thumbnailFile) {
@@ -129,11 +126,9 @@ export const addMaterial = async (req, res, next) => {
         thumbnailFile.buffer,
         "materials/thumbnails"
       );
-
       thumbnailUrl = thumbResult.secure_url;
     }
 
-    /* 💾 SAVE */
     const material = await Material.create({
 
       title: title.trim(),
@@ -156,7 +151,7 @@ export const addMaterial = async (req, res, next) => {
 
     });
 
-    /* 🧹 CLEANUP */
+    /* CLEANUP */
     fs.unlinkSync(tempPdfPath);
     fs.unlinkSync("uploads/preview-1.jpg");
     fs.unlinkSync("uploads/preview-2.jpg");
@@ -174,6 +169,36 @@ export const addMaterial = async (req, res, next) => {
     logger.error(`Add material error: ${error.message}`);
     next(error);
 
+  }
+
+};
+
+/* ❌ DELETE MATERIAL (🔥 FIXED EXPORT) */
+export const deleteMaterial = async (req, res, next) => {
+
+  try {
+
+    const material = await Material.findById(req.params.id);
+
+    if (!material) {
+      return next(new Error("Material not found"));
+    }
+
+    if (material.cloudinaryId) {
+      await cloudinary.uploader.destroy(material.cloudinaryId, {
+        resource_type: "raw"
+      });
+    }
+
+    await material.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Material deleted successfully"
+    });
+
+  } catch (error) {
+    next(error);
   }
 
 };
