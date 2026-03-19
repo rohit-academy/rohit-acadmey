@@ -100,16 +100,11 @@ function UploadMaterial() {
       });
 
       await API.post("/materials", data, {
-
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
-
+        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => {
           const percent = Math.round((e.loaded * 100) / e.total);
           setProgress(percent);
         }
-
       });
 
       setSuccess(true);
@@ -136,26 +131,24 @@ function UploadMaterial() {
       }, 1200);
 
     } catch (err) {
-
       setError(err.response?.data?.message || "Upload failed");
-
     } finally {
-
       setLoading(false);
-
     }
 
   };
 
   return (
 
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="px-4 sm:px-6 py-6 max-w-2xl mx-auto">
 
-      <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
+      {/* HEADER */}
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-2">
         <UploadCloud className="text-blue-600" />
         Upload Study Material
       </h1>
 
+      {/* ALERTS */}
       {success && (
         <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex gap-2 items-center">
           <CheckCircle size={18} /> Uploaded successfully
@@ -168,78 +161,77 @@ function UploadMaterial() {
         </div>
       )}
 
+      {/* PROGRESS */}
       {loading && (
-        <div className="w-full bg-gray-200 h-3 rounded-full mb-4">
+        <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
           <div
-            className="bg-blue-600 h-3 rounded-full"
+            className="bg-blue-600 h-2 rounded-full transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow space-y-5">
+      {/* FORM */}
+      <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-6 rounded-2xl shadow space-y-4">
 
-        {/* CLASS */}
-        <select name="classId" value={formData.classId} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
+        {/* SELECTS */}
+        <select name="classId" value={formData.classId} onChange={handleChange} className="input" required>
           <option value="">Select Class</option>
           {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
 
-        {/* SUBJECT */}
-        <select name="subjectId" value={formData.subjectId} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
+        <select name="subjectId" value={formData.subjectId} onChange={handleChange} className="input" required>
           <option value="">Select Subject</option>
           {subjects.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
 
-        {/* TYPE */}
-        <select name="type" value={formData.type} onChange={handleChange} className="border p-3 rounded-lg w-full" required>
+        <select name="type" value={formData.type} onChange={handleChange} className="input" required>
           <option value="">Type</option>
           <option value="Notes">Notes</option>
           <option value="PYQ">PYQ</option>
         </select>
 
-        <input name="title" placeholder="Title" onChange={handleChange} className="border p-3 rounded-lg w-full" required />
-        <input name="price" type="number" placeholder="Price" onChange={handleChange} className="border p-3 rounded-lg w-full" required />
+        {/* INPUTS */}
+        <input name="title" placeholder="Title" onChange={handleChange} className="input" required />
+        <input name="price" type="number" placeholder="Price" onChange={handleChange} className="input" required />
 
-        {/* PDF */}
-        <label className="border-2 border-dashed p-6 rounded-xl text-center cursor-pointer hover:bg-blue-50">
-          <FileText className="mx-auto mb-2 text-blue-600" />
-          Upload PDF
-          <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} hidden />
-        </label>
+        {/* FILE UPLOADS */}
+        <div className="grid sm:grid-cols-2 gap-4">
 
-        {formData.file && <p className="text-green-600 text-sm">{formData.file.name}</p>}
+          {/* PDF */}
+          <label className="upload-box hover:border-blue-400">
+            <FileText className="text-blue-600" />
+            <span>Upload PDF</span>
+            <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} hidden />
+          </label>
 
-        {/* 🖼 THUMBNAIL */}
-        <label className="border-2 border-dashed p-6 rounded-xl text-center cursor-pointer hover:bg-green-50">
+          {/* THUMBNAIL */}
+          <label className="upload-box hover:border-green-400">
+            <Image className="text-green-600" />
+            <span>Thumbnail</span>
+            <input ref={thumbRef} type="file" name="thumbnail" accept="image/*" onChange={handleChange} hidden />
+          </label>
 
-          <Image className="mx-auto mb-2 text-green-600" />
+        </div>
 
-          Upload Thumbnail (optional)
+        {/* FILE NAME */}
+        {formData.file && (
+          <p className="text-green-600 text-sm">{formData.file.name}</p>
+        )}
 
-          <input
-            ref={thumbRef}
-            type="file"
-            name="thumbnail"
-            accept="image/*"
-            onChange={handleChange}
-            hidden
-          />
-
-        </label>
-
-        {/* PREVIEW */}
+        {/* THUMB PREVIEW */}
         {thumbnailPreview && (
           <img
             src={thumbnailPreview}
-            className="w-full h-40 object-cover rounded-lg shadow"
+            className="w-full h-40 object-cover rounded-lg"
           />
         )}
 
+        {/* BUTTON */}
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white w-full py-3 rounded-lg font-semibold"
+          className="bg-blue-600 text-white w-full py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
         >
           {loading ? `Uploading ${progress}%` : "Upload Material"}
         </button>
