@@ -90,12 +90,11 @@ function ProductDetails() {
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
 
-      {/* 🔹 LEFT SIDE - PREVIEW */}
+      {/* 🔹 LEFT SIDE - PREVIEW ONLY (NO THUMBNAIL) */}
       <div className="bg-white p-6 rounded-xl shadow">
 
         <ProductPreview
-          previews={product.previewImages}
-          thumbnail={product.thumbnail}   // ✅ NEW
+          previews={product.previewImages}   // ✅ ONLY preview
           title={product.title}
         />
 
@@ -110,7 +109,7 @@ function ProductDetails() {
 
         <RatingStars
           rating={product.rating || 4.5}
-          reviews={product.reviewsCount || 0} // ✅ FIX
+          reviews={product.reviewsCount || 0}
         />
 
         <p className="text-gray-600 my-4 leading-relaxed">

@@ -8,66 +8,82 @@ function ProductCard({
   type = "Notes",
   pages = 0,
   price = 0,
-  rating = 4.5
+  rating = 4.5,
+  thumbnail // ✅ ADD THIS
 }) {
 
-  /* safety check */
   if (!_id) return null;
 
   return (
 
-    <div className="bg-white rounded-xl shadow hover:shadow-lg transition p-5 flex flex-col justify-between border border-gray-100">
+    <div className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col">
 
-      {/* TOP SECTION */}
-      <div>
+      {/* 🔥 THUMBNAIL */}
+      {thumbnail ? (
+        <img
+          src={thumbnail}
+          alt={title}
+          className="w-full h-40 object-cover"
+        />
+      ) : (
+        <div className="w-full h-40 flex items-center justify-center bg-gray-100">
+          <FileText className="text-blue-500" size={40} />
+        </div>
+      )}
 
-        <div className="flex items-center justify-between mb-2">
+      {/* CONTENT */}
+      <div className="p-5 flex flex-col justify-between flex-1">
 
-          <FileText className="text-blue-600" size={28} />
+        {/* TOP */}
+        <div>
 
-          <div className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
-            <Star size={14} fill="currentColor" />
-            {rating}
+          <div className="flex items-center justify-between mb-2">
+
+            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-medium">
+              {type}
+            </span>
+
+            <div className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
+              <Star size={14} fill="currentColor" />
+              {rating}
+            </div>
+
+          </div>
+
+          <h2 className="font-semibold text-lg leading-tight line-clamp-2">
+            {title}
+          </h2>
+
+          <div className="text-sm text-gray-600 mt-2 space-y-1">
+
+            <p>
+              📄 Pages: <span className="font-medium">{pages}</span>
+            </p>
+
+            <p className="text-green-600 font-medium">
+              ⚡ Instant Download
+            </p>
+
           </div>
 
         </div>
 
-        <h2 className="font-semibold text-lg leading-tight line-clamp-2">
-          {title}
-        </h2>
+        {/* BOTTOM */}
+        <div className="mt-5">
 
-        <div className="text-sm text-gray-600 mt-2 space-y-1">
-
-          <p>
-            📘 Type: <span className="font-medium">{type}</span>
+          <p className="text-2xl font-bold text-blue-600 mb-3">
+            ₹{price}
           </p>
 
-          <p>
-            📄 Pages: <span className="font-medium">{pages}</span>
-          </p>
-
-          <p className="text-green-600 font-medium">
-            ⚡ Instant Download
-          </p>
+          <Link
+            to={`/product/${_id}`}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            <Download size={16} />
+            View Details
+          </Link>
 
         </div>
-
-      </div>
-
-      {/* BOTTOM CTA */}
-      <div className="mt-5">
-
-        <p className="text-2xl font-bold text-blue-600 mb-3">
-          ₹{price}
-        </p>
-
-        <Link
-          to={`/product/${_id}`}
-          className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-medium"
-        >
-          <Download size={16} />
-          View Details
-        </Link>
 
       </div>
 

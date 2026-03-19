@@ -58,8 +58,9 @@ function StudyMaterials() {
 
   return (
 
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4">
 
+      {/* HEADER */}
       <div className="text-center mb-8">
 
         <h1 className="text-3xl md:text-4xl font-bold">
@@ -72,12 +73,14 @@ function StudyMaterials() {
 
       </div>
 
+      {/* FILTER */}
       <FilterBar
         filters={filters}
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
       />
 
+      {/* EMPTY */}
       {filteredMaterials.length === 0 ? (
 
         <div className="text-center py-16">
@@ -94,13 +97,14 @@ function StudyMaterials() {
 
       ) : (
 
+        /* GRID */
         <div className="grid md:grid-cols-3 gap-6 mt-6">
 
           {filteredMaterials.map((item) => (
 
             <ProductCard
               key={item._id}
-              {...item}
+              {...item}   // 🔥 thumbnail already included
             />
 
           ))}
