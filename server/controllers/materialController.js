@@ -102,7 +102,7 @@ export const addMaterial = async (req, res, next) => {
     fs.writeFileSync(tempPdfPath, pdfFile.buffer);
 
     /* PREVIEW GENERATE */
-    await generatePreview(tempPdfPath, "uploads");
+    await generatePreview(tempPdfPath, "uploads"); // safe now
 
     /* PDF UPLOAD */
     const pdfResult = await uploadPDFToCloudinary(pdfFile.buffer);
