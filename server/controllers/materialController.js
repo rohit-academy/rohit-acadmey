@@ -91,6 +91,7 @@ export const addMaterial = async (req, res, next) => {
       return next(new Error("Invalid class or subject"));
     }
 
+    /* TEMP FILE */
     const uploadsDir = path.join("uploads");
 
     if (!fs.existsSync(uploadsDir)) {
@@ -100,20 +101,38 @@ export const addMaterial = async (req, res, next) => {
     const tempPdfPath = `uploads/${Date.now()}.pdf`;
     fs.writeFileSync(tempPdfPath, pdfFile.buffer);
 
+    /* PREVIEW GENERATE */
     await generatePreview(tempPdfPath, "uploads");
 
+    /* PDF UPLOAD */
     const pdfResult = await uploadPDFToCloudinary(pdfFile.buffer);
 
-    const preview1 = await cloudinary.uploader.upload(
-      "uploads/preview-1.jpg",
-      { folder: "materials/previews" }
-    );
+    /* ✅ SAFE PREVIEW UPLOAD */
+    let previewImages = [];
 
-    const preview2 = await cloudinary.uploader.upload(
-      "uploads/preview-2.jpg",
-      { folder: "materials/previews" }
-    );
+    try {
 
+      if (fs.existsSync("uploads/preview-1.jpg")) {
+        const p1 = await cloudinary.uploader.upload(
+          "uploads/preview-1.jpg",
+          { folder: "materials/previews" }
+        );
+        previewImages.push(p1.secure_url);
+      }
+
+      if (fs.existsSync("uploads/preview-2.jpg")) {
+        const p2 = await cloudinary.uploader.upload(
+          "uploads/preview-2.jpg",
+          { folder: "materials/previews" }
+        );
+        previewImages.push(p2.secure_url);
+      }
+
+    } catch (err) {
+      console.log("Preview upload error:", err.message);
+    }
+
+    /* THUMBNAIL */
     let thumbnailUrl = "";
 
     if (thumbnailFile) {
@@ -124,7 +143,9 @@ export const addMaterial = async (req, res, next) => {
       thumbnailUrl = thumbResult.secure_url;
     }
 
+    /* SAVE */
     const material = await Material.create({
+
       title: title.trim(),
       description: description?.trim() || "",
       classId,
@@ -132,18 +153,24 @@ export const addMaterial = async (req, res, next) => {
       type,
       pages: pages || 0,
       price,
+
       fileUrl: pdfResult.secure_url,
       cloudinaryId: pdfResult.public_id,
+
       thumbnail: thumbnailUrl,
-      previewImages: [
-        preview1.secure_url,
-        preview2.secure_url
-      ]
+
+      previewImages
+
     });
 
+    /* CLEANUP SAFE */
     fs.unlinkSync(tempPdfPath);
-    fs.unlinkSync("uploads/preview-1.jpg");
-    fs.unlinkSync("uploads/preview-2.jpg");
+
+    if (fs.existsSync("uploads/preview-1.jpg"))
+      fs.unlinkSync("uploads/preview-1.jpg");
+
+    if (fs.existsSync("uploads/preview-2.jpg"))
+      fs.unlinkSync("uploads/preview-2.jpg");
 
     logger.info(`Material added: ${material.title}`);
 
@@ -154,8 +181,10 @@ export const addMaterial = async (req, res, next) => {
     });
 
   } catch (error) {
+
     logger.error(`Add material error: ${error.message}`);
     next(error);
+
   }
 
 };
@@ -181,7 +210,7 @@ export const getMaterials = async (req, res, next) => {
 
 };
 
-/* 🔍 GET MATERIAL BY ID (🔥 FIXED) */
+/* 🔍 GET MATERIAL BY ID */
 export const getMaterialById = async (req, res, next) => {
 
   try {
@@ -217,7 +246,6 @@ export const updateMaterial = async (req, res, next) => {
     }
 
     const updates = req.body;
-
     Object.assign(material, updates);
 
     await material.save();
