@@ -1,60 +1,64 @@
 import multer from "multer";
 
-/* 📦 Memory storage → direct Cloudinary upload */
+/* 📦 Memory storage */
 const storage = multer.memoryStorage();
 
-/* 🎯 SMART FILE FILTER (FIELD BASED) */
+/* 🎯 SMART FILE FILTER */
 const fileFilter = (req, file, cb) => {
 
-  /* 📄 PDF FIELD */
+  console.log("FIELD:", file.fieldname);
+  console.log("MIME:", file.mimetype);
+
+  /* 📄 PDF */
   if (file.fieldname === "file") {
 
-    const isPDFMime = file.mimetype === "application/pdf";
-    const isPDFExt = file.originalname.toLowerCase().endsWith(".pdf");
+    const isPDF =
+      file.mimetype === "application/pdf" ||
+      file.originalname.toLowerCase().endsWith(".pdf");
 
-    if (isPDFMime || isPDFExt) {
-      return cb(null, true);
-    } else {
+    if (!isPDF) {
       return cb(new Error("❌ Only PDF files are allowed"), false);
     }
 
+    return cb(null, true);
   }
 
-  /* 🖼 THUMBNAIL FIELD */
+  /* 🖼 THUMBNAIL */
   if (file.fieldname === "thumbnail") {
 
-    const isImage = file.mimetype.startsWith("image/");
+    const isImage =
+      file.mimetype.startsWith("image/") ||
+      /\.(jpg|jpeg|png|webp)$/i.test(file.originalname);
 
-    if (isImage) {
-      return cb(null, true);
-    } else {
+    if (!isImage) {
       return cb(new Error("❌ Only image files allowed for thumbnail"), false);
     }
 
+    return cb(null, true);
   }
 
-  /* ❌ UNKNOWN FIELD */
-  return cb(new Error("❌ Invalid file field"), false);
+  /* 🔥 IMPORTANT: allow other fields */
+  return cb(null, true);
 };
 
-/* 📤 MULTI FIELD UPLOAD (PDF + THUMBNAIL) */
+/* 📤 MULTI FIELD UPLOAD */
 export const uploadPDF = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 10 * 1024 * 1024
   }
 });
 
-/* 🖼 OPTIONAL: multiple preview images (future use) */
+/* 🖼 OPTIONAL preview images */
 export const uploadPreviewImages = multer({
   storage,
   limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB per image
+    fileSize: 2 * 1024 * 1024
   }
 }).array("previewImages", 5);
 
-/* 🚨 Multer error handler */
+/* 🚨 ERROR HANDLER */
 export const handleMulterError = (err, req, res, next) => {
 
   if (err instanceof multer.MulterError) {
