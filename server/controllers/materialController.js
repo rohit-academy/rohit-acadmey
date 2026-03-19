@@ -9,7 +9,7 @@ import fs from "fs";
 import path from "path";
 import { generatePreview } from "../utils/pdfPreview.js";
 
-/* ☁️ Upload PDF → Cloudinary */
+/* ☁️ Upload PDF */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
 
@@ -30,6 +30,21 @@ const uploadPDFToCloudinary = (buffer) =>
 
   });
 
+/* 🖼 Upload Image (THUMBNAIL FIX) */
+const uploadImageToCloudinary = (buffer, folder) =>
+  new Promise((resolve, reject) => {
+
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+
+    streamifier.createReadStream(buffer).pipe(stream);
+
+  });
 
 /* ➕ ADD MATERIAL */
 export const addMaterial = async (req, res, next) => {
@@ -46,9 +61,10 @@ export const addMaterial = async (req, res, next) => {
       pages
     } = req.body;
 
-    /* ✅ FILE ACCESS FIX */
     const pdfFile = req.files?.file?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0];
+
+    /* VALIDATION */
 
     if (!title || !classId || !subjectId || !price || !type) {
       return next(new Error("Required fields missing"));
@@ -59,7 +75,7 @@ export const addMaterial = async (req, res, next) => {
     }
 
     if (!pdfFile.mimetype.includes("pdf")) {
-      return next(new Error("Only PDF files allowed"));
+      return next(new Error("Only PDF files are allowed"));
     }
 
     if (pdfFile.size > 10 * 1024 * 1024) {
@@ -73,7 +89,7 @@ export const addMaterial = async (req, res, next) => {
       return next(new Error("Invalid class or subject"));
     }
 
-    /* 📂 TEMP PDF SAVE */
+    /* TEMP FILE */
 
     const uploadsDir = path.join("uploads");
 
@@ -84,13 +100,13 @@ export const addMaterial = async (req, res, next) => {
     const tempPdfPath = `uploads/${Date.now()}.pdf`;
     fs.writeFileSync(tempPdfPath, pdfFile.buffer);
 
-    /* 🖼 GENERATE PREVIEW */
+    /* PREVIEW GENERATE */
     await generatePreview(tempPdfPath, "uploads");
 
-    /* ☁️ Upload PDF */
-    const result = await uploadPDFToCloudinary(pdfFile.buffer);
+    /* PDF UPLOAD */
+    const pdfResult = await uploadPDFToCloudinary(pdfFile.buffer);
 
-    /* 🖼 Upload preview images */
+    /* PREVIEW UPLOAD */
     const preview1 = await cloudinary.uploader.upload(
       "uploads/preview-1.jpg",
       { folder: "materials/previews" }
@@ -101,23 +117,19 @@ export const addMaterial = async (req, res, next) => {
       { folder: "materials/previews" }
     );
 
-    /* 🖼 Upload thumbnail (optional) */
+    /* 🔥 THUMBNAIL FIXED */
     let thumbnailUrl = "";
 
     if (thumbnailFile) {
-
-      const thumbUpload = await cloudinary.uploader.upload_stream(
-        { folder: "materials/thumbnails" },
-        (error, result) => {
-          if (error) throw error;
-          thumbnailUrl = result.secure_url;
-        }
+      const thumbResult = await uploadImageToCloudinary(
+        thumbnailFile.buffer,
+        "materials/thumbnails"
       );
 
-      streamifier.createReadStream(thumbnailFile.buffer).pipe(thumbUpload);
+      thumbnailUrl = thumbResult.secure_url;
     }
 
-    /* 💾 SAVE */
+    /* SAVE */
     const material = await Material.create({
 
       title: title.trim(),
@@ -128,8 +140,8 @@ export const addMaterial = async (req, res, next) => {
       pages: pages || 0,
       price,
 
-      fileUrl: result.secure_url,
-      cloudinaryId: result.public_id,
+      fileUrl: pdfResult.secure_url,
+      cloudinaryId: pdfResult.public_id,
 
       thumbnail: thumbnailUrl,
 
@@ -140,7 +152,7 @@ export const addMaterial = async (req, res, next) => {
 
     });
 
-    /* 🧹 CLEANUP */
+    /* CLEANUP */
     fs.unlinkSync(tempPdfPath);
     fs.unlinkSync("uploads/preview-1.jpg");
     fs.unlinkSync("uploads/preview-2.jpg");
@@ -162,13 +174,20 @@ export const addMaterial = async (req, res, next) => {
 
 };
 
-
 /* 📄 GET MATERIALS */
 export const getMaterials = async (req, res, next) => {
 
   try {
 
-    const { page = 1, limit = 12, classId, subjectId, type, search = "", admin } = req.query;
+    const {
+      page = 1,
+      limit = 12,
+      classId,
+      subjectId,
+      type,
+      search = "",
+      admin
+    } = req.query;
 
     const filter = {};
 
@@ -206,7 +225,6 @@ export const getMaterials = async (req, res, next) => {
 
 };
 
-
 /* 🔍 GET MATERIAL BY ID */
 export const getMaterialById = async (req, res, next) => {
 
@@ -228,7 +246,6 @@ export const getMaterialById = async (req, res, next) => {
 
 };
 
-
 /* ✏ UPDATE MATERIAL */
 export const updateMaterial = async (req, res, next) => {
 
@@ -248,20 +265,16 @@ export const updateMaterial = async (req, res, next) => {
     material.type = updates.type || material.type;
     material.pages = updates.pages ?? material.pages;
 
-    /* 🖼 Thumbnail update */
+    /* 🔥 THUMBNAIL UPDATE FIX */
     const thumbnailFile = req.files?.thumbnail?.[0];
 
     if (thumbnailFile) {
-
-      const upload = await cloudinary.uploader.upload_stream(
-        { folder: "materials/thumbnails" },
-        (error, result) => {
-          if (error) throw error;
-          material.thumbnail = result.secure_url;
-        }
+      const thumbResult = await uploadImageToCloudinary(
+        thumbnailFile.buffer,
+        "materials/thumbnails"
       );
 
-      streamifier.createReadStream(thumbnailFile.buffer).pipe(upload);
+      material.thumbnail = thumbResult.secure_url;
     }
 
     await material.save();
@@ -277,7 +290,6 @@ export const updateMaterial = async (req, res, next) => {
   }
 
 };
-
 
 /* ❌ DELETE MATERIAL */
 export const deleteMaterial = async (req, res, next) => {
