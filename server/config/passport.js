@@ -36,7 +36,6 @@ passport.use(
           user = await User.findOne({ email });
 
           if (user) {
-            // 🔗 Link Google account with existing user
             user.googleId = googleId;
             user.avatar = avatar;
             user.authProvider = "google";
@@ -59,9 +58,12 @@ passport.use(
         }
 
         /* =====================================
-           🔐 TOKEN GENERATE
+           🔐 TOKEN GENERATE (✅ FIXED)
         ===================================== */
-        const token = generateToken(user._id);
+        const token = generateToken({
+          id: user._id,
+          role: user.role
+        });
 
         /* =====================================
            ✅ RETURN USER
