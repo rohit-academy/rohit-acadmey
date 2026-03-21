@@ -3,16 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { Phone, Chrome, ArrowLeft } from "lucide-react";
 
 function Login() {
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const [step, setStep] = useState("choose"); // choose | phone
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  /* 📱 SEND OTP */
   const handleSendOtp = (e) => {
     e.preventDefault();
 
@@ -29,6 +33,7 @@ function Login() {
     }, 800);
   };
 
+  /* ✅ VERIFY OTP */
   const handleVerifyOtp = (e) => {
     e.preventDefault();
 
@@ -54,55 +59,74 @@ function Login() {
   };
 
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
 
-      <div className="grid w-full max-w-5xl lg:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
 
-        {/* LEFT PANEL (Desktop) */}
-        <div className="hidden lg:flex flex-col justify-center bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-12">
+        {/* 🔙 BACK */}
+        {step !== "choose" && (
+          <button
+            onClick={() => {
+              setStep("choose");
+              setOtpSent(false);
+            }}
+            className="mb-4 text-gray-500 flex items-center gap-1"
+          >
+            <ArrowLeft size={16} /> Back
+          </button>
+        )}
 
-          <h1 className="text-5xl font-bold mb-6">
-            Rohit Academy
-          </h1>
+        {/* =========================
+            STEP 1: CHOOSE LOGIN
+        ========================= */}
+        {step === "choose" && (
 
-          <p className="text-lg opacity-90 mb-8">
-            Notes, Sample Papers & Previous Year Questions
-            for Classes 9–12.
-          </p>
+          <div className="text-center">
 
-          <div className="space-y-4 text-sm">
+            <h1 className="text-2xl font-bold mb-6">
+              Login to Rohit Academy
+            </h1>
 
-            <div>📚 High quality study materials</div>
+            {/* PHONE BUTTON */}
+            <button
+              onClick={() => setStep("phone")}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4 hover:bg-blue-700 transition"
+            >
+              <Phone size={18} />
+              Continue with Phone
+            </button>
 
-            <div>⚡ Instant PDF access after purchase</div>
-
-            <div>🔒 Secure payments with Razorpay</div>
-
-            <div>📱 Mobile friendly learning</div>
+            {/* GOOGLE BUTTON */}
+            <button
+              onClick={() => {
+                window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+              }}
+              className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl hover:bg-gray-100 transition"
+            >
+              <Chrome size={18} />
+              Continue with Google
+            </button>
 
           </div>
+        )}
 
-        </div>
+        {/* =========================
+            STEP 2: PHONE LOGIN
+        ========================= */}
+        {step === "phone" && (
 
-        {/* LOGIN PANEL */}
-        <div className="flex flex-col justify-center p-8 sm:p-12">
+          <div>
 
-          {/* MOBILE TITLE */}
-          <h1 className="lg:hidden text-3xl font-bold text-center mb-8">
-            Login To Rohit Academy
-          </h1>
-
-          <div className="w-full max-w-md mx-auto">
-
-            <h2 className="text-2xl font-semibold text-center mb-8">
-              Please Enter Your Phone Number
+            <h2 className="text-xl font-semibold text-center mb-6">
+              Phone Login
             </h2>
 
             {!otpSent ? (
 
-              <form onSubmit={handleSendOtp} className="space-y-6">
+              <form onSubmit={handleSendOtp} className="space-y-5">
 
-                <label className="block text-sm font-medium">
+                <label className="text-sm font-medium">
                   Phone Number
                 </label>
 
@@ -112,7 +136,7 @@ function Login() {
                   onChange={(phone) => setPhone(phone)}
                   inputStyle={{
                     width: "100%",
-                    height: "54px",
+                    height: "52px",
                     borderRadius: "12px",
                     border: "1px solid #e2e8f0"
                   }}
@@ -121,7 +145,7 @@ function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg font-medium hover:bg-blue-700 transition shadow-md"
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition"
                 >
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
@@ -130,7 +154,7 @@ function Login() {
 
             ) : (
 
-              <form onSubmit={handleVerifyOtp} className="space-y-6">
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
 
                 <p className="text-center text-gray-600">
                   OTP sent to <strong>+{phone}</strong>
@@ -138,7 +162,7 @@ function Login() {
 
                 <input
                   type="tel"
-                  placeholder="Enter 4 digit OTP"
+                  placeholder="Enter OTP"
                   value={otp}
                   required
                   onChange={(e) =>
@@ -150,7 +174,7 @@ function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-green-600 text-white py-3 rounded-xl text-lg font-medium hover:bg-green-700 transition shadow-md"
+                  className="w-full bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition"
                 >
                   {loading ? "Verifying..." : "Verify & Login"}
                 </button>
@@ -160,7 +184,7 @@ function Login() {
                   <button
                     type="button"
                     onClick={() => setOtpSent(false)}
-                    className="text-gray-500 hover:text-black"
+                    className="text-gray-500"
                   >
                     Change Number
                   </button>
@@ -168,7 +192,7 @@ function Login() {
                   <button
                     type="button"
                     onClick={handleResend}
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600"
                   >
                     Resend OTP
                   </button>
@@ -180,13 +204,13 @@ function Login() {
             )}
 
           </div>
-
-        </div>
+        )}
 
       </div>
 
     </div>
   );
+
 }
 
 export default Login;
