@@ -4,7 +4,7 @@ import morgan from "morgan";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-/* 🔥 NEW: PASSPORT */
+/* 🔥 PASSPORT */
 import passport from "./config/passport.js";
 
 import errorMiddleware from "./middleware/errorMiddleware.js";
@@ -30,11 +30,11 @@ const app = express();
 app.use(helmet());
 
 /* =====================================
-   🌍 CORS
+   🌍 CORS (🔥 FIXED)
 ===================================== */
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "*",
+    origin: process.env.FRONTEND_URL || "*",
     credentials: true,
   })
 );
@@ -55,7 +55,7 @@ app.use(limiter);
 app.use(morgan("dev"));
 
 /* =====================================
-   ⚠️ RAZORPAY WEBHOOK (RAW BODY)
+   ⚠️ RAZORPAY WEBHOOK
 ===================================== */
 app.post(
   "/api/webhook/razorpay",
@@ -73,7 +73,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =====================================
-   🔥 PASSPORT INIT (IMPORTANT)
+   🔥 PASSPORT INIT
 ===================================== */
 app.use(passport.initialize());
 
