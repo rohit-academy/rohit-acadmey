@@ -2,55 +2,98 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import logger from "../utils/logger.js";
 
-/* 📲 LOGIN / REGISTER AFTER OTP VERIFY */
+/* =====================================
+   📲 LOGIN / REGISTER WITH PHONE
+===================================== */
 export const loginWithPhone = async (req, res) => {
   try {
     const { phone } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ message: "Phone number required" });
+      return res.status(400).json({
+        success: false,
+        message: "Phone number required"
+      });
     }
 
     let user = await User.findOne({ phone });
 
-    // 🆕 Create new user if not exists
+    /* 🆕 CREATE USER */
     if (!user) {
-      user = await User.create({ phone });
+      user = await User.create({
+        phone,
+        authProvider: "phone",
+        isVerified: true
+      });
+
       logger.info(`New user registered: ${phone}`);
     }
 
-    // 🚫 Blocked user check
+    /* 🚫 BLOCK CHECK */
     if (user.isBlocked) {
       logger.warn(`Blocked user login attempt: ${phone}`);
-      return res.status(403).json({ message: "Account blocked" });
+      return res.status(403).json({
+        success: false,
+        message: "Account blocked"
+      });
     }
 
-    // 🔄 Update last login
-    await user.updateLoginTime();
+    /* 🔄 UPDATE LOGIN TIME */
+    user.lastLogin = new Date();
+    await user.save();
 
     logger.info(`User logged in: ${phone}`);
 
+    /* 🔐 TOKEN */
+    const token = generateToken({
+      id: user._id,
+      role: user.role
+    });
+
     res.json({
-      _id: user._id,
-      phone: user.phone,
-      role: user.role,
-      token: generateToken(user._id)
+      success: true,
+      user: {
+        _id: user._id,
+        phone: user.phone,
+        role: user.role
+      },
+      token
     });
 
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };
 
 
-/* 👤 GET LOGGED IN USER */
+/* =====================================
+   👤 GET CURRENT USER
+===================================== */
 export const getMe = async (req, res) => {
-  res.json(req.user);
+  try {
+    res.json({
+      success: true,
+      user: req.user
+    });
+  } catch (error) {
+    logger.error(`GetMe error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
 };
 
 
-/* 🛠 ADMIN LOGIN (OPTIONAL BACKDOOR) */
+/* =====================================
+   🛠 ADMIN LOGIN
+===================================== */
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -61,17 +104,31 @@ export const adminLogin = async (req, res) => {
     ) {
       logger.warn("Admin logged in via credentials");
 
-      res.json({
-        admin: true,
-        token: generateToken("admin")
+      const token = generateToken({
+        id: "admin",
+        role: "admin"
       });
-    } else {
-      logger.warn("Failed admin login attempt");
-      res.status(401).json({ message: "Invalid admin credentials" });
+
+      return res.json({
+        success: true,
+        admin: true,
+        token
+      });
     }
+
+    logger.warn("Failed admin login attempt");
+
+    res.status(401).json({
+      success: false,
+      message: "Invalid admin credentials"
+    });
 
   } catch (error) {
     logger.error(`Admin login error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };
