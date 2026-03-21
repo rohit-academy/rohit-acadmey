@@ -6,24 +6,27 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       unique: true,
-      sparse: true, // ✅ allow multiple nulls
+      sparse: true,
+      default: undefined, // 🔥 VERY IMPORTANT (null bug fix)
       match: [/^[0-9]{10}$/, "Phone must be 10 digits"]
     },
 
-    /* 📧 EMAIL (for Google login) */
+    /* 📧 EMAIL */
     email: {
       type: String,
       unique: true,
       sparse: true,
       lowercase: true,
-      trim: true
+      trim: true,
+      default: undefined // 🔥 prevent null duplicate
     },
 
     /* 🔵 GOOGLE ID */
     googleId: {
       type: String,
       unique: true,
-      sparse: true
+      sparse: true,
+      default: undefined
     },
 
     /* 👤 NAME */
@@ -53,7 +56,13 @@ const userSchema = new mongoose.Schema(
       default: "user"
     },
 
-    /* 🚫 BLOCK STATUS */
+    /* ✅ VERIFIED */
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    /* 🚫 BLOCK */
     isBlocked: {
       type: Boolean,
       default: false
@@ -70,11 +79,11 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔹 INDEXES (IMPORTANT FOR PERFORMANCE)
+   🔥 INDEXES (SAFE UNIQUE INDEXES)
 ===================================== */
-userSchema.index({ phone: 1 });
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
+userSchema.index({ phone: 1 }, { unique: true, sparse: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 
 /* =====================================
    🔹 UPDATE LAST LOGIN
