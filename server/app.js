@@ -4,6 +4,9 @@ import morgan from "morgan";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
+/* 🔥 NEW: PASSPORT */
+import passport from "./config/passport.js";
+
 import errorMiddleware from "./middleware/errorMiddleware.js";
 
 /* 🔹 ROUTES */
@@ -24,13 +27,11 @@ const app = express();
 /* =====================================
    🔐 SECURITY
 ===================================== */
-
 app.use(helmet());
 
 /* =====================================
    🌍 CORS
 ===================================== */
-
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "*",
@@ -41,7 +42,6 @@ app.use(
 /* =====================================
    🚦 GLOBAL RATE LIMIT
 ===================================== */
-
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -52,13 +52,11 @@ app.use(limiter);
 /* =====================================
    📄 LOGGER
 ===================================== */
-
 app.use(morgan("dev"));
 
 /* =====================================
    ⚠️ RAZORPAY WEBHOOK (RAW BODY)
 ===================================== */
-
 app.post(
   "/api/webhook/razorpay",
   express.raw({ type: "application/json" }),
@@ -71,14 +69,17 @@ app.post(
 /* =====================================
    📦 BODY PARSER
 ===================================== */
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =====================================
+   🔥 PASSPORT INIT (IMPORTANT)
+===================================== */
+app.use(passport.initialize());
+
+/* =====================================
    📲 OTP RATE LIMIT
 ===================================== */
-
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 5,
@@ -90,7 +91,6 @@ app.use("/api/otp", otpLimiter);
 /* =====================================
    ❤️ HEALTH CHECK
 ===================================== */
-
 app.get("/", (req, res) => {
   res.send("🚀 Rohit Academy API Running...");
 });
@@ -98,7 +98,6 @@ app.get("/", (req, res) => {
 /* =====================================
    🔹 API ROUTES
 ===================================== */
-
 app.use("/api/auth", authRoutes);
 app.use("/api/otp", otpRoutes);
 app.use("/api/classes", classRoutes);
@@ -110,14 +109,12 @@ app.use("/api/coupons", couponRoutes);
 /* =====================================
    🔐 ADMIN ROUTES
 ===================================== */
-
-app.use("/api/admin", adminAuthRoutes);   // login
-app.use("/api/admin", adminRoutes);       // protected admin routes
+app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin", adminRoutes);
 
 /* =====================================
    ❌ 404 HANDLER
 ===================================== */
-
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -128,7 +125,6 @@ app.use((req, res) => {
 /* =====================================
    🔥 ERROR HANDLER
 ===================================== */
-
 app.use(errorMiddleware);
 
 export default app;
