@@ -3,21 +3,26 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
-/* 🔥 GOOGLE STRATEGY */
+/* =====================================
+   🔥 GOOGLE STRATEGY
+===================================== */
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      scope: ["profile", "email"]
     },
 
     async (accessToken, refreshToken, profile, done) => {
       try {
-        /* 🧠 SAFE DATA EXTRACTION */
+        /* =====================================
+           🧠 SAFE DATA EXTRACTION
+        ===================================== */
         const email = profile.emails?.[0]?.value;
         const googleId = profile.id;
-        const name = profile.displayName;
+        const name = profile.displayName || "";
         const avatar = profile.photos?.[0]?.value || "";
 
         if (!email) {
@@ -33,13 +38,15 @@ passport.use(
            🔄 STEP 2: LINK EXISTING EMAIL USER
         ===================================== */
         if (!user) {
-          user = await User.findOne({ email });
+          const existingUser = await User.findOne({ email });
 
-          if (user) {
-            user.googleId = googleId;
-            user.avatar = avatar;
-            user.authProvider = "google";
-            await user.save();
+          if (existingUser) {
+            existingUser.googleId = googleId;
+            existingUser.avatar = avatar || existingUser.avatar;
+            existingUser.authProvider = "google";
+            existingUser.lastLogin = new Date();
+
+            user = await existingUser.save();
           }
         }
 
@@ -53,12 +60,21 @@ passport.use(
             googleId,
             avatar,
             authProvider: "google",
-            isVerified: true
+            isVerified: true,
+            lastLogin: new Date()
           });
         }
 
         /* =====================================
-           🔐 TOKEN GENERATE (✅ FIXED)
+           🔄 STEP 4: UPDATE LAST LOGIN
+        ===================================== */
+        else {
+          user.lastLogin = new Date();
+          await user.save();
+        }
+
+        /* =====================================
+           🔐 TOKEN GENERATE (SAFE PAYLOAD)
         ===================================== */
         const token = generateToken({
           id: user._id,
@@ -66,7 +82,7 @@ passport.use(
         });
 
         /* =====================================
-           ✅ RETURN USER
+           ✅ RETURN USER + TOKEN
         ===================================== */
         return done(null, {
           ...user.toObject(),
