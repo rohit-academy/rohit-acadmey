@@ -3,7 +3,9 @@ import User from "../models/User.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
-    /* 🔐 TOKEN CHECK */
+    /* =====================================
+       🔐 TOKEN CHECK
+    ===================================== */
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -15,8 +17,11 @@ const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    /* 🧬 VERIFY TOKEN */
+    /* =====================================
+       🧬 VERIFY TOKEN
+    ===================================== */
     let decoded;
+
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
@@ -33,9 +38,22 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    /* 👤 GET USER */
-    const user = await User.findById(decoded.id)
-      .select("name phone role isBlocked"); // 🔥 minimal payload
+    /* =====================================
+       ⚠️ TOKEN STRUCTURE CHECK (🔥 FIX)
+    ===================================== */
+    if (!decoded?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token payload",
+      });
+    }
+
+    /* =====================================
+       👤 GET USER
+    ===================================== */
+    const user = await User.findById(decoded.id).select(
+      "_id name phone email role isBlocked authProvider"
+    );
 
     if (!user) {
       return res.status(401).json({
@@ -44,7 +62,9 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    /* ⛔ BLOCK CHECK */
+    /* =====================================
+       ⛔ BLOCK CHECK
+    ===================================== */
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
@@ -52,8 +72,18 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    /* 📌 ATTACH USER */
-    req.user = user;
+    /* =====================================
+       📌 ATTACH USER (🔥 IMPORTANT)
+    ===================================== */
+    req.user = {
+      id: user._id,        // 🔥 use this everywhere (IMPORTANT FIX)
+      _id: user._id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      authProvider: user.authProvider,
+    };
 
     next();
 
@@ -67,8 +97,8 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-/* 🔁 NAMED EXPORT */
+/* =====================================
+   🔁 EXPORTS
+===================================== */
 export const protect = authMiddleware;
-
-/* 🔁 DEFAULT EXPORT */
 export default authMiddleware;
