@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
 import API from "../services/api";
+import { useAuth } from "../context/AuthContext"; // ✅ ADD THIS
 
 function Success() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth(); // ✅ IMPORTANT
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Processing...");
@@ -19,7 +21,7 @@ function Success() {
 
         const params = new URLSearchParams(location.search);
 
-        const token = params.get("token");       
+        const token = params.get("token");
         const payment = params.get("payment");
 
         /* 🔐 GOOGLE LOGIN */
@@ -28,11 +30,21 @@ function Success() {
           setMessage("Logging you in...");
         }
 
-        /* 👤 FETCH USER */
+        /* 👤 FETCH USER + SET CONTEXT */
         try {
-          await API.get("/auth/me");
+
+          const res = await API.get("/auth/me");
+
+          const userData = res.data?.data;
+
+          if (userData) {
+            login(userData); // 🔥 THIS WAS MISSING
+          }
+
         } catch {
           console.log("User fetch failed");
+          navigate("/login");
+          return;
         }
 
         /* 💳 PAYMENT */
@@ -42,12 +54,8 @@ function Success() {
 
         /* ⏳ DELAY */
         setTimeout(() => {
-
           setLoading(false);
-
-          /* 🔥 AUTO REDIRECT (FIXED) */
-          navigate("/account");
-
+          navigate("/account"); // ✅ FINAL REDIRECT
         }, 800);
 
       } catch (error) {
@@ -61,7 +69,7 @@ function Success() {
 
     handleSuccess();
 
-  }, [location, navigate]);
+  }, [location, navigate, login]);
 
   /* 🔄 LOADING */
   if (loading) {
@@ -84,10 +92,7 @@ function Success() {
 
       <div className="max-w-xl w-full text-center bg-white p-8 sm:p-10 rounded-2xl shadow-lg">
 
-        <CheckCircle
-          className="mx-auto text-green-500 mb-4"
-          size={70}
-        />
+        <CheckCircle className="mx-auto text-green-500 mb-4" size={70} />
 
         <h1 className="text-3xl font-bold mb-2 text-green-700">
           Success!
@@ -99,7 +104,6 @@ function Success() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
 
-          {/* DOWNLOAD */}
           <button
             onClick={() => navigate("/downloads")}
             className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
@@ -108,7 +112,6 @@ function Success() {
             Go to My Downloads
           </button>
 
-          {/* HOME */}
           <Link
             to="/"
             className="flex items-center justify-center gap-2 bg-gray-200 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-medium"
