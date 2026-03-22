@@ -13,6 +13,14 @@ function Account() {
     return null;
   }
 
+  const handleLogout = () => {
+
+    logout(); // context clear
+
+    // 🔥 HARD RESET (important)
+    window.location.href = "/login";
+  };
+
   return (
 
     <div className="min-h-screen bg-slate-50 px-4 py-6">
@@ -24,8 +32,19 @@ function Account() {
 
           <div className="flex items-center gap-4">
 
-            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-              <User className="text-blue-600" />
+            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+
+              {/* 🔥 GOOGLE AVATAR SUPPORT */}
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="text-blue-600" />
+              )}
+
             </div>
 
             <div>
@@ -59,10 +78,7 @@ function Account() {
 
         {/* 🚪 LOGOUT */}
         <button
-          onClick={() => {
-            logout();
-            navigate("/");
-          }}
+          onClick={handleLogout}
           className="w-full bg-red-500 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-600 transition"
         >
           <LogOut size={18} />

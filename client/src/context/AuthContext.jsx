@@ -1,25 +1,59 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import API from "../services/api"; // 🔥 ADD THIS
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
 
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   /* =====================================
-     🔄 LOAD USER FROM LOCALSTORAGE
+     🔄 LOAD USER (🔥 FROM BACKEND)
   ===================================== */
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
 
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const loadUser = async () => {
+
+      try {
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        // 🔥 FETCH FROM BACKEND
+        const res = await API.get("/auth/me");
+
+        const userData = res.data?.data;
+
+        if (userData) {
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+        }
+
+      } catch (error) {
+
+        console.log("User load failed");
+
+        // ❌ invalid token → clear
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+      } finally {
+        setLoading(false);
+      }
+
+    };
+
+    loadUser();
+
   }, []);
 
   /* =====================================
-     🔐 LOGIN (🔥 FIXED)
-     - accepts full user from backend
+     🔐 LOGIN
   ===================================== */
   const login = (userData) => {
 
@@ -38,12 +72,16 @@ export function AuthProvider({ children }) {
     setUser(null);
 
     localStorage.removeItem("user");
-    localStorage.removeItem("token"); // 🔥 IMPORTANT
+    localStorage.removeItem("token");
   };
 
   /* =====================================
-     📌 VALUE
+     ⏳ LOADING BLOCK (IMPORTANT)
   ===================================== */
+  if (loading) {
+    return null; // ya loader dikha sakta hai
+  }
+
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       {children}
@@ -51,7 +89,4 @@ export function AuthProvider({ children }) {
   );
 }
 
-/* =====================================
-   🔹 HOOK
-===================================== */
 export const useAuth = () => useContext(AuthContext);
