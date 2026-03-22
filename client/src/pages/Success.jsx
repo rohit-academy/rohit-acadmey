@@ -19,34 +19,35 @@ function Success() {
 
         const params = new URLSearchParams(location.search);
 
-        const token = params.get("token");       // 🔐 Google login
-        const payment = params.get("payment");   // 💳 payment success flag
+        const token = params.get("token");       
+        const payment = params.get("payment");
 
-        /* 🔐 SAVE TOKEN (Google Login) */
+        /* 🔐 GOOGLE LOGIN */
         if (token) {
           localStorage.setItem("token", token);
           setMessage("Logging you in...");
         }
 
-        /* 🔥 FETCH USER (important) */
+        /* 👤 FETCH USER */
         try {
           await API.get("/auth/me");
-        } catch (err) {
+        } catch {
           console.log("User fetch failed");
         }
 
-        /* 💳 PAYMENT SUCCESS FLOW */
+        /* 💳 PAYMENT */
         if (payment === "success") {
           setMessage("Unlocking your materials...");
-          
-          // 🔥 FUTURE: backend download entry create
-          // await API.post("/orders/save-downloads");
-
         }
 
-        /* ⏳ UX DELAY */
+        /* ⏳ DELAY */
         setTimeout(() => {
+
           setLoading(false);
+
+          /* 🔥 AUTO REDIRECT (FIXED) */
+          navigate("/account");
+
         }, 800);
 
       } catch (error) {
@@ -83,13 +84,11 @@ function Success() {
 
       <div className="max-w-xl w-full text-center bg-white p-8 sm:p-10 rounded-2xl shadow-lg">
 
-        {/* ✅ ICON */}
         <CheckCircle
           className="mx-auto text-green-500 mb-4"
           size={70}
         />
 
-        {/* 🎉 TITLE */}
         <h1 className="text-3xl font-bold mb-2 text-green-700">
           Success!
         </h1>
@@ -98,7 +97,6 @@ function Success() {
           Your materials are ready. You can download them anytime.
         </p>
 
-        {/* 🚀 ACTIONS */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
 
           {/* DOWNLOAD */}

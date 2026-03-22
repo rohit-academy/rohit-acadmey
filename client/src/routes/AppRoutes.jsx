@@ -17,6 +17,7 @@ import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
+import Account from "../pages/Account"; // ✅ NEW
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
@@ -51,7 +52,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🔥 GOOGLE CALLBACK (IMPORTANT) */}
+      {/* 🔥 GOOGLE CALLBACK */}
       <Route path="/auth/success" element={<Success />} />
 
 
@@ -85,6 +86,16 @@ function AppRoutes() {
 
         {/* 🛒 CART */}
         <Route path="/cart" element={<Cart />} />
+
+        {/* 👤 ACCOUNT (🔥 NEW) */}
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <Account />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 💳 CHECKOUT */}
         <Route

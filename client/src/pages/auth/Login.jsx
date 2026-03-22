@@ -75,7 +75,8 @@ function Login() {
         phone: "+" + phone
       });
 
-      navigate("/");
+      /* 🔥 FIXED REDIRECT */
+      navigate("/account");
 
     } catch (err) {
       setError(err.response?.data?.message || "Invalid OTP");
@@ -114,14 +115,16 @@ function Login() {
           </button>
         )}
 
-        {/* ERROR */}
+        {/* ❌ ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
             {error}
           </div>
         )}
 
-        {/* STEP 1 */}
+        {/* =========================
+            STEP 1: CHOOSE LOGIN
+        ========================= */}
         {step === "choose" && (
 
           <div className="text-center">
@@ -130,6 +133,7 @@ function Login() {
               Login to Rohit Academy
             </h1>
 
+            {/* 📱 PHONE */}
             <button
               onClick={() => setStep("phone")}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4 hover:bg-blue-700 transition"
@@ -138,6 +142,7 @@ function Login() {
               Continue with Phone
             </button>
 
+            {/* 🔵 GOOGLE */}
             <button
               onClick={() => {
                 window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
@@ -151,7 +156,9 @@ function Login() {
           </div>
         )}
 
-        {/* STEP 2 */}
+        {/* =========================
+            STEP 2: PHONE LOGIN
+        ========================= */}
         {step === "phone" && (
 
           <div>
