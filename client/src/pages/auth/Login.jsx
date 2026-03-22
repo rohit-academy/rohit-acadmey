@@ -5,57 +5,93 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { Phone, Chrome, ArrowLeft } from "lucide-react";
 
+import {
+  sendOtp,
+  verifyOtp,
+  loginWithPhone
+} from "../../services/authService";
+
 function Login() {
 
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [step, setStep] = useState("choose"); // choose | phone
+  const [step, setStep] = useState("choose");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   /* 📱 SEND OTP */
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
 
-    if (phone.length < 12) {
-      alert("Enter valid phone number");
+    if (phone.length < 10) {
+      setError("Enter valid phone number");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
+      setError("");
 
-    setTimeout(() => {
+      await sendOtp("+" + phone);
+
       setOtpSent(true);
+
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   /* ✅ VERIFY OTP */
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
 
-    if (!/^[0-9]{4}$/.test(otp)) {
-      alert("Enter valid 4 digit OTP");
+    if (!/^[0-9]{4,6}$/.test(otp)) {
+      setError("Enter valid OTP");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
+      setError("");
 
-    setTimeout(() => {
+      await verifyOtp("+" + phone, otp);
+
+      /* 🔐 LOGIN AFTER VERIFY */
+      const res = await loginWithPhone("+" + phone);
+
+      const token = res.data?.token;
+
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+
       login({
-        name: "Student",
         phone: "+" + phone
       });
 
       navigate("/");
-    }, 800);
+
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResend = () => {
-    alert("OTP resent to +" + phone);
+  /* 🔁 RESEND */
+  const handleResend = async () => {
+    try {
+      await sendOtp("+" + phone);
+      setError("");
+    } catch {
+      setError("Failed to resend OTP");
+    }
   };
 
   return (
@@ -70,6 +106,7 @@ function Login() {
             onClick={() => {
               setStep("choose");
               setOtpSent(false);
+              setError("");
             }}
             className="mb-4 text-gray-500 flex items-center gap-1"
           >
@@ -77,9 +114,14 @@ function Login() {
           </button>
         )}
 
-        {/* =========================
-            STEP 1: CHOOSE LOGIN
-        ========================= */}
+        {/* ERROR */}
+        {error && (
+          <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        {/* STEP 1 */}
         {step === "choose" && (
 
           <div className="text-center">
@@ -88,7 +130,6 @@ function Login() {
               Login to Rohit Academy
             </h1>
 
-            {/* PHONE BUTTON */}
             <button
               onClick={() => setStep("phone")}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4 hover:bg-blue-700 transition"
@@ -97,7 +138,6 @@ function Login() {
               Continue with Phone
             </button>
 
-            {/* GOOGLE BUTTON */}
             <button
               onClick={() => {
                 window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
@@ -111,9 +151,7 @@ function Login() {
           </div>
         )}
 
-        {/* =========================
-            STEP 2: PHONE LOGIN
-        ========================= */}
+        {/* STEP 2 */}
         {step === "phone" && (
 
           <div>
@@ -126,14 +164,10 @@ function Login() {
 
               <form onSubmit={handleSendOtp} className="space-y-5">
 
-                <label className="text-sm font-medium">
-                  Phone Number
-                </label>
-
                 <PhoneInput
                   country={"in"}
                   value={phone}
-                  onChange={(phone) => setPhone(phone)}
+                  onChange={setPhone}
                   inputStyle={{
                     width: "100%",
                     height: "52px",
@@ -166,7 +200,7 @@ function Login() {
                   value={otp}
                   required
                   onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
                   className="w-full border p-4 rounded-xl text-center text-xl tracking-widest focus:ring-2 focus:ring-green-500 outline-none"
                 />
@@ -209,6 +243,7 @@ function Login() {
       </div>
 
     </div>
+
   );
 
 }
