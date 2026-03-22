@@ -25,21 +25,16 @@ import AdminLogin from "../pages/AdminLogin";
 /* ❌ COMMON */
 import NotFound from "../pages/NotFound";
 
-/* 🛠 ADMIN LAYOUT */
+/* 🛠 ADMIN */
 import AdminLayout from "../admin/layout/AdminLayout";
-
-/* 🛠 ADMIN PAGES */
 import AdminDashboard from "../admin/dashboard/AdminDashboard";
 import ManageAcademics from "../admin/academics/ManageAcademics";
 import ManageClasses from "../admin/academics/ManageClasses";
 import ManageSubjects from "../admin/academics/ManageSubjects";
-
 import ManageMaterials from "../admin/materials/ManageMaterials";
 import UploadMaterial from "../admin/materials/UploadMaterial";
-
 import ManageUsers from "../admin/users/ManageUsers";
 import OrdersAdmin from "../admin/orders/OrdersAdmin";
-
 import Coupons from "../admin/finance/Coupons";
 import SalesReport from "../admin/finance/SalesReport";
 
@@ -56,6 +51,9 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
+      {/* 🔥 GOOGLE CALLBACK (IMPORTANT) */}
+      <Route path="/auth/success" element={<Success />} />
+
 
       {/* =========================
           🌍 USER WEBSITE
@@ -63,31 +61,32 @@ function AppRoutes() {
 
       <Route element={<UserLayout />}>
 
+        {/* 🏠 HOME */}
         <Route index element={<Home />} />
 
-        {/* 📚 Classes */}
+        {/* 📚 CLASSES */}
         <Route path="/classes" element={<Classes />} />
 
-        {/* 🎓 Streams (11/12) */}
+        {/* 🎓 STREAMS */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 📖 Subjects */}
+        {/* 📖 SUBJECTS */}
         <Route path="/subjects/:classId" element={<Subjects />} />
         <Route path="/subjects/:classId/:streamId" element={<Subjects />} />
 
-        {/* 📄 Study Materials */}
+        {/* 📄 MATERIALS */}
         <Route
           path="/materials/:classId/:subjectId"
           element={<StudyMaterials />}
         />
 
-        {/* 📦 Product */}
+        {/* 📦 PRODUCT */}
         <Route path="/product/:id" element={<ProductDetails />} />
 
-        {/* 🛒 Cart */}
+        {/* 🛒 CART */}
         <Route path="/cart" element={<Cart />} />
 
-        {/* 💳 Checkout (Protected) */}
+        {/* 💳 CHECKOUT */}
         <Route
           path="/checkout"
           element={
@@ -97,10 +96,10 @@ function AppRoutes() {
           }
         />
 
-        {/* ✅ Payment Success */}
+        {/* ✅ PAYMENT SUCCESS */}
         <Route path="/success" element={<Success />} />
 
-        {/* 📥 Downloads (Protected) */}
+        {/* 📥 DOWNLOADS */}
         <Route
           path="/downloads"
           element={
@@ -121,25 +120,25 @@ function AppRoutes() {
 
         <Route element={<AdminLayout />}>
 
-          {/* Dashboard */}
+          {/* 📊 DASHBOARD */}
           <Route index element={<AdminDashboard />} />
 
-          {/* Academics */}
+          {/* 📚 ACADEMICS */}
           <Route path="academics" element={<ManageAcademics />} />
           <Route path="academics/classes" element={<ManageClasses />} />
           <Route path="academics/subjects" element={<ManageSubjects />} />
 
-          {/* Materials */}
+          {/* 📦 MATERIALS */}
           <Route path="materials" element={<ManageMaterials />} />
           <Route path="materials/upload" element={<UploadMaterial />} />
 
-          {/* Users */}
+          {/* 👤 USERS */}
           <Route path="users" element={<ManageUsers />} />
 
-          {/* Orders */}
+          {/* 🧾 ORDERS */}
           <Route path="orders" element={<OrdersAdmin />} />
 
-          {/* Finance */}
+          {/* 💰 FINANCE */}
           <Route path="coupons" element={<Coupons />} />
           <Route path="sales-report" element={<SalesReport />} />
 
@@ -149,7 +148,7 @@ function AppRoutes() {
 
 
       {/* =========================
-          ❌ 404 PAGE
+          ❌ 404
       ========================= */}
 
       <Route path="*" element={<NotFound />} />
