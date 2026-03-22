@@ -2,16 +2,18 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const authMiddleware = async (req, res, next) => {
+
   try {
+
     /* =====================================
-       🔐 TOKEN CHECK
+       🔐 TOKEN EXTRACT
     ===================================== */
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Authorization token missing",
+        message: "Authorization token missing"
       });
     }
 
@@ -25,40 +27,41 @@ const authMiddleware = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
+
       if (err.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
-          message: "Session expired, please login again",
+          message: "Session expired, please login again"
         });
       }
 
       return res.status(401).json({
         success: false,
-        message: "Invalid token",
+        message: "Invalid token"
       });
     }
 
     /* =====================================
-       ⚠️ TOKEN STRUCTURE CHECK (🔥 FIX)
+       ⚠️ TOKEN STRUCTURE CHECK
     ===================================== */
-    if (!decoded?.id) {
+    if (!decoded || !decoded.id) {
       return res.status(401).json({
         success: false,
-        message: "Invalid token payload",
+        message: "Invalid token payload"
       });
     }
 
     /* =====================================
-       👤 GET USER
+       👤 FETCH USER
     ===================================== */
     const user = await User.findById(decoded.id).select(
-      "_id name phone email role isBlocked authProvider"
+      "_id name phone email role isBlocked authProvider avatar lastLogin"
     );
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User no longer exists",
+        message: "User not found"
       });
     }
 
@@ -68,33 +71,38 @@ const authMiddleware = async (req, res, next) => {
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
-        message: "Your account is blocked",
+        message: "Your account is blocked"
       });
     }
 
     /* =====================================
-       📌 ATTACH USER (🔥 IMPORTANT)
+       📌 ATTACH USER (🔥 FINAL FIX)
     ===================================== */
     req.user = {
-      id: user._id,        // 🔥 use this everywhere (IMPORTANT FIX)
-      _id: user._id,
+      id: user._id,     // 👉 backend queries me use hoga
+      _id: user._id,    // 👉 frontend consistency
       name: user.name,
       phone: user.phone,
       email: user.email,
       role: user.role,
       authProvider: user.authProvider,
+      avatar: user.avatar,
+      lastLogin: user.lastLogin
     };
 
     next();
 
   } catch (error) {
+
     console.error("🔥 Auth middleware error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Authentication failed",
+      message: "Authentication failed"
     });
+
   }
+
 };
 
 /* =====================================

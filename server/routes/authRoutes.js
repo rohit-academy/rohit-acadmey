@@ -18,9 +18,22 @@ const router = express.Router();
 router.post("/login-phone", authLimiter, loginWithPhone);
 
 /* =====================================
-   👤 GET LOGGED IN USER
+   👤 GET LOGGED IN USER (🔥 IMPORTANT)
 ===================================== */
 router.get("/me", authMiddleware, getMe);
+
+/*
+👉 KYU IMPORTANT?
+Frontend call karega:
+API.get("/auth/me")
+
+Account page ke liye:
+- name
+- email
+- phone
+- avatar
+- role
+*/
 
 /* =====================================
    🛠 ADMIN LOGIN
@@ -48,10 +61,31 @@ router.get(
   }),
   (req, res) => {
 
-    /* 🔐 Send token to frontend */
-    res.redirect(
-      `${process.env.FRONTEND_URL}/success?token=${req.user.token}`
-    );
+    try {
+
+      /* 🔐 TOKEN from passport */
+      const token = req.user?.token;
+
+      if (!token) {
+        return res.redirect(
+          `${process.env.FRONTEND_URL}/login`
+        );
+      }
+
+      /* ✅ SUCCESS REDIRECT */
+      res.redirect(
+        `${process.env.FRONTEND_URL}/success?token=${token}`
+      );
+
+    } catch (error) {
+
+      console.error("Google callback error:", error);
+
+      res.redirect(
+        `${process.env.FRONTEND_URL}/login`
+      );
+
+    }
 
   }
 );
