@@ -36,7 +36,7 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await sendOtp("+" + phone);
+      await sendOtp(phone); // ✅ FIXED (no +)
 
       setOtpSent(true);
 
@@ -60,10 +60,10 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await verifyOtp("+" + phone, otp);
+      await verifyOtp(phone, otp); // ✅ FIXED
 
       /* 🔐 LOGIN AFTER VERIFY */
-      const res = await loginWithPhone("+" + phone);
+      const res = await loginWithPhone(phone); // ✅ FIXED
 
       const token = res.data?.token;
 
@@ -71,11 +71,9 @@ function Login() {
         localStorage.setItem("token", token);
       }
 
-      login({
-        phone: "+" + phone
-      });
+      /* 🔥 MOST IMPORTANT FIX */
+      login(res.data.user); // ✅ REAL USER STORE
 
-      /* 🔥 FIXED REDIRECT */
       navigate("/account");
 
     } catch (err) {
@@ -88,7 +86,7 @@ function Login() {
   /* 🔁 RESEND */
   const handleResend = async () => {
     try {
-      await sendOtp("+" + phone);
+      await sendOtp(phone);
       setError("");
     } catch {
       setError("Failed to resend OTP");
@@ -198,7 +196,7 @@ function Login() {
               <form onSubmit={handleVerifyOtp} className="space-y-5">
 
                 <p className="text-center text-gray-600">
-                  OTP sent to <strong>+{phone}</strong>
+                  OTP sent to <strong>{phone}</strong>
                 </p>
 
                 <input
