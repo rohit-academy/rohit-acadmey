@@ -4,15 +4,20 @@ import { useAuth } from "../../context/AuthContext";
 import Loader from "../ui/Loader";
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  // 🕒 Future: if auth loading state ho (API based login)
-  if (user === undefined) {
+  /* =====================================
+     ⏳ WAIT FOR AUTH CHECK
+  ===================================== */
+  if (loading) {
     return <Loader />;
   }
 
-  // 🔒 Not logged in → login page pe bhejo & original route yaad rakho
+  /* =====================================
+     🔒 NOT LOGGED IN
+  ===================================== */
   if (!user) {
     return (
       <Navigate
@@ -23,7 +28,9 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  // ✅ Logged in → allow page
+  /* =====================================
+     ✅ AUTHORIZED
+  ===================================== */
   return children;
 }
 

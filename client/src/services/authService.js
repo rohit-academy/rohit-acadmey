@@ -3,35 +3,51 @@ import API from "./api";
 /* =====================================
    📲 SEND OTP
 ===================================== */
-export const sendOtp = (phone) => {
-  return API.post("/otp/send", { phone });
+export const sendOtp = async (phone) => {
+  const res = await API.post("/otp/send", { phone });
+  return res.data;
 };
 
 /* =====================================
-   🔢 VERIFY OTP + LOGIN
+   🔢 VERIFY OTP
 ===================================== */
-export const verifyOtp = (phone, otp) => {
-  return API.post("/otp/verify", { phone, otp });
+export const verifyOtp = async (phone, otp) => {
+  const res = await API.post("/otp/verify", { phone, otp });
+  return res.data;
 };
 
 /* =====================================
-   📲 LOGIN WITH PHONE (AFTER VERIFY)
+   📲 LOGIN WITH PHONE (GET TOKEN)
 ===================================== */
-export const loginWithPhone = (phone) => {
-  return API.post("/auth/login-phone", { phone });
+export const loginWithPhone = async (phone) => {
+  const res = await API.post("/auth/login-phone", { phone });
+  return res.data; // 🔥 return clean data
 };
 
 /* =====================================
-   👤 GET PROFILE
+   👤 GET CURRENT USER
 ===================================== */
-export const getProfile = () => {
-  return API.get("/auth/me");
+export const getProfile = async () => {
+  const res = await API.get("/auth/me");
+  return res.data;
 };
 
 /* =====================================
-   🚪 LOGOUT (FRONTEND TOKEN REMOVE)
+   🔵 GOOGLE LOGIN (REDIRECT)
+===================================== */
+export const loginWithGoogle = () => {
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+};
+
+/* =====================================
+   🚪 LOGOUT
 ===================================== */
 export const logoutUser = () => {
+
+  /* 🔥 CLEAN ALL AUTH DATA */
   localStorage.removeItem("token");
-  return Promise.resolve();
+  localStorage.removeItem("user");
+  localStorage.removeItem("admin");
+
+  return true;
 };

@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
-import API from "../services/api";
-import { useAuth } from "../context/AuthContext"; // ✅ ADD THIS
+import { useAuth } from "../context/AuthContext";
 
 function Success() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth(); // ✅ IMPORTANT
+  const { login } = useAuth(); // ✅ use token-based login
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Processing...");
@@ -26,36 +25,26 @@ function Success() {
 
         /* 🔐 GOOGLE LOGIN */
         if (token) {
-          localStorage.setItem("token", token);
+
           setMessage("Logging you in...");
+
+          /* 🔥 FINAL FIX */
+          await login(token); // ✅ ONLY THIS
+
         }
 
-        /* 👤 FETCH USER + SET CONTEXT */
-        try {
-
-          const res = await API.get("/auth/me");
-
-          const userData = res.data?.data;
-
-          if (userData) {
-            login(userData); // 🔥 THIS WAS MISSING
-          }
-
-        } catch {
-          console.log("User fetch failed");
-          navigate("/login");
-          return;
-        }
-
-        /* 💳 PAYMENT */
+        /* 💳 PAYMENT FLOW */
         if (payment === "success") {
           setMessage("Unlocking your materials...");
         }
 
         /* ⏳ DELAY */
         setTimeout(() => {
+
           setLoading(false);
-          navigate("/account"); // ✅ FINAL REDIRECT
+
+          navigate("/account"); // ✅ FINAL
+
         }, 800);
 
       } catch (error) {

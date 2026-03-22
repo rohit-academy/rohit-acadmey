@@ -36,7 +36,7 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await sendOtp(phone); // ✅ FIXED (no +)
+      await sendOtp(phone);
 
       setOtpSent(true);
 
@@ -60,24 +60,24 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await verifyOtp(phone, otp); // ✅ FIXED
+      await verifyOtp(phone, otp);
 
       /* 🔐 LOGIN AFTER VERIFY */
-      const res = await loginWithPhone(phone); // ✅ FIXED
+      const res = await loginWithPhone(phone);
 
       const token = res.data?.token;
 
-      if (token) {
-        localStorage.setItem("token", token);
+      if (!token) {
+        throw new Error("Token not received");
       }
 
-      /* 🔥 MOST IMPORTANT FIX */
-      login(res.data.user); // ✅ REAL USER STORE
+      /* 🔥 FINAL FIX (IMPORTANT) */
+      await login(token);
 
       navigate("/account");
 
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid OTP");
+      setError(err.response?.data?.message || err.message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -120,9 +120,7 @@ function Login() {
           </div>
         )}
 
-        {/* =========================
-            STEP 1: CHOOSE LOGIN
-        ========================= */}
+        {/* STEP 1 */}
         {step === "choose" && (
 
           <div className="text-center">
@@ -131,7 +129,6 @@ function Login() {
               Login to Rohit Academy
             </h1>
 
-            {/* 📱 PHONE */}
             <button
               onClick={() => setStep("phone")}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4 hover:bg-blue-700 transition"
@@ -140,7 +137,6 @@ function Login() {
               Continue with Phone
             </button>
 
-            {/* 🔵 GOOGLE */}
             <button
               onClick={() => {
                 window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
@@ -154,9 +150,7 @@ function Login() {
           </div>
         )}
 
-        {/* =========================
-            STEP 2: PHONE LOGIN
-        ========================= */}
+        {/* STEP 2 */}
         {step === "phone" && (
 
           <div>

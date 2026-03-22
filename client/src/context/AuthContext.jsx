@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import API from "../services/api"; // 🔥 ADD THIS
+import API from "../services/api";
 
 const AuthContext = createContext();
 
@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /* =====================================
-     🔄 LOAD USER (🔥 FROM BACKEND)
+     🔄 AUTO LOAD USER FROM TOKEN
   ===================================== */
   useEffect(() => {
 
@@ -20,11 +20,10 @@ export function AuthProvider({ children }) {
         const token = localStorage.getItem("token");
 
         if (!token) {
-          setLoading(false);
+          setUser(null);
           return;
         }
 
-        // 🔥 FETCH FROM BACKEND
         const res = await API.get("/auth/me");
 
         const userData = res.data?.data;
@@ -36,11 +35,13 @@ export function AuthProvider({ children }) {
 
       } catch (error) {
 
-        console.log("User load failed");
+        console.log("Auto login failed");
 
-        // ❌ invalid token → clear
+        /* ❌ CLEAN INVALID DATA */
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+
+        setUser(null);
 
       } finally {
         setLoading(false);
@@ -53,19 +54,46 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =====================================
-     🔐 LOGIN
+     🔐 LOGIN (🔥 FINAL FIX)
+     - token based
   ===================================== */
-  const login = (userData) => {
+  const login = async (token) => {
 
-    if (!userData) return;
+    if (!token) return;
 
-    setUser(userData);
+    try {
 
-    localStorage.setItem("user", JSON.stringify(userData));
+      /* 🔥 CLEAR OLD USER */
+      localStorage.removeItem("user");
+
+      /* 🔐 SAVE TOKEN */
+      localStorage.setItem("token", token);
+
+      /* 🔥 FETCH FRESH USER */
+      const res = await API.get("/auth/me");
+
+      const userData = res.data?.data;
+
+      if (userData) {
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      }
+
+    } catch (error) {
+
+      console.log("Login failed");
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      setUser(null);
+
+    }
+
   };
 
   /* =====================================
-     🚪 LOGOUT
+     🚪 LOGOUT (FULL CLEAN)
   ===================================== */
   const logout = () => {
 
@@ -76,10 +104,10 @@ export function AuthProvider({ children }) {
   };
 
   /* =====================================
-     ⏳ LOADING BLOCK (IMPORTANT)
+     ⏳ LOADING STATE
   ===================================== */
   if (loading) {
-    return null; // ya loader dikha sakta hai
+    return null; // ya loader laga sakta hai
   }
 
   return (
@@ -89,4 +117,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+/* =====================================
+   🔹 HOOK
+===================================== */
 export const useAuth = () => useContext(AuthContext);
