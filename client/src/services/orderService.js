@@ -1,26 +1,53 @@
 import API from "./api";
 
-// 🛒 Create order (after checkout form)
-export const createOrder = (orderData) => {
-  return API.post("/orders", orderData);
+/* =====================================
+   🛒 CREATE ORDER
+===================================== */
+export const createOrder = async (orderData) => {
+  const res = await API.post("/orders", orderData);
+  return res.data;
 };
 
-// 💳 Verify payment (after gateway success)
-export const verifyPayment = (paymentData) => {
-  return API.post("/orders/verify-payment", paymentData);
+/* =====================================
+   💳 VERIFY PAYMENT (RAZORPAY)
+===================================== */
+export const verifyPayment = async (paymentData) => {
+  const res = await API.post("/orders/verify-payment", paymentData);
+  return res.data;
 };
 
-// 📜 Get logged-in user's orders
-export const getMyOrders = () => {
-  return API.get("/orders/my");
+/* =====================================
+   📜 GET MY ORDERS
+===================================== */
+export const getMyOrders = async () => {
+  const res = await API.get("/orders/my");
+  return res.data?.data || res.data;
 };
 
-// 📦 Get single order details
-export const getOrderById = (id) => {
-  return API.get(`/orders/${id}`);
+/* =====================================
+   📦 GET ORDER BY ID
+===================================== */
+export const getOrderById = async (id) => {
+  if (!id) throw new Error("Order ID required");
+
+  const res = await API.get(`/orders/${id}`);
+  return res.data?.data || res.data;
 };
 
-// ❌ Cancel order
-export const cancelOrder = (id) => {
-  return API.put(`/orders/${id}/cancel`);
+/* =====================================
+   ❌ CANCEL ORDER
+===================================== */
+export const cancelOrder = async (id) => {
+  if (!id) throw new Error("Order ID required");
+
+  const res = await API.put(`/orders/${id}/cancel`);
+  return res.data;
+};
+
+/* =====================================
+   📥 DOWNLOAD MATERIALS (BONUS)
+===================================== */
+export const getMyDownloads = async () => {
+  const res = await API.get("/orders/my-downloads");
+  return res.data?.data || res.data;
 };

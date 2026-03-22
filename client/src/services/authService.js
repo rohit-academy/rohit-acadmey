@@ -1,21 +1,37 @@
 import API from "./api";
 
-// 📲 Step 1: Send OTP to phone
+/* =====================================
+   📲 SEND OTP
+===================================== */
 export const sendOtp = (phone) => {
-  return API.post("/auth/send-otp", { phone });
+  return API.post("/otp/send", { phone });
 };
 
-// 🔢 Step 2: Verify OTP
+/* =====================================
+   🔢 VERIFY OTP + LOGIN
+===================================== */
 export const verifyOtp = (phone, otp) => {
-  return API.post("/auth/verify-otp", { phone, otp });
+  return API.post("/otp/verify", { phone, otp });
 };
 
-// 👤 Get logged-in user profile
+/* =====================================
+   📲 LOGIN WITH PHONE (AFTER VERIFY)
+===================================== */
+export const loginWithPhone = (phone) => {
+  return API.post("/auth/login-phone", { phone });
+};
+
+/* =====================================
+   👤 GET PROFILE
+===================================== */
 export const getProfile = () => {
-  return API.get("/auth/profile");
+  return API.get("/auth/me");
 };
 
-// 🚪 Logout (optional backend call)
+/* =====================================
+   🚪 LOGOUT (FRONTEND TOKEN REMOVE)
+===================================== */
 export const logoutUser = () => {
-  return API.post("/auth/logout");
+  localStorage.removeItem("token");
+  return Promise.resolve();
 };
