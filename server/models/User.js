@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
-      default: undefined, // 🔥 VERY IMPORTANT (null bug fix)
+      default: undefined,
       match: [/^[0-9]{10}$/, "Phone must be 10 digits"]
     },
 
@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       lowercase: true,
       trim: true,
-      default: undefined // 🔥 prevent null duplicate
+      default: undefined
     },
 
     /* 🔵 GOOGLE ID */
@@ -77,13 +77,6 @@ const userSchema = new mongoose.Schema(
     timestamps: true
   }
 );
-
-/* =====================================
-   🔥 INDEXES (SAFE UNIQUE INDEXES)
-===================================== */
-userSchema.index({ phone: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 
 /* =====================================
    🔹 UPDATE LAST LOGIN
