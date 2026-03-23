@@ -46,17 +46,18 @@ router.get(
 );
 
 /* =====================================
-   👉 STEP 2: Google Callback (🔥 FINAL FIX)
+   👉 STEP 2: Google Callback (🔥 FINAL)
 ===================================== */
 router.get("/google/callback", (req, res, next) => {
 
   passport.authenticate(
     "google",
     {
-      failureRedirect: "/login",
       session: false
     },
-    (err, data) => {
+    (err, result) => {
+
+      console.log("🔥 GOOGLE CALLBACK RESULT:", result);
 
       /* ❌ ERROR FROM PASSPORT */
       if (err) {
@@ -64,15 +65,25 @@ router.get("/google/callback", (req, res, next) => {
         return res.redirect(`${process.env.FRONTEND_URL}/login`);
       }
 
-      /* ❌ NO DATA */
-      if (!data || !data.token) {
-        console.warn("❌ No token received");
+      /* ❌ NO RESULT */
+      if (!result) {
+        console.warn("❌ No result from passport");
+        return res.redirect(`${process.env.FRONTEND_URL}/login`);
+      }
+
+      const token = result?.token;
+
+      /* ❌ TOKEN MISSING */
+      if (!token) {
+        console.warn("❌ Token missing in result:", result);
         return res.redirect(`${process.env.FRONTEND_URL}/login`);
       }
 
       /* ✅ SUCCESS */
+      console.log("✅ Login success, redirecting...");
+
       return res.redirect(
-        `${process.env.FRONTEND_URL}/success?token=${data.token}`
+        `${process.env.FRONTEND_URL}/success?token=${token}`
       );
 
     }
