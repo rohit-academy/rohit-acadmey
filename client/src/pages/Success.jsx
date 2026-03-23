@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
-import API from "../services/api"; // ✅ IMPORTANT
+import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 function Success() {
@@ -34,25 +34,31 @@ function Success() {
 
           // ✅ FETCH USER FROM BACKEND
           const res = await API.get("/auth/me");
-
           const userData = res.data?.data;
 
           if (userData) {
 
-            // ✅ SAVE USER IN CONTEXT + LOCALSTORAGE
+            // ✅ SAVE USER
             login(userData);
 
-            /* 🔥 USERNAME CHECK (MAIN LOGIC) */
-            if (!userData.name || userData.name.trim() === "") {
+            /* 🔥 USERNAME VALIDATION (FINAL FIX) */
+            const name = userData.name?.trim();
+
+            const isInvalidUsername =
+              !name ||                       // empty
+              name === "" ||
+              name.toLowerCase() === "student" || // default name
+              name.includes(" ");           // space = invalid
+
+            if (isInvalidUsername) {
               navigate("/setup-username");
-              return;
-            } else {
-              navigate("/account");
               return;
             }
 
+            // ✅ VALID USER
+            navigate("/account");
+            return;
           }
-
         }
 
         /* 💳 PAYMENT FLOW */
@@ -60,7 +66,7 @@ function Success() {
           setMessage("Unlocking your materials...");
         }
 
-        /* ⏳ FALLBACK DELAY */
+        /* ⏳ FALLBACK */
         setTimeout(() => {
           setLoading(false);
           navigate("/account");
