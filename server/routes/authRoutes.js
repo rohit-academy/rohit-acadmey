@@ -45,49 +45,39 @@ router.get(
   })
 );
 
-/* 👉 STEP 2: Google Callback */
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login",
-    session: false
-  }),
-  (req, res) => {
+/* =====================================
+   👉 STEP 2: Google Callback (🔥 FINAL FIX)
+===================================== */
+router.get("/google/callback", (req, res, next) => {
 
-    try {
+  passport.authenticate(
+    "google",
+    {
+      failureRedirect: "/login",
+      session: false
+    },
+    (err, data) => {
 
-      /* =====================================
-         🔐 EXTRACT FROM PASSPORT (🔥 FIXED)
-      ===================================== */
-      const token = req.user?.token;
-      const user = req.user?.user; // optional (future use)
-
-      if (!token) {
-        console.warn("❌ Google login failed: No token");
-
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/login`
-        );
+      /* ❌ ERROR FROM PASSPORT */
+      if (err) {
+        console.error("❌ Passport Error:", err);
+        return res.redirect(`${process.env.FRONTEND_URL}/login`);
       }
 
-      /* =====================================
-         ✅ SUCCESS REDIRECT
-      ===================================== */
+      /* ❌ NO DATA */
+      if (!data || !data.token) {
+        console.warn("❌ No token received");
+        return res.redirect(`${process.env.FRONTEND_URL}/login`);
+      }
+
+      /* ✅ SUCCESS */
       return res.redirect(
-        `${process.env.FRONTEND_URL}/success?token=${token}`
-      );
-
-    } catch (error) {
-
-      console.error("🔥 Google callback error:", error);
-
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/login`
+        `${process.env.FRONTEND_URL}/success?token=${data.token}`
       );
 
     }
+  )(req, res, next);
 
-  }
-);
+});
 
 export default router;
