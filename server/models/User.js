@@ -29,11 +29,20 @@ const userSchema = new mongoose.Schema(
       default: undefined
     },
 
-    /* 👤 NAME */
+    /* 👤 USERNAME (🔥 MAIN FIELD) */
     name: {
       type: String,
       trim: true,
-      default: ""
+      lowercase: true,
+      unique: true,          // 🔥 UNIQUE USERNAME
+      sparse: true,          // allow empty for new users
+      default: "",
+      minlength: [3, "Username must be at least 3 characters"],
+      maxlength: [20, "Username max 20 characters"],
+      match: [
+        /^[a-z0-9_]+$/,
+        "Username can only contain lowercase letters, numbers, and underscore"
+      ]
     },
 
     /* 🖼 AVATAR */
@@ -77,6 +86,14 @@ const userSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+/* =====================================
+   🔥 INDEXES (SAFE UNIQUE)
+===================================== */
+userSchema.index({ phone: 1 }, { unique: true, sparse: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
+userSchema.index({ name: 1 }, { unique: true, sparse: true }); // 🔥 username unique
 
 /* =====================================
    🔹 UPDATE LAST LOGIN
