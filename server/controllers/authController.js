@@ -59,7 +59,8 @@ export const loginWithPhone = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
-        avatar: user.avatar
+        avatar: user.avatar,
+        authProvider: user.authProvider
       },
       token
     });
@@ -78,13 +79,12 @@ export const loginWithPhone = async (req, res) => {
 
 
 /* =====================================
-   👤 GET CURRENT USER (🔥 FINAL FIX)
+   👤 GET CURRENT USER
 ===================================== */
 export const getMe = async (req, res) => {
 
   try {
 
-    /* 🔥 ALWAYS FETCH FROM DB */
     const user = await User.findById(req.user.id).select("-__v");
 
     if (!user) {
@@ -133,7 +133,6 @@ export const googleLoginSuccess = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    /* 🔐 TOKEN */
     const token = generateToken({
       id: user._id,
       role: user.role
@@ -169,6 +168,78 @@ export const googleLoginSuccess = async (req, res) => {
 
 
 /* =====================================
+   🆕 SET USERNAME (🔥 FINAL VERSION)
+===================================== */
+export const setUsername = async (req, res) => {
+
+  try {
+
+    let { name } = req.body;
+
+    /* ❌ EMPTY CHECK */
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Username required"
+      });
+    }
+
+    /* 🔥 CLEAN */
+    name = name.trim();
+
+    /* ❌ LENGTH CHECK */
+    if (name.length < 3 || name.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must be 3–20 characters"
+      });
+    }
+
+    /* ❌ DUPLICATE CHECK */
+    const existing = await User.findOne({ name });
+
+    if (existing && existing._id.toString() !== req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: "Username already taken"
+      });
+    }
+
+    /* 👤 UPDATE USER */
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.name = name;
+    await user.save();
+
+    logger.info(`Username updated: ${name}`);
+
+    res.json({
+      success: true,
+      data: user
+    });
+
+  } catch (error) {
+
+    logger.error(`Set username error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update username"
+    });
+
+  }
+
+};
+
+
+/* =====================================
    🛠 ADMIN LOGIN
 ===================================== */
 export const adminLogin = async (req, res) => {
@@ -182,7 +253,7 @@ export const adminLogin = async (req, res) => {
       password === process.env.ADMIN_PASSWORD
     ) {
 
-      logger.warn("Admin logged in via credentials");
+      logger.warn("Admin logged in");
 
       const token = generateToken({
         id: "admin",
@@ -196,8 +267,6 @@ export const adminLogin = async (req, res) => {
       });
 
     }
-
-    logger.warn("Failed admin login attempt");
 
     res.status(401).json({
       success: false,
