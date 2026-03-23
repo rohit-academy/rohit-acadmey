@@ -24,7 +24,8 @@ export const loginWithPhone = async (req, res) => {
       user = await User.create({
         phone,
         authProvider: "phone",
-        isVerified: true
+        isVerified: true,
+        name: "" // 🔥 keep empty (same flow as Google)
       });
 
       logger.info(`New user registered: ${phone}`);
@@ -32,7 +33,6 @@ export const loginWithPhone = async (req, res) => {
 
     /* 🚫 BLOCK CHECK */
     if (user.isBlocked) {
-      logger.warn(`Blocked user login attempt: ${phone}`);
       return res.status(403).json({
         success: false,
         message: "Account blocked"
@@ -43,9 +43,6 @@ export const loginWithPhone = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    logger.info(`User logged in: ${phone}`);
-
-    /* 🔐 TOKEN */
     const token = generateToken({
       id: user._id,
       role: user.role
@@ -58,8 +55,8 @@ export const loginWithPhone = async (req, res) => {
         phone: user.phone,
         email: user.email,
         name: user.name,
-        role: user.role,
         avatar: user.avatar,
+        role: user.role,
         authProvider: user.authProvider
       },
       token
@@ -114,7 +111,7 @@ export const getMe = async (req, res) => {
 
 
 /* =====================================
-   🔵 GOOGLE LOGIN SUCCESS
+   🔵 GOOGLE LOGIN SUCCESS (🔥 FIXED)
 ===================================== */
 export const googleLoginSuccess = async (req, res) => {
 
@@ -127,6 +124,11 @@ export const googleLoginSuccess = async (req, res) => {
         success: false,
         message: "Google authentication failed"
       });
+    }
+
+    /* 🔥 FORCE EMPTY USERNAME */
+    if (!user.name || user.name.includes(" ")) {
+      user.name = ""; // 👉 IMPORTANT FIX
     }
 
     /* 🔄 UPDATE LOGIN TIME */
@@ -145,7 +147,7 @@ export const googleLoginSuccess = async (req, res) => {
       token,
       user: {
         _id: user._id,
-        name: user.name,
+        name: user.name, // now empty
         email: user.email,
         avatar: user.avatar,
         role: user.role,
@@ -168,7 +170,7 @@ export const googleLoginSuccess = async (req, res) => {
 
 
 /* =====================================
-   🆕 SET USERNAME (🔥 FINAL VERSION)
+   🆕 SET USERNAME
 ===================================== */
 export const setUsername = async (req, res) => {
 
@@ -176,7 +178,7 @@ export const setUsername = async (req, res) => {
 
     let { name } = req.body;
 
-    /* ❌ EMPTY CHECK */
+    /* ❌ EMPTY */
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
@@ -184,10 +186,17 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* 🔥 CLEAN */
-    name = name.trim();
+    name = name.trim().toLowerCase();
 
-    /* ❌ LENGTH CHECK */
+    /* ❌ FORMAT CHECK */
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only lowercase letters, numbers & underscore allowed"
+      });
+    }
+
+    /* ❌ LENGTH */
     if (name.length < 3 || name.length > 20) {
       return res.status(400).json({
         success: false,
@@ -195,7 +204,7 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* ❌ DUPLICATE CHECK */
+    /* ❌ DUPLICATE */
     const existing = await User.findOne({ name });
 
     if (existing && existing._id.toString() !== req.user.id) {
@@ -205,7 +214,7 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* 👤 UPDATE USER */
+    /* ✅ UPDATE */
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -218,7 +227,7 @@ export const setUsername = async (req, res) => {
     user.name = name;
     await user.save();
 
-    logger.info(`Username updated: ${name}`);
+    logger.info(`Username set: ${name}`);
 
     res.json({
       success: true,
@@ -252,8 +261,6 @@ export const adminLogin = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-
-      logger.warn("Admin logged in");
 
       const token = generateToken({
         id: "admin",
