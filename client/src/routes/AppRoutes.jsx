@@ -41,26 +41,21 @@ import Coupons from "../admin/finance/Coupons";
 import SalesReport from "../admin/finance/SalesReport";
 
 function AppRoutes() {
-
   return (
-
     <Routes>
 
       {/* =========================
           🔐 AUTH ROUTES
       ========================= */}
-
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* 🔥 GOOGLE CALLBACK */}
       <Route path="/auth/success" element={<Success />} />
 
-
       {/* =========================
           🌍 USER WEBSITE
       ========================= */}
-
       <Route element={<UserLayout />}>
 
         {/* 🏠 HOME */}
@@ -98,7 +93,7 @@ function AppRoutes() {
           }
         />
 
-        {/* 🆕 SET USERNAME (🔥 IMPORTANT FLOW) */}
+        {/* 🆕 SET USERNAME */}
         <Route
           path="/setup-username"
           element={
@@ -118,9 +113,6 @@ function AppRoutes() {
           }
         />
 
-        {/* ✅ PAYMENT SUCCESS */}
-        <Route path="/success" element={<Success />} />
-
         {/* 📥 DOWNLOADS */}
         <Route
           path="/downloads"
@@ -133,34 +125,25 @@ function AppRoutes() {
 
       </Route>
 
-
       {/* =========================
           🛠 ADMIN PANEL
       ========================= */}
-
       <Route path="/admin" element={<AdminRoute />}>
 
         <Route element={<AdminLayout />}>
 
-          {/* 📊 DASHBOARD */}
           <Route index element={<AdminDashboard />} />
 
-          {/* 📚 ACADEMICS */}
           <Route path="academics" element={<ManageAcademics />} />
           <Route path="academics/classes" element={<ManageClasses />} />
           <Route path="academics/subjects" element={<ManageSubjects />} />
 
-          {/* 📦 MATERIALS */}
           <Route path="materials" element={<ManageMaterials />} />
           <Route path="materials/upload" element={<UploadMaterial />} />
 
-          {/* 👤 USERS */}
           <Route path="users" element={<ManageUsers />} />
-
-          {/* 🧾 ORDERS */}
           <Route path="orders" element={<OrdersAdmin />} />
 
-          {/* 💰 FINANCE */}
           <Route path="coupons" element={<Coupons />} />
           <Route path="sales-report" element={<SalesReport />} />
 
@@ -168,17 +151,13 @@ function AppRoutes() {
 
       </Route>
 
-
       {/* =========================
           ❌ 404
       ========================= */}
-
       <Route path="*" element={<NotFound />} />
 
     </Routes>
-
   );
-
 }
 
 export default AppRoutes;

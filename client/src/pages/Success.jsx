@@ -32,7 +32,7 @@ function Success() {
           // ✅ SAVE TOKEN
           localStorage.setItem("token", token);
 
-          // ✅ FETCH USER FROM BACKEND
+          // ✅ FETCH USER
           const res = await API.get("/auth/me");
           const userData = res.data?.data;
 
@@ -41,21 +41,13 @@ function Success() {
             // ✅ SAVE USER
             login(userData);
 
-            /* 🔥 USERNAME VALIDATION (FINAL FIX) */
-            const name = userData.name?.trim();
-
-            const isInvalidUsername =
-              !name ||                       // empty
-              name === "" ||
-              name.toLowerCase() === "student" || // default name
-              name.includes(" ");           // space = invalid
-
-            if (isInvalidUsername) {
-              navigate("/setup-username");
+            /* 🔥 FINAL LOGIC */
+            if (userData.authProvider === "google") {
+              navigate("/setup-username"); // 🔥 ALWAYS FOR GOOGLE
               return;
             }
 
-            // ✅ VALID USER
+            // ✅ PHONE USER
             navigate("/account");
             return;
           }

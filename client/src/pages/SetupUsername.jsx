@@ -1,78 +1,35 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../services/api";
+import React from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function SetupUsername() {
 
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!name.trim()) {
-      alert("Enter username");
-      return;
-    }
-
-    try {
-
-      setLoading(true);
-
-      const res = await API.put("/auth/set-username", {
-        name
-      });
-
-      const updatedUser = res.data?.data;
-
-      login(updatedUser);
-
-      navigate("/account");
-
-    } catch (err) {
-      alert("Failed to update username");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
 
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="bg-white p-8 rounded-2xl shadow text-center max-w-md w-full">
 
-      <div className="bg-white p-8 rounded-xl shadow w-full max-w-md">
-
-        <h1 className="text-2xl font-bold mb-6 text-center">
-          Set Your Username
+        <h1 className="text-2xl font-bold mb-4">
+          Your Username
         </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-gray-100 p-4 rounded-lg text-lg font-semibold mb-6">
+          @{user?.name}
+        </div>
 
-          <input
-            type="text"
-            placeholder="Enter your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg"
-          >
-            {loading ? "Saving..." : "Continue"}
-          </button>
-
-        </form>
+        <button
+          onClick={() => navigate("/account")}
+          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
+        >
+          Continue
+        </button>
 
       </div>
 
     </div>
-
   );
 }
 
