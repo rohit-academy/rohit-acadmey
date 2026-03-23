@@ -92,7 +92,7 @@ passport.use(
           const username = await generateUsername(displayName);
 
           user = await User.create({
-            name: username, // ✅ ALWAYS SAFE
+            name: username,
             email,
             googleId,
             avatar,
@@ -108,7 +108,6 @@ passport.use(
         ===================================== */
         else {
 
-          /* 🔥 DOUBLE SAFETY CHECK */
           if (
             !user.name ||
             user.name.includes(" ") ||
@@ -130,11 +129,11 @@ passport.use(
         });
 
         /* =====================================
-           ✅ RETURN USER + TOKEN
+           ✅ FINAL FIX (IMPORTANT)
         ===================================== */
         return done(null, {
-          ...user.toObject(),
-          token
+          user,   // ✅ mongoose document
+          token   // ✅ token separate
         });
 
       } catch (error) {

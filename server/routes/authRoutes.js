@@ -5,7 +5,7 @@ import {
   loginWithPhone,
   getMe,
   adminLogin,
-  setUsername // 🔥 NEW
+  setUsername
 } from "../controllers/authController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -24,19 +24,9 @@ router.post("/login-phone", authLimiter, loginWithPhone);
 router.get("/me", authMiddleware, getMe);
 
 /* =====================================
-   🆕 SET USERNAME (🔥 IMPORTANT)
+   🆕 SET USERNAME
 ===================================== */
 router.put("/set-username", authMiddleware, setUsername);
-
-/*
-👉 Use case:
-Google login ke baad
-username empty ho → frontend redirect karega
-/setup-username
-
-phir yaha hit hoga:
-PUT /api/auth/set-username
-*/
 
 /* =====================================
    🛠 ADMIN LOGIN
@@ -66,8 +56,11 @@ router.get(
 
     try {
 
-      /* 🔐 TOKEN from passport */
+      /* =====================================
+         🔐 EXTRACT FROM PASSPORT (🔥 FIXED)
+      ===================================== */
       const token = req.user?.token;
+      const user = req.user?.user; // optional (future use)
 
       if (!token) {
         console.warn("❌ Google login failed: No token");
@@ -77,8 +70,10 @@ router.get(
         );
       }
 
-      /* ✅ SUCCESS REDIRECT */
-      res.redirect(
+      /* =====================================
+         ✅ SUCCESS REDIRECT
+      ===================================== */
+      return res.redirect(
         `${process.env.FRONTEND_URL}/success?token=${token}`
       );
 
@@ -86,7 +81,7 @@ router.get(
 
       console.error("🔥 Google callback error:", error);
 
-      res.redirect(
+      return res.redirect(
         `${process.env.FRONTEND_URL}/login`
       );
 
