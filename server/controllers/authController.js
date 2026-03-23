@@ -25,7 +25,7 @@ export const loginWithPhone = async (req, res) => {
         phone,
         authProvider: "phone",
         isVerified: true,
-        name: "" // 🔥 keep empty (same flow as Google)
+        name: "" // empty → setup later
       });
 
       logger.info(`New user registered: ${phone}`);
@@ -79,7 +79,6 @@ export const loginWithPhone = async (req, res) => {
    👤 GET CURRENT USER
 ===================================== */
 export const getMe = async (req, res) => {
-
   try {
 
     const user = await User.findById(req.user.id).select("-__v");
@@ -106,12 +105,11 @@ export const getMe = async (req, res) => {
     });
 
   }
-
 };
 
 
 /* =====================================
-   🔵 GOOGLE LOGIN SUCCESS (🔥 FIXED)
+   🔵 GOOGLE LOGIN SUCCESS (🔥 FINAL FIX)
 ===================================== */
 export const googleLoginSuccess = async (req, res) => {
 
@@ -126,10 +124,8 @@ export const googleLoginSuccess = async (req, res) => {
       });
     }
 
-    /* 🔥 FORCE EMPTY USERNAME */
-    if (!user.name || user.name.includes(" ")) {
-      user.name = ""; // 👉 IMPORTANT FIX
-    }
+    /* ✅ DO NOT TOUCH USERNAME HERE */
+    // ❌ user.name = ""  (REMOVED)
 
     /* 🔄 UPDATE LOGIN TIME */
     user.lastLogin = new Date();
@@ -147,7 +143,7 @@ export const googleLoginSuccess = async (req, res) => {
       token,
       user: {
         _id: user._id,
-        name: user.name, // now empty
+        name: user.name, // ✅ from strategy
         email: user.email,
         avatar: user.avatar,
         role: user.role,
@@ -188,7 +184,7 @@ export const setUsername = async (req, res) => {
 
     name = name.trim().toLowerCase();
 
-    /* ❌ FORMAT CHECK */
+    /* ❌ FORMAT */
     if (!/^[a-z0-9_]+$/.test(name)) {
       return res.status(400).json({
         success: false,

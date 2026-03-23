@@ -4,14 +4,14 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
-   🔥 USERNAME GENERATOR (UNIQUE)
+   🔥 USERNAME GENERATOR (UNIQUE + SAFE)
 ===================================== */
 const generateUsername = async (name) => {
 
   let base = (name || "user")
     .toLowerCase()
-    .replace(/\s+/g, "_")          // spaces → _
-    .replace(/[^a-z0-9_]/g, "");   // remove invalid chars
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
 
   if (!base) base = "user";
 
@@ -42,7 +42,7 @@ passport.use(
       try {
 
         /* =====================================
-           🧠 SAFE DATA
+           🧠 SAFE DATA EXTRACTION
         ===================================== */
         const email = profile.emails?.[0]?.value;
         const googleId = profile.id;
@@ -65,24 +65,34 @@ passport.use(
           const existingUser = await User.findOne({ email });
 
           if (existingUser) {
+
             existingUser.googleId = googleId;
             existingUser.avatar = avatar || existingUser.avatar;
             existingUser.authProvider = "google";
             existingUser.lastLogin = new Date();
+
+            /* 🔥 FIX OLD INVALID USERNAME */
+            if (
+              !existingUser.name ||
+              existingUser.name.includes(" ") ||
+              /[^a-z0-9_]/.test(existingUser.name)
+            ) {
+              existingUser.name = await generateUsername(displayName);
+            }
 
             user = await existingUser.save();
           }
         }
 
         /* =====================================
-           ➕ STEP 3: CREATE NEW USER (🔥 AUTO USERNAME)
+           ➕ STEP 3: CREATE NEW USER
         ===================================== */
         if (!user) {
 
           const username = await generateUsername(displayName);
 
           user = await User.create({
-            name: username, // 🔥 AUTO GENERATED UNIQUE USERNAME
+            name: username, // ✅ ALWAYS SAFE
             email,
             googleId,
             avatar,
@@ -97,12 +107,22 @@ passport.use(
            🔄 STEP 4: UPDATE LOGIN
         ===================================== */
         else {
+
+          /* 🔥 DOUBLE SAFETY CHECK */
+          if (
+            !user.name ||
+            user.name.includes(" ") ||
+            /[^a-z0-9_]/.test(user.name)
+          ) {
+            user.name = await generateUsername(displayName);
+          }
+
           user.lastLogin = new Date();
           await user.save();
         }
 
         /* =====================================
-           🔐 TOKEN
+           🔐 TOKEN GENERATE
         ===================================== */
         const token = generateToken({
           id: user._id,
@@ -110,7 +130,7 @@ passport.use(
         });
 
         /* =====================================
-           ✅ RETURN
+           ✅ RETURN USER + TOKEN
         ===================================== */
         return done(null, {
           ...user.toObject(),

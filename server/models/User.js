@@ -34,8 +34,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       lowercase: true,
-      unique: true,          // 🔥 UNIQUE USERNAME
-      sparse: true,          // allow empty for new users
+      unique: true,
+      sparse: true,
       default: "",
       minlength: [3, "Username must be at least 3 characters"],
       maxlength: [20, "Username max 20 characters"],
@@ -88,12 +88,28 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 INDEXES (SAFE UNIQUE)
+   🔥 SAFE UNIQUE INDEXES
 ===================================== */
 userSchema.index({ phone: 1 }, { unique: true, sparse: true });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
-userSchema.index({ name: 1 }, { unique: true, sparse: true }); // 🔥 username unique
+userSchema.index({ name: 1 }, { unique: true, sparse: true });
+
+/* =====================================
+   🔥 PRE-SAVE HOOK (AUTO CLEAN USERNAME)
+===================================== */
+userSchema.pre("save", function (next) {
+
+  if (this.name) {
+    this.name = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "_")        // space → _
+      .replace(/[^a-z0-9_]/g, ""); // remove invalid
+  }
+
+  next();
+});
 
 /* =====================================
    🔹 UPDATE LAST LOGIN
