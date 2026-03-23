@@ -17,7 +17,8 @@ import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
-import Account from "../pages/Account"; // ✅ NEW
+import Account from "../pages/Account";
+import SetupUsername from "../pages/SetupUsername"; // 🔥 NEW
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
@@ -87,12 +88,22 @@ function AppRoutes() {
         {/* 🛒 CART */}
         <Route path="/cart" element={<Cart />} />
 
-        {/* 👤 ACCOUNT (🔥 NEW) */}
+        {/* 👤 ACCOUNT */}
         <Route
           path="/account"
           element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🆕 SET USERNAME (🔥 IMPORTANT FLOW) */}
+        <Route
+          path="/setup-username"
+          element={
+            <ProtectedRoute>
+              <SetupUsername />
             </ProtectedRoute>
           }
         />

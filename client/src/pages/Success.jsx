@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
+import API from "../services/api"; // ✅ IMPORTANT
 import { useAuth } from "../context/AuthContext";
 
 function Success() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth(); // ✅ use token-based login
+  const { login } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Processing...");
@@ -28,8 +29,29 @@ function Success() {
 
           setMessage("Logging you in...");
 
-          /* 🔥 FINAL FIX */
-          await login(token); // ✅ ONLY THIS
+          // ✅ SAVE TOKEN
+          localStorage.setItem("token", token);
+
+          // ✅ FETCH USER FROM BACKEND
+          const res = await API.get("/auth/me");
+
+          const userData = res.data?.data;
+
+          if (userData) {
+
+            // ✅ SAVE USER IN CONTEXT + LOCALSTORAGE
+            login(userData);
+
+            /* 🔥 USERNAME CHECK (MAIN LOGIC) */
+            if (!userData.name || userData.name.trim() === "") {
+              navigate("/setup-username");
+              return;
+            } else {
+              navigate("/account");
+              return;
+            }
+
+          }
 
         }
 
@@ -38,13 +60,10 @@ function Success() {
           setMessage("Unlocking your materials...");
         }
 
-        /* ⏳ DELAY */
+        /* ⏳ FALLBACK DELAY */
         setTimeout(() => {
-
           setLoading(false);
-
-          navigate("/account"); // ✅ FINAL
-
+          navigate("/account");
         }, 800);
 
       } catch (error) {
