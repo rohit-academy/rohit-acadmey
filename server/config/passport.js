@@ -4,6 +4,29 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
+   🔥 USERNAME GENERATOR (UNIQUE)
+===================================== */
+const generateUsername = async (name) => {
+
+  let base = (name || "user")
+    .toLowerCase()
+    .replace(/\s+/g, "_")          // spaces → _
+    .replace(/[^a-z0-9_]/g, "");   // remove invalid chars
+
+  if (!base) base = "user";
+
+  let username = base;
+  let count = 1;
+
+  while (await User.findOne({ name: username })) {
+    username = `${base}${count}`;
+    count++;
+  }
+
+  return username;
+};
+
+/* =====================================
    🔥 GOOGLE STRATEGY
 ===================================== */
 passport.use(
@@ -17,12 +40,13 @@ passport.use(
 
     async (accessToken, refreshToken, profile, done) => {
       try {
+
         /* =====================================
-           🧠 SAFE DATA EXTRACTION
+           🧠 SAFE DATA
         ===================================== */
         const email = profile.emails?.[0]?.value;
         const googleId = profile.id;
-        const name = profile.displayName || "";
+        const displayName = profile.displayName || "";
         const avatar = profile.photos?.[0]?.value || "";
 
         if (!email) {
@@ -51,11 +75,14 @@ passport.use(
         }
 
         /* =====================================
-           ➕ STEP 3: CREATE NEW USER
+           ➕ STEP 3: CREATE NEW USER (🔥 AUTO USERNAME)
         ===================================== */
         if (!user) {
+
+          const username = await generateUsername(displayName);
+
           user = await User.create({
-            name,
+            name: username, // 🔥 AUTO GENERATED UNIQUE USERNAME
             email,
             googleId,
             avatar,
@@ -63,10 +90,11 @@ passport.use(
             isVerified: true,
             lastLogin: new Date()
           });
+
         }
 
         /* =====================================
-           🔄 STEP 4: UPDATE LAST LOGIN
+           🔄 STEP 4: UPDATE LOGIN
         ===================================== */
         else {
           user.lastLogin = new Date();
@@ -74,7 +102,7 @@ passport.use(
         }
 
         /* =====================================
-           🔐 TOKEN GENERATE (SAFE PAYLOAD)
+           🔐 TOKEN
         ===================================== */
         const token = generateToken({
           id: user._id,
@@ -82,7 +110,7 @@ passport.use(
         });
 
         /* =====================================
-           ✅ RETURN USER + TOKEN
+           ✅ RETURN
         ===================================== */
         return done(null, {
           ...user.toObject(),
