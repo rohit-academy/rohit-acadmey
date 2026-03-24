@@ -34,21 +34,26 @@ function Success() {
 
           // ✅ FETCH USER
           const res = await API.get("/auth/me");
-          const userData = res.data?.data;
+          const userData = res.data?.user; // ✅ FIXED
 
           if (userData) {
 
-            // ✅ SAVE USER
+            // ✅ SAVE USER IN CONTEXT
             login(userData);
 
-            /* 🔥 FINAL LOGIC */
+            // ✅ GOOGLE USER → USERNAME SETUP
             if (userData.authProvider === "google") {
-              navigate("/setup-username"); // 🔥 ALWAYS FOR GOOGLE
+              navigate("/setup-username");
               return;
             }
 
-            // ✅ PHONE USER
+            // ✅ NORMAL USER
             navigate("/account");
+            return;
+          } else {
+            // ❌ USER NOT FOUND
+            localStorage.removeItem("token");
+            navigate("/login");
             return;
           }
         }
@@ -56,17 +61,22 @@ function Success() {
         /* 💳 PAYMENT FLOW */
         if (payment === "success") {
           setMessage("Unlocking your materials...");
+
+          setTimeout(() => {
+            setLoading(false);
+          }, 800);
+
+          return;
         }
 
-        /* ⏳ FALLBACK */
-        setTimeout(() => {
-          setLoading(false);
-          navigate("/account");
-        }, 800);
+        /* ❌ NO TOKEN + NO PAYMENT */
+        navigate("/login");
 
       } catch (error) {
 
-        console.error(error);
+        console.error("❌ Success Error:", error);
+
+        localStorage.removeItem("token");
         navigate("/login");
 
       }
@@ -77,7 +87,7 @@ function Success() {
 
   }, [location, navigate, login]);
 
-  /* 🔄 LOADING */
+  /* 🔄 LOADING UI */
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -92,6 +102,7 @@ function Success() {
     );
   }
 
+  /* ✅ PAYMENT SUCCESS UI */
   return (
 
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
