@@ -66,18 +66,26 @@ function Login() {
       const res = await loginWithPhone(phone);
 
       const token = res.data?.token;
+      const user = res.data?.user;
 
       if (!token) {
         throw new Error("Token not received");
       }
 
-      /* 🔥 FINAL FIX (IMPORTANT) */
-      await login(token);
+      // ✅ SAVE TOKEN
+      localStorage.setItem("token", token);
+
+      // ✅ SET USER IN CONTEXT
+      login(user);
 
       navigate("/account");
 
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Invalid OTP");
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        "Invalid OTP"
+      );
     } finally {
       setLoading(false);
     }
@@ -93,6 +101,18 @@ function Login() {
     }
   };
 
+  /* 🔵 GOOGLE LOGIN */
+  const handleGoogleLogin = () => {
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    if (!API_URL) {
+      setError("API URL not configured");
+      return;
+    }
+
+    window.location.href = `${API_URL}/auth/google`;
+  };
+
   return (
 
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
@@ -106,6 +126,7 @@ function Login() {
               setStep("choose");
               setOtpSent(false);
               setError("");
+              setOtp("");
             }}
             className="mb-4 text-gray-500 flex items-center gap-1"
           >
@@ -138,9 +159,7 @@ function Login() {
             </button>
 
             <button
-              onClick={() => {
-                window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
-              }}
+              onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl hover:bg-gray-100 transition"
             >
               <Chrome size={18} />

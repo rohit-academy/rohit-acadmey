@@ -18,7 +18,7 @@ import Checkout from "../pages/Checkout";
 import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
 import Account from "../pages/Account";
-import SetupUsername from "../pages/SetupUsername"; // 🔥 NEW
+import SetupUsername from "../pages/SetupUsername";
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
@@ -44,46 +44,32 @@ function AppRoutes() {
   return (
     <Routes>
 
-      {/* =========================
-          🔐 AUTH ROUTES
-      ========================= */}
+      {/* 🔐 AUTH */}
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* 🔥 GOOGLE CALLBACK */}
-      <Route path="/auth/success" element={<Success />} />
+      <Route path="/success" element={<Success />} />
 
-      {/* =========================
-          🌍 USER WEBSITE
-      ========================= */}
+      {/* 🌍 USER */}
       <Route element={<UserLayout />}>
 
-        {/* 🏠 HOME */}
         <Route index element={<Home />} />
 
-        {/* 📚 CLASSES */}
         <Route path="/classes" element={<Classes />} />
-
-        {/* 🎓 STREAMS */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 📖 SUBJECTS */}
-        <Route path="/subjects/:classId" element={<Subjects />} />
-        <Route path="/subjects/:classId/:streamId" element={<Subjects />} />
+        {/* ✅ CLEAN SUBJECT ROUTE */}
+        <Route path="/subjects/:classId/:streamId?" element={<Subjects />} />
 
-        {/* 📄 MATERIALS */}
         <Route
           path="/materials/:classId/:subjectId"
           element={<StudyMaterials />}
         />
 
-        {/* 📦 PRODUCT */}
         <Route path="/product/:id" element={<ProductDetails />} />
-
-        {/* 🛒 CART */}
         <Route path="/cart" element={<Cart />} />
 
-        {/* 👤 ACCOUNT */}
         <Route
           path="/account"
           element={
@@ -93,7 +79,6 @@ function AppRoutes() {
           }
         />
 
-        {/* 🆕 SET USERNAME */}
         <Route
           path="/setup-username"
           element={
@@ -103,7 +88,6 @@ function AppRoutes() {
           }
         />
 
-        {/* 💳 CHECKOUT */}
         <Route
           path="/checkout"
           element={
@@ -113,7 +97,6 @@ function AppRoutes() {
           }
         />
 
-        {/* 📥 DOWNLOADS */}
         <Route
           path="/downloads"
           element={
@@ -125,12 +108,9 @@ function AppRoutes() {
 
       </Route>
 
-      {/* =========================
-          🛠 ADMIN PANEL
-      ========================= */}
-      <Route path="/admin" element={<AdminRoute />}>
-
-        <Route element={<AdminLayout />}>
+      {/* 🛠 ADMIN */}
+      <Route element={<AdminRoute />}>
+        <Route path="/admin" element={<AdminLayout />}>
 
           <Route index element={<AdminDashboard />} />
 
@@ -148,12 +128,9 @@ function AppRoutes() {
           <Route path="sales-report" element={<SalesReport />} />
 
         </Route>
-
       </Route>
 
-      {/* =========================
-          ❌ 404
-      ========================= */}
+      {/* ❌ 404 */}
       <Route path="*" element={<NotFound />} />
 
     </Routes>

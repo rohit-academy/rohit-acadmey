@@ -1,11 +1,32 @@
 import React from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 
 function SetupUsername() {
 
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // 🔄 WAIT UNTIL USER LOAD
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // 🔐 NOT LOGGED IN
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 🚫 NOT GOOGLE USER
+  if (user.authProvider !== "google") {
+    return <Navigate to="/account" replace />;
+  }
+
+  const username = user.name || "user";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -17,7 +38,7 @@ function SetupUsername() {
         </h1>
 
         <div className="bg-gray-100 p-4 rounded-lg text-lg font-semibold mb-6">
-          @{user?.name}
+          @{username}
         </div>
 
         <button

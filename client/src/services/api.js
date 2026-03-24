@@ -1,31 +1,31 @@
 import axios from "axios";
 
 /* =====================================
-   🌐 BASE URL
+   🌐 BASE URL (FIXED)
 ===================================== */
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-acadmey.onrender.com/api",
-  withCredentials: true,
+    "https://rohit-acadmey.onrender.com/api", // ✅ FIXED
 });
 
 /* =====================================
    🔐 REQUEST INTERCEPTOR
-   - attach USER / ADMIN token
 ===================================== */
 API.interceptors.request.use(
   (req) => {
     try {
       const userToken = localStorage.getItem("token");
 
+      // 🔥 admin separate rakho (optional future)
       const adminData = JSON.parse(
         localStorage.getItem("admin") || "{}"
       );
       const adminToken = adminData?.token;
 
-      /* 🔥 PRIORITY: admin > user */
-      const token = adminToken || userToken;
+      // ✅ safer logic
+      const isAdminRoute = req.url?.includes("/admin");
+      const token = isAdminRoute ? adminToken : userToken;
 
       if (token) {
         req.headers.Authorization = `Bearer ${token}`;
@@ -42,9 +42,9 @@ API.interceptors.request.use(
 
 /* =====================================
    🚨 RESPONSE INTERCEPTOR
-   - auto logout
-   - error handling
 ===================================== */
+let isRedirecting = false; // 🔥 prevent multi redirect
+
 API.interceptors.response.use(
   (response) => response,
 
@@ -52,37 +52,34 @@ API.interceptors.response.use(
 
     const status = error.response?.status;
 
-    /* =====================================
-       🔐 401 → TOKEN EXPIRED / INVALID
-    ===================================== */
-    if (status === 401) {
+    /* 🔐 401 */
+    if (status === 401 && !isRedirecting) {
+
+      isRedirecting = true;
 
       console.warn("⚠️ Session expired");
 
-      /* 🔥 CLEAN ALL AUTH DATA */
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("admin");
 
-      /* 🔁 REDIRECT LOGIN */
-      window.location.href = "/login";
+      // 🔥 prevent loop
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
     }
 
-    /* =====================================
-       🚫 403 → BLOCKED / FORBIDDEN
-    ===================================== */
+    /* 🚫 403 */
     if (status === 403) {
       console.warn("🚫 Access forbidden");
 
-      alert("Your account is blocked or access denied");
+      // 👉 better than alert
+      console.error("Access denied");
     }
 
-    /* =====================================
-       🌐 NETWORK ERROR
-    ===================================== */
+    /* 🌐 NETWORK */
     if (!error.response) {
       console.error("🌐 Network error");
-      alert("Server not reachable. Try again.");
     }
 
     return Promise.reject(error);

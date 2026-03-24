@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
 import API from "../services/api";
@@ -13,7 +13,12 @@ function Success() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Processing...");
 
+  const hasRun = useRef(false); // 🔥 prevent double run
+
   useEffect(() => {
+
+    if (hasRun.current) return;
+    hasRun.current = true;
 
     const handleSuccess = async () => {
 
@@ -34,26 +39,26 @@ function Success() {
 
           // ✅ FETCH USER
           const res = await API.get("/auth/me");
-          const userData = res.data?.user; // ✅ FIXED
+          const userData = res.data?.user;
 
           if (userData) {
 
-            // ✅ SAVE USER IN CONTEXT
+            // ✅ SAVE USER
             login(userData);
 
-            // ✅ GOOGLE USER → USERNAME SETUP
-            if (userData.authProvider === "google") {
-              navigate("/setup-username");
-              return;
-            }
+            // 🔥 slight delay to avoid race condition
+            setTimeout(() => {
+              if (userData.authProvider === "google") {
+                navigate("/setup-username", { replace: true });
+              } else {
+                navigate("/account", { replace: true });
+              }
+            }, 50);
 
-            // ✅ NORMAL USER
-            navigate("/account");
             return;
           } else {
-            // ❌ USER NOT FOUND
             localStorage.removeItem("token");
-            navigate("/login");
+            navigate("/login", { replace: true });
             return;
           }
         }
@@ -69,15 +74,15 @@ function Success() {
           return;
         }
 
-        /* ❌ NO TOKEN + NO PAYMENT */
-        navigate("/login");
+        /* ❌ INVALID ACCESS */
+        navigate("/login", { replace: true });
 
       } catch (error) {
 
         console.error("❌ Success Error:", error);
 
         localStorage.removeItem("token");
-        navigate("/login");
+        navigate("/login", { replace: true });
 
       }
 
@@ -87,7 +92,7 @@ function Success() {
 
   }, [location, navigate, login]);
 
-  /* 🔄 LOADING UI */
+  /* 🔄 LOADING */
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -102,7 +107,7 @@ function Success() {
     );
   }
 
-  /* ✅ PAYMENT SUCCESS UI */
+  /* ✅ PAYMENT UI */
   return (
 
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">

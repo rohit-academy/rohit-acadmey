@@ -12,4 +12,3 @@ function App() {
 }
 
 export default App;
-58888888888

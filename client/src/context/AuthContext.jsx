@@ -26,18 +26,19 @@ export function AuthProvider({ children }) {
 
         const res = await API.get("/auth/me");
 
-        const userData = res.data?.data;
+        const userData = res.data?.user; // ✅ FIXED
 
         if (userData) {
           setUser(userData);
           localStorage.setItem("user", JSON.stringify(userData));
+        } else {
+          throw new Error("Invalid user");
         }
 
       } catch (error) {
 
         console.log("Auto login failed");
 
-        /* ❌ CLEAN INVALID DATA */
         localStorage.removeItem("token");
         localStorage.removeItem("user");
 
@@ -54,29 +55,36 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =====================================
-     🔐 LOGIN (🔥 FINAL FIX)
-     - token based
+     🔐 LOGIN
+     - supports token OR user
   ===================================== */
-  const login = async (token) => {
-
-    if (!token) return;
+  const login = async (data) => {
 
     try {
 
-      /* 🔥 CLEAR OLD USER */
-      localStorage.removeItem("user");
+      /* 🔥 CASE 1: TOKEN PASSED */
+      if (typeof data === "string") {
 
-      /* 🔐 SAVE TOKEN */
-      localStorage.setItem("token", token);
+        localStorage.setItem("token", data);
 
-      /* 🔥 FETCH FRESH USER */
-      const res = await API.get("/auth/me");
+        const res = await API.get("/auth/me");
+        const userData = res.data?.user;
 
-      const userData = res.data?.data;
+        if (!userData) throw new Error("User not found");
 
-      if (userData) {
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
+
+        return;
+      }
+
+      /* 🔥 CASE 2: USER PASSED (Google flow) */
+      if (typeof data === "object") {
+
+        setUser(data);
+        localStorage.setItem("user", JSON.stringify(data));
+
+        return;
       }
 
     } catch (error) {
@@ -93,7 +101,7 @@ export function AuthProvider({ children }) {
   };
 
   /* =====================================
-     🚪 LOGOUT (FULL CLEAN)
+     🚪 LOGOUT
   ===================================== */
   const logout = () => {
 
@@ -103,15 +111,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
   };
 
-  /* =====================================
-     ⏳ LOADING STATE
-  ===================================== */
-  if (loading) {
-    return null; // ya loader laga sakta hai
-  }
-
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
