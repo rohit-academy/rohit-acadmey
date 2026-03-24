@@ -7,17 +7,28 @@ import {
   deleteClass,
 } from "../controllers/classController.js";
 
+import { protect } from "../middleware/authMiddleware.js";
 import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-/* Public */
+/* =====================================
+   🌍 PUBLIC ROUTES
+===================================== */
 router.get("/", getClasses);
+
+// future safe (if you add /popular etc)
+// router.get("/popular", getPopularClasses);
+
 router.get("/:id", getClassById);
 
-/* Admin */
-router.post("/", adminOnly, addClass);
-router.put("/:id", adminOnly, updateClass);
-router.delete("/:id", adminOnly, deleteClass);
+/* =====================================
+   🔐 ADMIN ROUTES
+===================================== */
+router.use(protect, adminOnly);
+
+router.post("/", addClass);
+router.put("/:id", updateClass);
+router.delete("/:id", deleteClass);
 
 export default router;

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
 
 const materialSchema = new mongoose.Schema(
   {
@@ -7,12 +8,21 @@ const materialSchema = new mongoose.Schema(
       required: true,
       trim: true,
       index: true,
+      minlength: 3,
+      maxlength: 150,
+    },
+
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
     },
 
     description: {
       type: String,
       default: "",
       trim: true,
+      maxlength: 1000,
     },
 
     classId: {
@@ -50,26 +60,27 @@ const materialSchema = new mongoose.Schema(
       index: true,
     },
 
-    /* 📄 Full PDF */
+    isFree: {
+      type: Boolean,
+      default: false
+    },
+
     fileUrl: {
       type: String,
       required: true,
     },
 
-    /* ☁️ Cloudinary ID */
     cloudinaryId: {
       type: String,
       default: "",
       index: true,
     },
 
-    /* 🖼 Thumbnail (Main Cover Image) */
     thumbnail: {
       type: String,
       default: "",
     },
 
-    /* 🖼 Preview Images (First 2 Pages) */
     previewImages: {
       type: [String],
       default: [],
@@ -92,6 +103,7 @@ const materialSchema = new mongoose.Schema(
       default: 0,
       min: 0,
       max: 5,
+      set: (v) => Math.round(v * 10) / 10, // 🔥 1 decimal only
     },
 
     reviewsCount: {
@@ -103,7 +115,22 @@ const materialSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* 🔍 Fast filters */
+/* =====================================
+   🔥 SLUG AUTO GENERATE
+===================================== */
+materialSchema.pre("save", function (next) {
+  if (this.isModified("title")) {
+    this.slug = slugify(this.title, {
+      lower: true,
+      strict: true,
+    });
+  }
+  next();
+});
+
+/* =====================================
+   🔥 FILTER INDEX
+===================================== */
 materialSchema.index({
   classId: 1,
   subjectId: 1,
@@ -111,10 +138,19 @@ materialSchema.index({
   isActive: 1,
 });
 
-/* 🔎 Text search */
+/* =====================================
+   🔎 TEXT SEARCH
+===================================== */
 materialSchema.index({
   title: "text",
   description: "text",
 });
+
+/* =====================================
+   ⚡ SORT OPTIMIZATION
+===================================== */
+materialSchema.index({ createdAt: -1 });
+materialSchema.index({ price: 1 });
+materialSchema.index({ rating: -1 });
 
 export default mongoose.model("Material", materialSchema);

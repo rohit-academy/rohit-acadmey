@@ -3,12 +3,25 @@ import generateToken from "../utils/generateToken.js";
 import logger from "../utils/logger.js";
 
 /* =====================================
+   🔧 HELPER: SAFE USER RESPONSE
+===================================== */
+const safeUser = (user) => ({
+  _id: user._id,
+  phone: user.phone,
+  email: user.email,
+  name: user.name,
+  avatar: user.avatar,
+  role: user.role,
+  authProvider: user.authProvider
+});
+
+/* =====================================
    📲 LOGIN / REGISTER WITH PHONE
 ===================================== */
 export const loginWithPhone = async (req, res) => {
   try {
 
-    const { phone } = req.body;
+    let { phone } = req.body;
 
     if (!phone) {
       return res.status(400).json({
@@ -16,6 +29,9 @@ export const loginWithPhone = async (req, res) => {
         message: "Phone number required"
       });
     }
+
+    /* 🔥 NORMALIZE PHONE */
+    phone = phone.replace(/\D/g, "").slice(-10);
 
     let user = await User.findOne({ phone });
 
@@ -25,7 +41,7 @@ export const loginWithPhone = async (req, res) => {
         phone,
         authProvider: "phone",
         isVerified: true,
-        name: "" // empty → setup later
+        name: ""
       });
 
       logger.info(`New user registered: ${phone}`);
@@ -39,7 +55,6 @@ export const loginWithPhone = async (req, res) => {
       });
     }
 
-    /* 🔄 UPDATE LOGIN TIME */
     user.lastLogin = new Date();
     await user.save();
 
@@ -50,15 +65,7 @@ export const loginWithPhone = async (req, res) => {
 
     res.json({
       success: true,
-      user: {
-        _id: user._id,
-        phone: user.phone,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        role: user.role,
-        authProvider: user.authProvider
-      },
+      user: safeUser(user),
       token
     });
 
@@ -81,7 +88,7 @@ export const loginWithPhone = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
 
-    const user = await User.findById(req.user.id).select("-__v");
+    const user = await User.findById(req.user.id).lean();
 
     if (!user) {
       return res.status(404).json({
@@ -92,7 +99,7 @@ export const getMe = async (req, res) => {
 
     res.json({
       success: true,
-      data: user
+      user: safeUser(user) // ✅ FIXED
     });
 
   } catch (error) {
@@ -109,7 +116,7 @@ export const getMe = async (req, res) => {
 
 
 /* =====================================
-   🔵 GOOGLE LOGIN SUCCESS (🔥 FINAL FIX)
+   🔵 GOOGLE LOGIN SUCCESS
 ===================================== */
 export const googleLoginSuccess = async (req, res) => {
 
@@ -124,10 +131,6 @@ export const googleLoginSuccess = async (req, res) => {
       });
     }
 
-    /* ✅ DO NOT TOUCH USERNAME HERE */
-    // ❌ user.name = ""  (REMOVED)
-
-    /* 🔄 UPDATE LOGIN TIME */
     user.lastLogin = new Date();
     await user.save();
 
@@ -141,14 +144,7 @@ export const googleLoginSuccess = async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        _id: user._id,
-        name: user.name, // ✅ from strategy
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-        authProvider: user.authProvider
-      }
+      user: safeUser(user)
     });
 
   } catch (error) {
@@ -174,7 +170,6 @@ export const setUsername = async (req, res) => {
 
     let { name } = req.body;
 
-    /* ❌ EMPTY */
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
@@ -184,7 +179,6 @@ export const setUsername = async (req, res) => {
 
     name = name.trim().toLowerCase();
 
-    /* ❌ FORMAT */
     if (!/^[a-z0-9_]+$/.test(name)) {
       return res.status(400).json({
         success: false,
@@ -192,7 +186,6 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* ❌ LENGTH */
     if (name.length < 3 || name.length > 20) {
       return res.status(400).json({
         success: false,
@@ -200,7 +193,6 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* ❌ DUPLICATE */
     const existing = await User.findOne({ name });
 
     if (existing && existing._id.toString() !== req.user.id) {
@@ -210,7 +202,6 @@ export const setUsername = async (req, res) => {
       });
     }
 
-    /* ✅ UPDATE */
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -227,7 +218,7 @@ export const setUsername = async (req, res) => {
 
     res.json({
       success: true,
-      data: user
+      user: safeUser(user) // ✅ FIXED
     });
 
   } catch (error) {

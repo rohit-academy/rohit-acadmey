@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    /* 📱 PHONE (optional for Google users) */
+    /* 📱 PHONE */
     phone: {
       type: String,
       unique: true,
@@ -29,20 +29,17 @@ const userSchema = new mongoose.Schema(
       default: undefined
     },
 
-    /* 👤 USERNAME (🔥 MAIN FIELD) */
+    /* 👤 USERNAME */
     name: {
       type: String,
       trim: true,
       lowercase: true,
       unique: true,
       sparse: true,
-      default: "",
-      minlength: [3, "Username must be at least 3 characters"],
-      maxlength: [20, "Username max 20 characters"],
-      match: [
-        /^[a-z0-9_]+$/,
-        "Username can only contain lowercase letters, numbers, and underscore"
-      ]
+      default: undefined, // ✅ FIXED
+      minlength: 3,
+      maxlength: 20,
+      match: [/^[a-z0-9_]+$/, "Invalid username"]
     },
 
     /* 🖼 AVATAR */
@@ -88,15 +85,30 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 SAFE UNIQUE INDEXES
+   🔥 SAFE UNIQUE INDEXES (PARTIAL)
 ===================================== */
-userSchema.index({ phone: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
-userSchema.index({ name: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { phone: 1 },
+  { unique: true, partialFilterExpression: { phone: { $exists: true } } }
+);
+
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $exists: true } } }
+);
+
+userSchema.index(
+  { googleId: 1 },
+  { unique: true, partialFilterExpression: { googleId: { $exists: true } } }
+);
+
+userSchema.index(
+  { name: 1 },
+  { unique: true, partialFilterExpression: { name: { $exists: true } } }
+);
 
 /* =====================================
-   🔥 PRE-SAVE HOOK (AUTO CLEAN USERNAME)
+   🔥 PRE-SAVE CLEAN USERNAME
 ===================================== */
 userSchema.pre("save", function (next) {
 
@@ -104,24 +116,21 @@ userSchema.pre("save", function (next) {
     this.name = this.name
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, "_")        // space → _
-      .replace(/[^a-z0-9_]/g, ""); // remove invalid
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
   }
 
   next();
 });
 
 /* =====================================
-   🔹 UPDATE LAST LOGIN
+   🔹 METHODS
 ===================================== */
 userSchema.methods.updateLoginTime = function () {
   this.lastLogin = new Date();
   return this.save();
 };
 
-/* =====================================
-   🔹 CLEAN RESPONSE
-===================================== */
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.__v;

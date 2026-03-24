@@ -52,11 +52,24 @@ const authMiddleware = async (req, res, next) => {
     }
 
     /* =====================================
-       👤 FETCH USER
+       🛠 ADMIN SHORT-CIRCUIT (🔥 FIX)
     ===================================== */
-    const user = await User.findById(decoded.id).select(
-      "_id name phone email role isBlocked authProvider avatar lastLogin"
-    );
+    if (decoded.role === "admin") {
+
+      req.user = {
+        id: "admin",
+        role: "admin"
+      };
+
+      return next();
+    }
+
+    /* =====================================
+       👤 FETCH USER (OPTIMIZED)
+    ===================================== */
+    const user = await User.findById(decoded.id)
+      .select("_id name phone email role isBlocked authProvider avatar lastLogin")
+      .lean(); // ✅ performance boost
 
     if (!user) {
       return res.status(401).json({
@@ -76,11 +89,11 @@ const authMiddleware = async (req, res, next) => {
     }
 
     /* =====================================
-       📌 ATTACH USER (🔥 FINAL FIX)
+       📌 ATTACH USER
     ===================================== */
     req.user = {
-      id: user._id,     // 👉 backend queries me use hoga
-      _id: user._id,    // 👉 frontend consistency
+      id: user._id,
+      _id: user._id,
       name: user.name,
       phone: user.phone,
       email: user.email,

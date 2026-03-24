@@ -4,10 +4,12 @@ import {
   getMaterials,
   getMaterialById,
   updateMaterial,
-  deleteMaterial
+  deleteMaterial,
+  toggleMaterialStatus // 🔥 move logic to controller
 } from "../controllers/materialController.js";
 
-import adminMiddleware from "../middleware/adminMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
+import { adminOnly } from "../middleware/adminMiddleware.js";
 import { uploadPDF } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -16,31 +18,31 @@ const router = express.Router();
    🌍 PUBLIC ROUTES
 ===================================== */
 
-/* 📄 Get all materials (only active for users) */
+/* 📄 Get all materials */
 router.get("/", getMaterials);
 
 /* 🔍 Get single material */
 router.get("/:id", getMaterialById);
 
 /* =====================================
-   🛠 ADMIN ROUTES
+   🔐 ADMIN ROUTES
 ===================================== */
 
-/* ➕ CREATE MATERIAL */
+router.use(protect, adminOnly);
+
+/* ➕ CREATE */
 router.post(
   "/",
-  adminMiddleware,
   uploadPDF.fields([
-    { name: "file", maxCount: 1 },        // PDF
-    { name: "thumbnail", maxCount: 1 }    // Thumbnail
+    { name: "file", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 }
   ]),
   addMaterial
 );
 
-/* ✏️ UPDATE MATERIAL */
+/* ✏️ UPDATE */
 router.put(
   "/:id",
-  adminMiddleware,
   uploadPDF.fields([
     { name: "file", maxCount: 1 },
     { name: "thumbnail", maxCount: 1 }
@@ -48,43 +50,10 @@ router.put(
   updateMaterial
 );
 
-/* 🔁 TOGGLE ACTIVE / INACTIVE */
-router.patch(
-  "/:id/toggle",
-  adminMiddleware,
-  async (req, res, next) => {
+/* 🔁 TOGGLE ACTIVE */
+router.patch("/:id/toggle", toggleMaterialStatus);
 
-    try {
-
-      const { default: Material } = await import("../models/Material.js");
-
-      const material = await Material.findById(req.params.id);
-
-      if (!material) {
-        return next(new Error("Material not found"));
-      }
-
-      material.isActive = !material.isActive;
-      await material.save();
-
-      res.json({
-        success: true,
-        message: `Material ${material.isActive ? "activated" : "deactivated"}`,
-        data: material
-      });
-
-    } catch (error) {
-      next(error);
-    }
-
-  }
-);
-
-/* ❌ DELETE MATERIAL */
-router.delete(
-  "/:id",
-  adminMiddleware,
-  deleteMaterial
-);
+/* ❌ DELETE */
+router.delete("/:id", deleteMaterial);
 
 export default router;

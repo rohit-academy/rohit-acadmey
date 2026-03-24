@@ -4,7 +4,7 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
-   🔥 USERNAME GENERATOR (UNIQUE + SAFE)
+   🔥 USERNAME GENERATOR (OPTIMIZED)
 ===================================== */
 const generateUsername = async (name) => {
 
@@ -15,12 +15,21 @@ const generateUsername = async (name) => {
 
   if (!base) base = "user";
 
-  let username = base;
-  let count = 1;
+  // 🔥 single query optimization
+  const existingUsers = await User.find({
+    name: new RegExp(`^${base}`)
+  }).select("name");
 
-  while (await User.findOne({ name: username })) {
-    username = `${base}${count}`;
+  const usernames = existingUsers.map(u => u.name);
+
+  if (!usernames.includes(base)) return base;
+
+  let count = 1;
+  let username = `${base}${count}`;
+
+  while (usernames.includes(username)) {
     count++;
+    username = `${base}${count}`;
   }
 
   return username;
@@ -35,32 +44,25 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      scope: ["profile", "email"]
     },
 
     async (accessToken, refreshToken, profile, done) => {
       try {
 
-        /* =====================================
-           🧠 SAFE DATA EXTRACTION
-        ===================================== */
-        const email = profile.emails?.[0]?.value;
+        /* 🧠 SAFE DATA */
+        const email = profile.emails?.[0]?.value || null;
         const googleId = profile.id;
-        const displayName = profile.displayName || "";
+        const displayName = profile.displayName || "user";
         const avatar = profile.photos?.[0]?.value || "";
 
         if (!email) {
           return done(new Error("Google email not found"), null);
         }
 
-        /* =====================================
-           🔍 STEP 1: FIND BY GOOGLE ID
-        ===================================== */
+        /* 🔍 FIND USER */
         let user = await User.findOne({ googleId });
 
-        /* =====================================
-           🔄 STEP 2: LINK EXISTING EMAIL USER
-        ===================================== */
+        /* 🔄 LINK EXISTING */
         if (!user) {
           const existingUser = await User.findOne({ email });
 
@@ -71,7 +73,6 @@ passport.use(
             existingUser.authProvider = "google";
             existingUser.lastLogin = new Date();
 
-            /* 🔥 FIX OLD INVALID USERNAME */
             if (
               !existingUser.name ||
               existingUser.name.includes(" ") ||
@@ -84,9 +85,7 @@ passport.use(
           }
         }
 
-        /* =====================================
-           ➕ STEP 3: CREATE NEW USER
-        ===================================== */
+        /* ➕ CREATE NEW */
         if (!user) {
 
           const username = await generateUsername(displayName);
@@ -103,9 +102,7 @@ passport.use(
 
         }
 
-        /* =====================================
-           🔄 STEP 4: UPDATE LOGIN
-        ===================================== */
+        /* 🔄 UPDATE */
         else {
 
           if (
@@ -120,20 +117,23 @@ passport.use(
           await user.save();
         }
 
-        /* =====================================
-           🔐 TOKEN GENERATE
-        ===================================== */
+        /* 🔐 TOKEN */
         const token = generateToken({
           id: user._id,
           role: user.role
         });
 
-        /* =====================================
-           ✅ FINAL FIX (IMPORTANT)
-        ===================================== */
+        /* ✅ SAFE RESPONSE */
         return done(null, {
-          user,   // ✅ mongoose document
-          token   // ✅ token separate
+          user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            role: user.role,
+            authProvider: user.authProvider
+          },
+          token
         });
 
       } catch (error) {

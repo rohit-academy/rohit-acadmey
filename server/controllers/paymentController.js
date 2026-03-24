@@ -2,7 +2,6 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Material from "../models/Material.js";
-import User from "../models/User.js";
 
 /* =====================================
    🔹 RAZORPAY INSTANCE
@@ -18,8 +17,9 @@ const razorpay = new Razorpay({
 export const createOrder = async (req, res) => {
   try {
     const { materials } = req.body;
+    const userId = req.user?.id;
 
-    if (!materials || !materials.length) {
+    if (!materials?.length) {
       return res.status(400).json({
         success: false,
         message: "Materials required"
@@ -28,17 +28,32 @@ export const createOrder = async (req, res) => {
 
     /* 🔍 FETCH MATERIALS */
     const materialDocs = await Material.find({
-      _id: { $in: materials }
+      _id: { $in: materials },
+      isActive: true
     });
 
     if (!materialDocs.length) {
       return res.status(400).json({
         success: false,
-        message: "No valid materials found"
+        message: "Invalid materials"
       });
     }
 
-    /* 💰 CALCULATE AMOUNT (SECURE) */
+    /* ❌ CHECK ALREADY PURCHASED */
+    const existing = await Order.findOne({
+      user: userId,
+      materials: { $in: materials },
+      status: "paid"
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "You already purchased this material"
+      });
+    }
+
+    /* 💰 CALCULATE AMOUNT */
     const totalAmount = materialDocs.reduce(
       (sum, m) => sum + (m.price || 0),
       0
@@ -46,9 +61,18 @@ export const createOrder = async (req, res) => {
 
     /* 🧾 CREATE RAZORPAY ORDER */
     const razorpayOrder = await razorpay.orders.create({
-      amount: totalAmount * 100, // paise
+      amount: Math.round(totalAmount * 100),
       currency: "INR",
       receipt: `rcpt_${Date.now()}`
+    });
+
+    /* 💾 SAVE PENDING ORDER */
+    await Order.create({
+      user: userId,
+      materials,
+      amount: totalAmount,
+      razorpay_order_id: razorpayOrder.id,
+      status: "pending"
     });
 
     res.json({
@@ -68,7 +92,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-
 /* =====================================
    🔐 VERIFY PAYMENT
 ===================================== */
@@ -77,21 +100,19 @@ export const verifyPayment = async (req, res) => {
     const {
       razorpay_order_id,
       razorpay_payment_id,
-      razorpay_signature,
-      materials
+      razorpay_signature
     } = req.body;
 
-    /* 🔐 USER FROM AUTH (🔥 IMPORTANT FIX) */
     const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized user"
+        message: "Unauthorized"
       });
     }
 
-    /* 🔐 SIGNATURE VERIFY */
+    /* 🔐 VERIFY SIGNATURE */
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
 
     const expectedSign = crypto
@@ -102,60 +123,43 @@ export const verifyPayment = async (req, res) => {
     if (expectedSign !== razorpay_signature) {
       return res.status(400).json({
         success: false,
-        message: "Invalid payment signature"
+        message: "Invalid signature"
       });
     }
 
-    /* ❌ DUPLICATE CHECK */
-    const existingOrder = await Order.findOne({
-      paymentId: razorpay_payment_id
+    /* 🔍 FIND ORDER */
+    const order = await Order.findOne({
+      razorpay_order_id,
+      user: userId
     });
 
-    if (existingOrder) {
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    /* ❌ DUPLICATE PAYMENT CHECK */
+    if (order.razorpay_payment_id) {
       return res.json({
         success: true,
-        message: "Order already exists",
-        order: existingOrder
+        message: "Already verified",
+        order
       });
     }
 
-    /* 🔍 FETCH MATERIALS AGAIN (SECURITY) */
-    const materialDocs = await Material.find({
-      _id: { $in: materials }
-    });
+    /* ✅ UPDATE ORDER */
+    order.razorpay_payment_id = razorpay_payment_id;
+    order.status = "paid";
+    order.paidAt = new Date();
 
-    if (!materialDocs.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid materials"
-      });
-    }
-
-    /* 💰 RE-CALCULATE AMOUNT */
-    const totalAmount = materialDocs.reduce(
-      (sum, m) => sum + (m.price || 0),
-      0
-    );
-
-    /* ✅ CREATE ORDER */
-    const newOrder = await Order.create({
-      user: userId,
-      materials,
-      amount: totalAmount,
-      razorpay_order_id,
-      paymentId: razorpay_payment_id,
-      status: "Paid"
-    });
-
-    /* 🔄 UPDATE USER LAST LOGIN (OPTIONAL) */
-    await User.findByIdAndUpdate(userId, {
-      lastLogin: new Date()
-    });
+    await order.save();
 
     res.json({
       success: true,
-      message: "Payment verified & order saved",
-      order: newOrder
+      message: "Payment verified",
+      order
     });
 
   } catch (error) {

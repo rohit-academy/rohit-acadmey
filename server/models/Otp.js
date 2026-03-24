@@ -15,18 +15,40 @@ const otpSchema = new mongoose.Schema(
 
     expiresAt: {
       type: Date,
-      required: true
+      required: true,
+      index: true
     },
 
     attempts: {
       type: Number,
-      default: 0
+      default: 0,
+      max: 5 // 🔥 brute-force protection
     }
   },
   { timestamps: true }
 );
 
-/* ⏳ Auto delete expired OTPs (Mongo TTL index) */
+/* =====================================
+   🔥 TTL INDEX (AUTO DELETE)
+===================================== */
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+/* =====================================
+   🔥 ONE ACTIVE OTP PER PHONE
+===================================== */
+otpSchema.index(
+  { phone: 1 },
+  { unique: true }
+);
+
+/* =====================================
+   🔥 NORMALIZE PHONE
+===================================== */
+otpSchema.pre("save", function (next) {
+  if (this.phone) {
+    this.phone = this.phone.replace(/\D/g, "").slice(-10);
+  }
+  next();
+});
 
 export default mongoose.model("Otp", otpSchema);

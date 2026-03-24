@@ -7,10 +7,11 @@ import Order from "../models/Order.js";
 import logger from "../utils/logger.js";
 import generateToken from "../utils/generateToken.js";
 
-/* 🔐 ADMIN LOGIN */
+/* =====================================
+   🔐 ADMIN LOGIN
+===================================== */
 export const adminLogin = async (req, res) => {
   try {
-
     const { username, password } = req.body;
 
     if (
@@ -23,51 +24,41 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    /* 🔎 CHECK ADMIN IN DB */
     let admin = await User.findOne({ role: "admin" });
 
-    /* 🆕 CREATE ADMIN IF NOT EXISTS */
     if (!admin) {
       admin = await User.create({
-        name: "Admin",
-        phone: "0000000000",
+        name: "admin",
         role: "admin",
-        isBlocked: false,
+        isVerified: true
       });
 
-      logger.info("Admin user created in database");
+      logger.info("Admin created");
     }
 
-    /* 🎫 GENERATE TOKEN */
     const token = generateToken({
       id: admin._id,
-      role: "admin",
-      name: "Admin",
+      role: "admin"
     });
-
-    logger.info("Admin logged in");
 
     res.json({
       success: true,
-      token,
-      role: "admin",
-      name: "Admin",
+      token
     });
 
   } catch (error) {
-
     logger.error(`Admin login error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Admin login failed",
+      message: "Admin login failed"
     });
-
   }
 };
 
-
-/* 📊 DASHBOARD STATS */
+/* =====================================
+   📊 DASHBOARD STATS
+===================================== */
 export const getAdminStats = async (req, res) => {
   try {
 
@@ -80,14 +71,19 @@ export const getAdminStats = async (req, res) => {
       revenueData,
       downloadsData
     ] = await Promise.all([
-      User.countDocuments(),
-      Class.countDocuments(),
-      Subject.countDocuments(),
-      Material.countDocuments(),
+
+      User.countDocuments({ isBlocked: false }),
+
+      Class.countDocuments({ isActive: true }),
+
+      Subject.countDocuments({ isActive: true }),
+
+      Material.countDocuments({ isActive: true }),
+
       Order.countDocuments(),
 
       Order.aggregate([
-        { $match: { paymentStatus: "Paid" } },
+        { $match: { status: "paid" } },
         { $group: { _id: null, total: { $sum: "$amount" } } }
       ]),
 
@@ -96,11 +92,6 @@ export const getAdminStats = async (req, res) => {
       ])
     ]);
 
-    const totalRevenue = revenueData[0]?.total || 0;
-    const totalDownloads = downloadsData[0]?.total || 0;
-
-    logger.info("Admin stats fetched");
-
     res.json({
       success: true,
       totalUsers,
@@ -108,24 +99,23 @@ export const getAdminStats = async (req, res) => {
       totalSubjects,
       totalMaterials,
       totalOrders,
-      totalRevenue,
-      totalDownloads
+      totalRevenue: revenueData[0]?.total || 0,
+      totalDownloads: downloadsData[0]?.total || 0
     });
 
   } catch (error) {
-
     logger.error(`Admin stats error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Server Error"
     });
-
   }
 };
 
-
-/* 👥 GET ALL USERS */
+/* =====================================
+   👥 GET ALL USERS
+===================================== */
 export const getAllUsers = async (req, res) => {
   try {
 
@@ -135,7 +125,7 @@ export const getAllUsers = async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find()
-        .select("-password")
+        .select("-__v")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -154,19 +144,18 @@ export const getAllUsers = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Get users error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Server Error"
     });
-
   }
 };
 
-
-/* 🚫 BLOCK USER */
+/* =====================================
+   🚫 BLOCK USER
+===================================== */
 export const blockUser = async (req, res) => {
   try {
 
@@ -174,6 +163,13 @@ export const blockUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID"
+      });
+    }
+
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot block yourself"
       });
     }
 
@@ -185,19 +181,18 @@ export const blockUser = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Block user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Server Error"
     });
-
   }
 };
 
-
-/* ✅ UNBLOCK USER */
+/* =====================================
+   ✅ UNBLOCK USER
+===================================== */
 export const unblockUser = async (req, res) => {
   try {
 
@@ -216,19 +211,18 @@ export const unblockUser = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Unblock user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Server Error"
     });
-
   }
 };
 
-
-/* ❌ DELETE USER */
+/* =====================================
+   ❌ DELETE USER (SOFT DELETE)
+===================================== */
 export const deleteUser = async (req, res) => {
   try {
 
@@ -239,7 +233,16 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete yourself"
+      });
+    }
+
+    await User.findByIdAndUpdate(req.params.id, {
+      isBlocked: true
+    });
 
     res.json({
       success: true,
@@ -247,25 +250,30 @@ export const deleteUser = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Delete user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Server Error"
     });
-
   }
 };
 
-
-/* 📄 GET ALL MATERIALS */
+/* =====================================
+   📄 GET ALL MATERIALS (ADMIN)
+===================================== */
 export const getAllMaterials = async (req, res) => {
   try {
+
+    const page = Number(req.query.page) || 1;
+    const limit = 20;
+    const skip = (page - 1) * limit;
 
     const materials = await Material.find()
       .populate("classId", "name")
       .populate("subjectId", "name")
+      .skip(skip)
+      .limit(limit)
       .sort({ createdAt: -1 });
 
     res.json({
@@ -274,19 +282,18 @@ export const getAllMaterials = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Get materials error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch materials"
     });
-
   }
 };
 
-
-/* 📦 GET ALL ORDERS */
+/* =====================================
+   📦 GET ALL ORDERS
+===================================== */
 export const getAllOrders = async (req, res) => {
   try {
 
@@ -301,13 +308,11 @@ export const getAllOrders = async (req, res) => {
     });
 
   } catch (error) {
-
     logger.error(`Get orders error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch orders"
     });
-
   }
 };

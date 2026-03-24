@@ -5,18 +5,25 @@ const classSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      lowercase: true,        // 🔥 FIX
+      unique: true,           // 🔥 FIX
+      minlength: 2,
+      maxlength: 50,
+      index: true
     },
 
     level: {
       type: String,
       enum: ["School", "College"],
-      default: "School"
+      default: "School",
+      index: true
     },
 
     order: {
       type: Number,
-      default: 0 // UI display order
+      default: 0,
+      min: 0
     },
 
     streams: [
@@ -28,15 +35,37 @@ const classSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      default: ""
+      default: "",
+      maxlength: 500
     },
 
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
+      index: true
     }
   },
   { timestamps: true }
 );
+
+/* =====================================
+   🔥 CLEAN STREAMS (REMOVE DUPLICATES)
+===================================== */
+classSchema.pre("save", function (next) {
+  if (this.streams && this.streams.length > 0) {
+    this.streams = [...new Set(this.streams)];
+  }
+
+  if (this.name) {
+    this.name = this.name.trim().toLowerCase();
+  }
+
+  next();
+});
+
+/* =====================================
+   🔥 SORT OPTIMIZATION
+===================================== */
+classSchema.index({ level: 1, order: 1 });
 
 export default mongoose.model("Class", classSchema);

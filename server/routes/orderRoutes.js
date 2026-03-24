@@ -2,26 +2,32 @@ import express from "express";
 import {
   createOrder,
   verifyPayment,
-  getMyPurchases   // 🔥 ADD
+  getMyPurchases
 } from "../controllers/orderController.js";
 
-import authMiddleware from "../middleware/authMiddleware.js"; // 🔥 ADD
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 /* =====================================
-   💳 CREATE ORDER
+   🔐 PROTECTED ROUTES
 ===================================== */
+router.use(authMiddleware);
+
+/* 💳 CREATE ORDER (user required) */
 router.post("/create-order", createOrder);
 
-/* =====================================
-   ✅ VERIFY PAYMENT
-===================================== */
-router.post("/verify-payment", verifyPayment);
+/* 📥 GET PURCHASES */
+router.get("/my-materials", getMyPurchases);
 
 /* =====================================
-   📥 GET USER PURCHASED MATERIALS (🔥 NEW)
+   🌐 PUBLIC / SPECIAL ROUTES
 ===================================== */
-router.get("/my-materials", authMiddleware, getMyPurchases);
+
+/* ✅ VERIFY PAYMENT (no auth for flexibility) */
+router.post("/verify", verifyPayment);
+
+/* 🔔 OPTIONAL WEBHOOK */
+// router.post("/webhook", razorpayWebhook);
 
 export default router;

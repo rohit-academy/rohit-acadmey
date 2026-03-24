@@ -1,85 +1,96 @@
 import multer from "multer";
 
-/* 📦 Memory storage */
+/* =====================================
+   📦 MEMORY STORAGE
+===================================== */
 const storage = multer.memoryStorage();
 
-/* 🎯 SMART FILE FILTER */
+/* =====================================
+   🔍 STRICT FILE FILTER
+===================================== */
 const fileFilter = (req, file, cb) => {
 
-  console.log("FIELD:", file.fieldname);
-  console.log("MIME:", file.mimetype);
+  const { fieldname, mimetype } = file;
 
   /* 📄 PDF */
-  if (file.fieldname === "file") {
-
-    const isPDF =
-      file.mimetype === "application/pdf" ||
-      file.originalname.toLowerCase().endsWith(".pdf");
-
-    if (!isPDF) {
-      return cb(new Error("❌ Only PDF files are allowed"), false);
+  if (fieldname === "file") {
+    if (mimetype !== "application/pdf") {
+      return cb(new Error("Only PDF files allowed"), false);
     }
-
     return cb(null, true);
   }
 
   /* 🖼 THUMBNAIL */
-  if (file.fieldname === "thumbnail") {
-
-    const isImage =
-      file.mimetype.startsWith("image/") ||
-      /\.(jpg|jpeg|png|webp)$/i.test(file.originalname);
-
-    if (!isImage) {
-      return cb(new Error("❌ Only image files allowed for thumbnail"), false);
+  if (fieldname === "thumbnail") {
+    if (!mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files allowed"), false);
     }
-
     return cb(null, true);
   }
 
-  /* 🔥 IMPORTANT: allow other fields */
+  /* 🖼 PREVIEW IMAGES */
+  if (fieldname === "previewImages") {
+    if (!mimetype.startsWith("image/")) {
+      return cb(new Error("Only images allowed"), false);
+    }
+    return cb(null, true);
+  }
+
   return cb(null, true);
 };
 
-/* 📤 MULTI FIELD UPLOAD */
+/* =====================================
+   📤 MAIN UPLOAD (PDF + THUMBNAIL)
+===================================== */
 export const uploadPDF = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024
+    fileSize: 10 * 1024 * 1024, // 10MB
+    files: 2 // 🔥 max 2 files (file + thumbnail)
   }
 });
 
-/* 🖼 OPTIONAL preview images */
+/* =====================================
+   🖼 PREVIEW IMAGES
+===================================== */
 export const uploadPreviewImages = multer({
   storage,
+  fileFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024
+    fileSize: 2 * 1024 * 1024,
+    files: 5
   }
 }).array("previewImages", 5);
 
-/* 🚨 ERROR HANDLER */
+/* =====================================
+   🚨 ERROR HANDLER
+===================================== */
 export const handleMulterError = (err, req, res, next) => {
 
   if (err instanceof multer.MulterError) {
 
+    let message = err.message;
+
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = "File too large (max 10MB)";
+    }
+
+    if (err.code === "LIMIT_FILE_COUNT") {
+      message = "Too many files uploaded";
+    }
+
     return res.status(400).json({
       success: false,
-      message:
-        err.code === "LIMIT_FILE_SIZE"
-          ? "❌ File too large. Max size is 10MB"
-          : err.message
+      message
     });
-
   }
 
   if (err) {
-
     return res.status(400).json({
       success: false,
-      message: err.message || "File upload error"
+      message: err.message || "Upload failed"
     });
-
   }
 
   next();

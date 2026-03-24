@@ -1,10 +1,12 @@
 import Subject from "../models/Subject.js";
 import Class from "../models/Class.js";
 
-/* ➕ ADD SUBJECT (Admin) */
+/* =====================================
+   ➕ ADD SUBJECT
+===================================== */
 export const addSubject = async (req, res) => {
   try {
-    const { name, classId, stream } = req.body;
+    let { name, classId, stream } = req.body;
 
     if (!name || !classId) {
       return res.status(400).json({
@@ -13,9 +15,10 @@ export const addSubject = async (req, res) => {
       });
     }
 
-    /* 🔍 Check class exists */
-    const classExists = await Class.findById(classId);
+    name = name.trim().toLowerCase();
 
+    /* 🔍 CHECK CLASS */
+    const classExists = await Class.findById(classId);
     if (!classExists) {
       return res.status(404).json({
         success: false,
@@ -23,17 +26,17 @@ export const addSubject = async (req, res) => {
       });
     }
 
-    /* ❌ Prevent duplicate subject */
+    /* ❌ DUPLICATE CHECK */
     const existing = await Subject.findOne({
       name,
       classId,
-      stream
+      stream: stream || "General"
     });
 
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: "Subject already exists in this class"
+        message: "Subject already exists"
       });
     }
 
@@ -49,32 +52,29 @@ export const addSubject = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("Add subject error:", error);
-
+    console.error("Add subject error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to add subject"
     });
-
   }
 };
 
-
-/* 📄 GET ALL SUBJECTS */
+/* =====================================
+   📄 GET SUBJECTS
+===================================== */
 export const getSubjects = async (req, res) => {
   try {
-
     const { classId, stream } = req.query;
 
-    const filter = {};
+    const filter = { isActive: true }; // 🔥 IMPORTANT
 
     if (classId) filter.classId = classId;
     if (stream) filter.stream = stream;
 
     const subjects = await Subject.find(filter)
       .populate("classId", "name")
-      .sort({ createdAt: -1 });
+      .sort({ order: 1, createdAt: -1 }); // 🔥 better sort
 
     res.json({
       success: true,
@@ -82,26 +82,23 @@ export const getSubjects = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("Fetch subjects error:", error);
-
+    console.error("Fetch subjects error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to fetch subjects"
     });
-
   }
 };
 
-
-/* 🔍 GET SUBJECT BY ID */
+/* =====================================
+   🔍 GET SUBJECT BY ID
+===================================== */
 export const getSubjectById = async (req, res) => {
   try {
-
     const subject = await Subject.findById(req.params.id)
       .populate("classId", "name");
 
-    if (!subject) {
+    if (!subject || !subject.isActive) {
       return res.status(404).json({
         success: false,
         message: "Subject not found"
@@ -114,19 +111,17 @@ export const getSubjectById = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("Get subject error:", error);
-
+    console.error("Get subject error:", error.message);
     res.status(500).json({
       success: false,
       message: "Error fetching subject"
     });
-
   }
 };
 
-
-/* ✏ UPDATE SUBJECT */
+/* =====================================
+   ✏ UPDATE SUBJECT
+===================================== */
 export const updateSubject = async (req, res) => {
   try {
 
@@ -139,7 +134,15 @@ export const updateSubject = async (req, res) => {
       });
     }
 
-    Object.assign(subject, req.body);
+    const { name, stream, description, icon, order, isActive } = req.body;
+
+    /* 🔥 SAFE UPDATE */
+    if (name) subject.name = name.trim().toLowerCase();
+    if (stream) subject.stream = stream;
+    if (description !== undefined) subject.description = description;
+    if (icon !== undefined) subject.icon = icon;
+    if (order !== undefined) subject.order = order;
+    if (isActive !== undefined) subject.isActive = isActive;
 
     await subject.save();
 
@@ -149,23 +152,21 @@ export const updateSubject = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("Update subject error:", error);
-
+    console.error("Update subject error:", error.message);
     res.status(500).json({
       success: false,
       message: "Update failed"
     });
-
   }
 };
 
-
-/* ❌ DELETE SUBJECT */
+/* =====================================
+   ❌ DELETE SUBJECT
+===================================== */
 export const deleteSubject = async (req, res) => {
   try {
 
-    const subject = await Subject.findByIdAndDelete(req.params.id);
+    const subject = await Subject.findById(req.params.id);
 
     if (!subject) {
       return res.status(404).json({
@@ -174,19 +175,20 @@ export const deleteSubject = async (req, res) => {
       });
     }
 
+    /* 🔥 SOFT DELETE (RECOMMENDED) */
+    subject.isActive = false;
+    await subject.save();
+
     res.json({
       success: true,
-      message: "Subject deleted successfully"
+      message: "Subject deleted (soft)"
     });
 
   } catch (error) {
-
-    console.error("Delete subject error:", error);
-
+    console.error("Delete subject error:", error.message);
     res.status(500).json({
       success: false,
       message: "Delete failed"
     });
-
   }
 };

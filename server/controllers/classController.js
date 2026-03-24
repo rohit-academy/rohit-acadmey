@@ -1,7 +1,9 @@
 import Class from "../models/Class.js";
 import logger from "../utils/logger.js";
 
-/* ➕ ADD CLASS (Admin) */
+/* =====================================
+   ➕ ADD CLASS
+===================================== */
 export const addClass = async (req, res) => {
   try {
     let { name } = req.body;
@@ -13,8 +15,9 @@ export const addClass = async (req, res) => {
       });
     }
 
-    name = name.trim();
+    name = name.trim().toLowerCase(); // 🔥 FIX
 
+    /* ❌ DUPLICATE SAFE */
     const existing = await Class.findOne({ name });
     if (existing) {
       return res.status(400).json({
@@ -31,8 +34,10 @@ export const addClass = async (req, res) => {
       success: true,
       data: newClass,
     });
+
   } catch (error) {
     logger.error(`Add class error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -40,17 +45,23 @@ export const addClass = async (req, res) => {
   }
 };
 
-/* 📄 GET ALL CLASSES */
+/* =====================================
+   📄 GET CLASSES (ONLY ACTIVE)
+===================================== */
 export const getClasses = async (req, res) => {
   try {
-    const classes = await Class.find().sort({ createdAt: -1 });
+
+    const classes = await Class.find({ isActive: true }) // 🔥 FIX
+      .sort({ order: 1, createdAt: -1 });
 
     res.json({
       success: true,
       data: classes,
     });
+
   } catch (error) {
     logger.error(`Get classes error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -58,12 +69,15 @@ export const getClasses = async (req, res) => {
   }
 };
 
-/* 🔍 GET CLASS BY ID */
+/* =====================================
+   🔍 GET CLASS BY ID
+===================================== */
 export const getClassById = async (req, res) => {
   try {
+
     const singleClass = await Class.findById(req.params.id);
 
-    if (!singleClass) {
+    if (!singleClass || !singleClass.isActive) {
       return res.status(404).json({
         success: false,
         message: "Class not found",
@@ -74,8 +88,10 @@ export const getClassById = async (req, res) => {
       success: true,
       data: singleClass,
     });
+
   } catch (error) {
     logger.error(`Get class error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -83,39 +99,54 @@ export const getClassById = async (req, res) => {
   }
 };
 
-/* ✏ UPDATE CLASS */
+/* =====================================
+   ✏ UPDATE CLASS (SAFE)
+===================================== */
 export const updateClass = async (req, res) => {
   try {
-    const { name } = req.body;
 
-    if (!name || name.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid class name required",
-      });
-    }
+    let { name, order, isActive } = req.body;
 
-    const updated = await Class.findByIdAndUpdate(
-      req.params.id,
-      { name: name.trim() },
-      { new: true }
-    );
+    const classDoc = await Class.findById(req.params.id);
 
-    if (!updated) {
+    if (!classDoc) {
       return res.status(404).json({
         success: false,
         message: "Class not found",
       });
     }
 
-    logger.info(`Class updated: ${updated.name}`);
+    /* 🔥 SAFE UPDATE */
+    if (name) {
+      const newName = name.trim().toLowerCase();
+
+      const exists = await Class.findOne({ name: newName });
+
+      if (exists && exists._id.toString() !== req.params.id) {
+        return res.status(400).json({
+          success: false,
+          message: "Class name already exists",
+        });
+      }
+
+      classDoc.name = newName;
+    }
+
+    if (order !== undefined) classDoc.order = order;
+    if (isActive !== undefined) classDoc.isActive = isActive;
+
+    await classDoc.save();
+
+    logger.info(`Class updated: ${classDoc.name}`);
 
     res.json({
       success: true,
-      data: updated,
+      data: classDoc,
     });
+
   } catch (error) {
     logger.error(`Update class error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -123,26 +154,35 @@ export const updateClass = async (req, res) => {
   }
 };
 
-/* ❌ DELETE CLASS */
+/* =====================================
+   ❌ DELETE CLASS (SOFT DELETE)
+===================================== */
 export const deleteClass = async (req, res) => {
   try {
-    const deleted = await Class.findByIdAndDelete(req.params.id);
 
-    if (!deleted) {
+    const classDoc = await Class.findById(req.params.id);
+
+    if (!classDoc) {
       return res.status(404).json({
         success: false,
         message: "Class not found",
       });
     }
 
-    logger.warn(`Class deleted: ${deleted.name}`);
+    /* 🔥 SOFT DELETE */
+    classDoc.isActive = false;
+    await classDoc.save();
+
+    logger.warn(`Class deactivated: ${classDoc.name}`);
 
     res.json({
       success: true,
-      message: "Class deleted successfully",
+      message: "Class deactivated",
     });
+
   } catch (error) {
     logger.error(`Delete class error: ${error.message}`);
+
     res.status(500).json({
       success: false,
       message: "Server Error",

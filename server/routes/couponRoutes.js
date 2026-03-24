@@ -11,12 +11,34 @@ import { adminOnly } from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-/* USER */
-router.post("/apply", protect, applyCoupon);
+/* =====================================
+   🔍 VALIDATION
+===================================== */
+const validateCoupon = (req, res, next) => {
+  const { code } = req.body;
 
-/* ADMIN */
-router.post("/", protect, adminOnly, createCoupon);
-router.get("/", protect, adminOnly, getCoupons);
-router.delete("/:id", protect, adminOnly, deleteCoupon);
+  if (!code || typeof code !== "string" || code.trim().length < 3) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid coupon code required"
+    });
+  }
+
+  next();
+};
+
+/* =====================================
+   👤 USER ROUTES
+===================================== */
+router.post("/apply", protect, validateCoupon, applyCoupon);
+
+/* =====================================
+   🔐 ADMIN ROUTES
+===================================== */
+router.use(protect, adminOnly);
+
+router.post("/", createCoupon);
+router.get("/", getCoupons);
+router.delete("/:id", deleteCoupon);
 
 export default router;

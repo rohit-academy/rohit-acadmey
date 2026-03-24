@@ -1,94 +1,183 @@
 import Coupon from "../models/Coupon.js";
 import logger from "../utils/logger.js";
 
-/* ➕ CREATE COUPON (Admin) */
+/* =====================================
+   ➕ CREATE COUPON
+===================================== */
 export const createCoupon = async (req, res) => {
   try {
     let { code, discountPercent, expiryDate } = req.body;
 
     if (!code || !discountPercent || !expiryDate) {
-      return res.status(400).json({ message: "All fields required" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields required"
+      });
     }
 
     code = code.trim().toUpperCase();
+    discountPercent = Number(discountPercent);
 
-    if (discountPercent <= 0 || discountPercent > 80) {
-      return res.status(400).json({ message: "Discount must be between 1-80%" });
+    /* 🔥 VALIDATION */
+    if (discountPercent < 1 || discountPercent > 80) {
+      return res.status(400).json({
+        success: false,
+        message: "Discount must be between 1-80%"
+      });
+    }
+
+    const expiry = new Date(expiryDate);
+
+    if (isNaN(expiry.getTime()) || expiry < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid expiry date"
+      });
     }
 
     const exists = await Coupon.findOne({ code });
-    if (exists) return res.status(400).json({ message: "Coupon already exists" });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Coupon already exists"
+      });
+    }
 
     const coupon = await Coupon.create({
       code,
       discountPercent,
-      expiryDate
+      expiryDate: expiry
     });
 
     logger.info(`Coupon created: ${code}`);
 
-    res.status(201).json(coupon);
+    res.status(201).json({
+      success: true,
+      data: coupon
+    });
+
   } catch (error) {
     logger.error(`Create coupon error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };
 
-
-/* 📃 GET ALL COUPONS (Admin) */
+/* =====================================
+   📃 GET COUPONS
+===================================== */
 export const getCoupons = async (req, res) => {
   try {
     const coupons = await Coupon.find().sort({ createdAt: -1 });
-    res.json(coupons);
+
+    res.json({
+      success: true,
+      data: coupons
+    });
+
   } catch (error) {
     logger.error(`Get coupons error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };
 
-
-/* ❌ DELETE COUPON */
+/* =====================================
+   ❌ DELETE COUPON
+===================================== */
 export const deleteCoupon = async (req, res) => {
   try {
     const deleted = await Coupon.findByIdAndDelete(req.params.id);
 
-    if (!deleted) return res.status(404).json({ message: "Coupon not found" });
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Coupon not found"
+      });
+    }
 
     logger.warn(`Coupon deleted: ${deleted.code}`);
 
-    res.json({ message: "Coupon deleted" });
+    res.json({
+      success: true,
+      message: "Coupon deleted"
+    });
+
   } catch (error) {
     logger.error(`Delete coupon error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };
 
-
-/* 🎟 APPLY COUPON (User checkout) */
+/* =====================================
+   🎟 APPLY COUPON
+===================================== */
 export const applyCoupon = async (req, res) => {
   try {
-    const { code, cartTotal } = req.body;
+    let { code, cartTotal } = req.body;
 
-    if (!code || !cartTotal || cartTotal <= 0) {
-      return res.status(400).json({ message: "Invalid data" });
+    if (!code || !cartTotal) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid data"
+      });
     }
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
-    if (!coupon) return res.status(404).json({ message: "Invalid coupon" });
+    code = code.trim().toUpperCase();
+    cartTotal = Number(cartTotal);
 
-    if (coupon.expiryDate < new Date())
-      return res.status(400).json({ message: "Coupon expired" });
+    if (cartTotal <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cart total"
+      });
+    }
 
-    const discountAmount = (cartTotal * coupon.discountPercent) / 100;
-    const finalAmount = Math.max(cartTotal - discountAmount, 1); // never 0
+    const coupon = await Coupon.findOne({ code });
+
+    if (!coupon) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid coupon"
+      });
+    }
+
+    if (coupon.expiryDate < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Coupon expired"
+      });
+    }
+
+    /* 💰 CALCULATE */
+    const discountAmount = Math.round(
+      (cartTotal * coupon.discountPercent) / 100
+    );
+
+    const finalAmount = Math.max(cartTotal - discountAmount, 1);
 
     res.json({
-      discountPercent: coupon.discountPercent,
-      discountAmount,
-      finalAmount
+      success: true,
+      data: {
+        code: coupon.code,
+        discountPercent: coupon.discountPercent,
+        discountAmount,
+        finalAmount
+      }
     });
+
   } catch (error) {
     logger.error(`Apply coupon error: ${error.message}`);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
   }
 };

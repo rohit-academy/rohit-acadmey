@@ -1,14 +1,17 @@
 import dotenv from "dotenv";
-dotenv.config(); // ⭐ SABSE PEHLE
+dotenv.config(); // ⭐ FIRST
 
 import mongoose from "mongoose";
 import app from "./app.js";
 
-/* 🔹 MongoDB Connection */
+/* =====================================
+   🔹 MONGODB CONNECT
+===================================== */
 const connectDB = async () => {
   try {
+
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      dbName: "rohitacademy", // ✅ FIX: force correct DB
+      dbName: "rohitacademy",
     });
 
     console.log(`🟢 MongoDB Connected: ${conn.connection.host}`);
@@ -24,22 +27,64 @@ const connectDB = async () => {
   }
 };
 
-/* 🔹 Unhandled Rejection Safety */
-process.on("unhandledRejection", (err) => {
-  console.log("💥 UNHANDLED REJECTION! Shutting down...");
-  console.log(err.name, err.message);
+/* =====================================
+   🔹 UNCAUGHT EXCEPTION (🔥 ADD)
+===================================== */
+process.on("uncaughtException", (err) => {
+  console.error("💥 UNCAUGHT EXCEPTION! Shutting down...");
+  console.error(err.name, err.message);
   process.exit(1);
 });
 
-/* 🔹 Start Server */
+/* =====================================
+   🔹 UNHANDLED REJECTION
+===================================== */
+process.on("unhandledRejection", (err) => {
+  console.error("💥 UNHANDLED REJECTION! Shutting down...");
+  console.error(err.name, err.message);
+  process.exit(1);
+});
+
+/* =====================================
+   🔹 START SERVER
+===================================== */
 const PORT = process.env.PORT || 5000;
 
+let server;
+
 const startServer = async () => {
+
   await connectDB();
 
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
+
 };
 
 startServer();
+
+/* =====================================
+   🔹 GRACEFUL SHUTDOWN (🔥 IMPORTANT)
+===================================== */
+const shutdown = async (signal) => {
+  console.log(`🛑 ${signal} received. Closing server...`);
+
+  if (server) {
+    server.close(() => {
+      console.log("🧹 HTTP server closed");
+    });
+  }
+
+  try {
+    await mongoose.connection.close();
+    console.log("🧹 MongoDB connection closed");
+  } catch (err) {
+    console.error("❌ Error closing DB:", err.message);
+  }
+
+  process.exit(0);
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

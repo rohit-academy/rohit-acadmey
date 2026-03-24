@@ -19,6 +19,9 @@ const router = express.Router();
 /* Get all subjects */
 router.get("/", getSubjects);
 
+/* 🔥 IMPORTANT: specific routes first (future safe) */
+// router.get("/popular", getPopularSubjects);
+
 /* Get single subject */
 router.get("/:id", getSubjectById);
 
@@ -27,14 +30,17 @@ router.get("/:id", getSubjectById);
    🔐 ADMIN ROUTES
 ======================================== */
 
+/* 🔒 Apply middleware once (cleaner) */
+router.use(protect, adminOnly);
+
 /* Add subject */
-router.post("/", protect, adminOnly, addSubject);
+router.post("/", addSubject);
 
 /* Update subject */
-router.put("/:id", protect, adminOnly, updateSubject);
+router.put("/:id", updateSubject);
 
 /* Delete subject */
-router.delete("/:id", protect, adminOnly, deleteSubject);
+router.delete("/:id", deleteSubject);
 
 
 export default router;

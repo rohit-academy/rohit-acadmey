@@ -5,7 +5,10 @@ const subjectSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      lowercase: true, // ✅ FIX
+      minlength: 2,
+      maxlength: 50
     },
 
     classId: {
@@ -22,7 +25,8 @@ const subjectSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      default: ""
+      default: "",
+      maxlength: 500
     },
 
     icon: {
@@ -32,7 +36,8 @@ const subjectSchema = new mongoose.Schema(
 
     order: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0
     },
 
     isActive: {
@@ -45,7 +50,27 @@ const subjectSchema = new mongoose.Schema(
   }
 );
 
-/* 🔎 Prevent duplicate subject in same class */
-subjectSchema.index({ name: 1, classId: 1, stream: 1 }, { unique: true });
+/* =====================================
+   🔥 UNIQUE INDEX (SAFE)
+===================================== */
+subjectSchema.index(
+  { name: 1, classId: 1, stream: 1 },
+  { unique: true }
+);
+
+/* =====================================
+   🔥 SORT OPTIMIZATION
+===================================== */
+subjectSchema.index({ classId: 1, stream: 1, order: 1 });
+
+/* =====================================
+   🔥 PRE-SAVE CLEAN
+===================================== */
+subjectSchema.pre("save", function (next) {
+  if (this.name) {
+    this.name = this.name.trim().toLowerCase();
+  }
+  next();
+});
 
 export default mongoose.model("Subject", subjectSchema);

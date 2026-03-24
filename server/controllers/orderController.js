@@ -1,39 +1,52 @@
-import crypto from "crypto";
-// import Razorpay from "razorpay"; ❌ Disabled for now
 import Order from "../models/Order.js";
 import Material from "../models/Material.js";
-import User from "../models/User.js";
 
-/* ❌ Razorpay init disabled */
-/*
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-*/
-
-
-/* ===============================
-   1️⃣ CREATE ORDER (TEMP MANUAL)
-================================ */
+/* =====================================
+   🧾 CREATE ORDER (SAFE MANUAL MODE)
+===================================== */
 export const createOrder = async (req, res) => {
-
   try {
 
-    const { materials, userId } = req.body;
+    const userId = req.user?.id; // 🔥 FIX
+    const { materials } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    if (!materials?.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Materials required"
+      });
     }
 
     const materialDocs = await Material.find({
-      _id: { $in: materials }
+      _id: { $in: materials },
+      isActive: true
     });
 
     if (materialDocs.length !== materials.length) {
       return res.status(400).json({
-        message: "Invalid materials selected"
+        success: false,
+        message: "Invalid materials"
+      });
+    }
+
+    /* ❌ ALREADY PURCHASED CHECK */
+    const existing = await Order.findOne({
+      user: userId,
+      materials: { $in: materials },
+      status: "paid"
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Already purchased"
       });
     }
 
@@ -42,68 +55,77 @@ export const createOrder = async (req, res) => {
       0
     );
 
-    /* ⚠️ Fake order response */
     res.json({
       success: true,
       fakeOrder: true,
-      amount: totalAmount,
-      message: "Payment gateway not configured yet"
+      amount: totalAmount
     });
 
   } catch (error) {
-
-    console.error("CREATE ORDER ERROR:", error);
+    console.error("CREATE ORDER ERROR:", error.message);
 
     res.status(500).json({
+      success: false,
       message: "Server error"
     });
-
   }
-
 };
 
 
-/* ===============================
-   2️⃣ VERIFY PAYMENT (BYPASS MODE)
-================================ */
+/* =====================================
+   ✅ VERIFY PAYMENT (MANUAL SAFE)
+===================================== */
 export const verifyPayment = async (req, res) => {
-
   try {
 
-    const { userId, materials } = req.body;
+    const userId = req.user?.id; // 🔥 FIX
+    const { materials } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
     }
 
     const materialDocs = await Material.find({
-      _id: { $in: materials }
+      _id: { $in: materials },
+      isActive: true
     });
+
+    if (!materialDocs.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid materials"
+      });
+    }
 
     const totalAmount = materialDocs.reduce(
       (sum, m) => sum + m.price,
       0
     );
 
-    /* 🧾 Prevent duplicate order */
-    const existingOrder = await Order.findOne({
+    /* ❌ DUPLICATE CHECK */
+    const existing = await Order.findOne({
       user: userId,
-      materials
+      materials: { $in: materials },
+      status: "paid"
     });
 
-    if (existingOrder) {
+    if (existing) {
       return res.json({
         success: true,
-        orderId: existingOrder._id
+        orderId: existing._id
       });
     }
 
+    /* ✅ CREATE ORDER */
     const newOrder = await Order.create({
       user: userId,
       materials,
       amount: totalAmount,
-      paymentStatus: "Manual" // ⭐ important
+      status: "paid", // 🔥 FIXED
+      paidAt: new Date()
     });
 
     res.json({
@@ -113,36 +135,30 @@ export const verifyPayment = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("VERIFY PAYMENT ERROR:", error);
+    console.error("VERIFY PAYMENT ERROR:", error.message);
 
     res.status(500).json({
+      success: false,
       message: "Server error"
     });
-
   }
-
 };
 
 
-/* ===============================
-   📥 GET MY PURCHASES (🔥 ACCOUNT PAGE)
-================================ */
+/* =====================================
+   📥 GET MY PURCHASES
+===================================== */
 export const getMyPurchases = async (req, res) => {
-
   try {
 
-    /* 🔥 IMPORTANT FIX:
-       tu "paid" use nahi kar raha
-       tu "Manual" use kar raha hai
-    */
+    const userId = req.user?.id;
 
     const orders = await Order.find({
-      user: req.user._id,
-      paymentStatus: { $in: ["Manual", "paid"] } // ✅ FIX
+      user: userId,
+      status: "paid" // 🔥 FIX
     }).populate("materials");
 
-    const materials = orders.flatMap(order => order.materials);
+    const materials = orders.flatMap(o => o.materials);
 
     res.json({
       success: true,
@@ -150,14 +166,11 @@ export const getMyPurchases = async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error("GET PURCHASES ERROR:", error);
+    console.error("GET PURCHASES ERROR:", error.message);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch purchases"
     });
-
   }
-
 };

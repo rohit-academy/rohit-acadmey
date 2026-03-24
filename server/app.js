@@ -18,7 +18,7 @@ import materialRoutes from "./routes/materialRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 
-/* 🔐 ADMIN ROUTES */
+/* 🔐 ADMIN */
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
@@ -30,11 +30,21 @@ const app = express();
 app.use(helmet());
 
 /* =====================================
-   🌍 CORS (🔥 FIXED)
+   🌍 CORS (FIXED)
 ===================================== */
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS blocked"));
+    },
     credentials: true,
   })
 );
@@ -46,16 +56,17 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
 });
-
-app.use(limiter);
+app.use("/api", limiter);
 
 /* =====================================
    📄 LOGGER
 ===================================== */
-app.use(morgan("dev"));
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
 
 /* =====================================
-   ⚠️ RAZORPAY WEBHOOK
+   ⚠️ WEBHOOK (RAW FIRST)
 ===================================== */
 app.post(
   "/api/webhook/razorpay",
@@ -85,18 +96,17 @@ const otpLimiter = rateLimit({
   max: 5,
   message: "Too many OTP requests. Try later.",
 });
-
 app.use("/api/otp", otpLimiter);
 
 /* =====================================
-   ❤️ HEALTH CHECK
+   ❤️ HEALTH
 ===================================== */
 app.get("/", (req, res) => {
   res.send("🚀 Rohit Academy API Running...");
 });
 
 /* =====================================
-   🔹 API ROUTES
+   🔹 ROUTES
 ===================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/otp", otpRoutes);
@@ -113,7 +123,7 @@ app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
 
 /* =====================================
-   ❌ 404 HANDLER
+   ❌ 404
 ===================================== */
 app.use((req, res) => {
   res.status(404).json({

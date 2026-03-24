@@ -1,39 +1,77 @@
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import fs from "fs";
+import path from "path";
 
 export const generatePreview = (pdfPath, outputFolder) => {
 
   return new Promise((resolve) => {
 
-    const command = `pdftoppm -jpeg -f 1 -l 2 "${pdfPath}" ${outputFolder}/preview`;
+    try {
 
-    exec(command, (err, stdout, stderr) => {
-
-      if (err) {
-
-        console.log("❌ Preview generation failed");
-        console.log("Reason:", err.message);
-
-        // 🔥 IMPORTANT: reject नहीं करना → crash रोकना
-        return resolve(null);
-
+      /* =====================================
+         📁 ENSURE OUTPUT FOLDER
+      ===================================== */
+      if (!fs.existsSync(outputFolder)) {
+        fs.mkdirSync(outputFolder, { recursive: true });
       }
 
-      // ✅ check if files actually created
-      const preview1 = `${outputFolder}/preview-1.jpg`;
-      const preview2 = `${outputFolder}/preview-2.jpg`;
+      /* =====================================
+         🔒 SAFE COMMAND (NO INJECTION)
+      ===================================== */
+      const outputBase = path.join(outputFolder, "preview");
 
-      if (!fs.existsSync(preview1) && !fs.existsSync(preview2)) {
+      const process = spawn("pdftoppm", [
+        "-jpeg",
+        "-f", "1",
+        "-l", "2",
+        pdfPath,
+        outputBase
+      ]);
 
-        console.log("⚠️ Preview files not generated");
-        return resolve(null);
+      let errorOccurred = false;
 
-      }
+      /* =====================================
+         ⏱ TIMEOUT (10s)
+      ===================================== */
+      const timeout = setTimeout(() => {
+        process.kill("SIGKILL");
+        console.log("⏱ Preview generation timeout");
+        resolve(null);
+      }, 10000);
 
-      console.log("✅ Preview generated successfully");
-      resolve(true);
+      process.on("error", (err) => {
+        errorOccurred = true;
+        clearTimeout(timeout);
+        console.log("❌ Preview spawn error:", err.message);
+        resolve(null);
+      });
 
-    });
+      process.on("close", () => {
+        clearTimeout(timeout);
+
+        if (errorOccurred) return;
+
+        const preview1 = path.join(outputFolder, "preview-1.jpg");
+        const preview2 = path.join(outputFolder, "preview-2.jpg");
+
+        if (!fs.existsSync(preview1) && !fs.existsSync(preview2)) {
+          console.log("⚠️ Preview files not generated");
+          return resolve(null);
+        }
+
+        console.log("✅ Preview generated successfully");
+
+        resolve({
+          page1: fs.existsSync(preview1) ? preview1 : null,
+          page2: fs.existsSync(preview2) ? preview2 : null,
+        });
+
+      });
+
+    } catch (error) {
+      console.log("❌ Unexpected preview error:", error.message);
+      resolve(null);
+    }
 
   });
 

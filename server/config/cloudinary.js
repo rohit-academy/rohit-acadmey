@@ -1,31 +1,63 @@
 import { v2 as cloudinary } from "cloudinary";
 
-/* 🔐 Validate ENV variables */
-if (
-  !process.env.CLOUDINARY_CLOUD_NAME ||
-  !process.env.CLOUDINARY_API_KEY ||
-  !process.env.CLOUDINARY_API_SECRET
-) {
-  console.error("❌ Cloudinary ENV variables missing");
-  process.exit(1); // stop server if config missing
+/* =====================================
+   🔒 ENV CHECK (SAFE MODE)
+===================================== */
+const isCloudinaryConfigured =
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET;
+
+/* =====================================
+   ☁️ INIT CLOUDINARY (ONLY IF CONFIGURED)
+===================================== */
+if (isCloudinaryConfigured) {
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+
+  console.log("☁️ Cloudinary initialized");
+
+} else {
+
+  console.warn("⚠️ Cloudinary not configured");
+
 }
 
-/* ☁️ Cloudinary Config */
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true
-});
+/* =====================================
+   🛡 HELPER
+===================================== */
+export const isCloudinaryEnabled = () => !!isCloudinaryConfigured;
 
-/* 🧪 Test function (optional use in startup) */
+/* =====================================
+   🧪 LIGHT TEST (SAFE)
+===================================== */
 export const testCloudinaryConnection = async () => {
-  try {
-    const result = await cloudinary.api.ping();
-    console.log("☁️ Cloudinary Connected:", result.status);
-  } catch (error) {
-    console.error("❌ Cloudinary Connection Failed:", error.message);
+
+  if (!isCloudinaryConfigured) {
+    console.warn("⚠️ Cloudinary skipped (no config)");
+    return false;
   }
+
+  try {
+    // lightweight test (no heavy API call)
+    await cloudinary.utils.api_sign_request(
+      { timestamp: Date.now() },
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    console.log("☁️ Cloudinary ready");
+    return true;
+
+  } catch (error) {
+    console.error("❌ Cloudinary test failed:", error.message);
+    return false;
+  }
+
 };
 
 export default cloudinary;

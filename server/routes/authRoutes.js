@@ -37,7 +37,7 @@ router.post("/admin-login", authLimiter, adminLogin);
    🔵 GOOGLE LOGIN
 ===================================== */
 
-/* 👉 STEP 1: Redirect to Google */
+/* 👉 STEP 1: Redirect */
 router.get(
   "/google",
   passport.authenticate("google", {
@@ -46,44 +46,43 @@ router.get(
 );
 
 /* =====================================
-   👉 STEP 2: Google Callback (🔥 FINAL)
+   👉 STEP 2: CALLBACK
 ===================================== */
 router.get("/google/callback", (req, res, next) => {
 
   passport.authenticate(
     "google",
-    {
-      session: false
-    },
+    { session: false },
     (err, result) => {
 
-      console.log("🔥 GOOGLE CALLBACK RESULT:", result);
+      const FRONTEND_URL =
+        process.env.FRONTEND_URL || "http://localhost:5173";
 
-      /* ❌ ERROR FROM PASSPORT */
+      /* ❌ PASSPORT ERROR */
       if (err) {
         console.error("❌ Passport Error:", err);
-        return res.redirect(`${process.env.FRONTEND_URL}/login`);
+        return res.redirect(`${FRONTEND_URL}/login`);
       }
 
       /* ❌ NO RESULT */
-      if (!result) {
-        console.warn("❌ No result from passport");
-        return res.redirect(`${process.env.FRONTEND_URL}/login`);
+      if (!result || !result.user) {
+        console.warn("❌ Invalid passport result:", result);
+        return res.redirect(`${FRONTEND_URL}/login`);
       }
 
-      const token = result?.token;
+      const { token, user } = result;
 
-      /* ❌ TOKEN MISSING */
+      /* ❌ TOKEN CHECK */
       if (!token) {
-        console.warn("❌ Token missing in result:", result);
-        return res.redirect(`${process.env.FRONTEND_URL}/login`);
+        console.warn("❌ Token missing:", result);
+        return res.redirect(`${FRONTEND_URL}/login`);
       }
 
-      /* ✅ SUCCESS */
-      console.log("✅ Login success, redirecting...");
+      console.log(`✅ Google login success: ${user.email}`);
 
+      /* ✅ SUCCESS REDIRECT */
       return res.redirect(
-        `${process.env.FRONTEND_URL}/success?token=${token}`
+        `${FRONTEND_URL}/success?token=${token}`
       );
 
     }

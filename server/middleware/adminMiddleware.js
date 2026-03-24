@@ -1,47 +1,56 @@
-import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-const adminMiddleware = (req, res, next) => {
+/* =====================================
+   🔐 ADMIN ONLY MIDDLEWARE
+===================================== */
+const adminOnly = async (req, res, next) => {
   try {
-    /* 🔐 AUTH HEADER CHECK */
-    const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    /* ❌ USER MISSING */
+    if (!req.user || !req.user.id) {
       return res.status(401).json({
         success: false,
-        message: "Admin token missing",
+        message: "Unauthorized",
       });
     }
 
-    /* 🔑 TOKEN EXTRACT */
-    const token = authHeader.split(" ")[1];
+    /* 🔍 VERIFY USER FROM DB */
+    const user = await User.findById(req.user.id).select("role isBlocked");
 
-    /* 🔍 VERIFY TOKEN */
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-    /* 🛡 ROLE CHECK */
-    if (decoded.role !== "admin") {
+    /* ⛔ BLOCK CHECK */
+    if (user.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: "Account blocked",
+      });
+    }
+
+    /* 🔐 ROLE CHECK */
+    if (user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied: Admins only",
       });
     }
 
-    /* ✅ SAVE ADMIN DATA */
-    req.admin = decoded;
-
     next();
+
   } catch (error) {
     console.error("🔥 Admin middleware error:", error.message);
 
-    return res.status(401).json({
+    return res.status(500).json({
       success: false,
-      message: "Invalid or expired admin token",
+      message: "Admin authorization failed",
     });
   }
 };
 
-/* 🔁 Named export */
-export const adminOnly = adminMiddleware;
-
-/* 🔁 Default export */
-export default adminMiddleware;
+export { adminOnly };
+export default adminOnly;

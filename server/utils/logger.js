@@ -1,6 +1,19 @@
 import winston from "winston";
+import fs from "fs";
+import path from "path";
 
-/* 🎨 COLORS FOR CONSOLE */
+/* =====================================
+   📁 ENSURE LOG DIRECTORY
+===================================== */
+const logDir = "logs";
+
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
+/* =====================================
+   🎨 COLORS (DEV ONLY)
+===================================== */
 const colors = {
   info: "green",
   warn: "yellow",
@@ -10,7 +23,9 @@ const colors = {
 
 winston.addColors(colors);
 
-/* 🧾 CUSTOM FORMAT */
+/* =====================================
+   🧾 FORMAT
+===================================== */
 const logFormat = winston.format.printf(
   ({ timestamp, level, message, stack }) => {
     return stack
@@ -19,34 +34,50 @@ const logFormat = winston.format.printf(
   }
 );
 
-const logger = winston.createLogger({
-  level: "info",
+/* =====================================
+   🔧 BASE FORMAT
+===================================== */
+const baseFormat = winston.format.combine(
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.errors({ stack: true }),
+  logFormat
+);
 
-  format: winston.format.combine(
-    winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    winston.format.errors({ stack: true }), // 🔥 stack trace enable
-    logFormat
-  ),
+/* =====================================
+   🚀 LOGGER
+===================================== */
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === "production" ? "warn" : "debug",
+
+  format: baseFormat,
 
   transports: [
-    /* 🖥 CONSOLE (COLORED) */
+
+    /* 🖥 CONSOLE */
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.timestamp({ format: "HH:mm:ss" }),
-        logFormat
-      ),
+      format:
+        process.env.NODE_ENV === "production"
+          ? baseFormat // clean logs
+          : winston.format.combine(
+              winston.format.colorize(),
+              winston.format.timestamp({ format: "HH:mm:ss" }),
+              logFormat
+            ),
     }),
 
-    /* ❌ ERROR LOG FILE */
+    /* ❌ ERROR LOG */
     new winston.transports.File({
-      filename: "logs/error.log",
+      filename: path.join(logDir, "error.log"),
       level: "error",
+      maxsize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 3,
     }),
 
-    /* 📦 ALL LOG FILE */
+    /* 📦 ALL LOG */
     new winston.transports.File({
-      filename: "logs/combined.log",
+      filename: path.join(logDir, "combined.log"),
+      maxsize: 5 * 1024 * 1024,
+      maxFiles: 5,
     }),
   ],
 });
