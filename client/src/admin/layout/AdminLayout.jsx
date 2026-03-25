@@ -18,11 +18,32 @@ function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  /* =========================
+     🔐 AUTH CHECK (IMPORTANT)
+  ========================= */
+  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+
+  if (!admin?.token) {
+    navigate("/admin-login", { replace: true });
+  }
+
+  /* =========================
+     🚪 LOGOUT FIX
+  ========================= */
   const handleLogout = () => {
+
+    if (!window.confirm("Logout from admin panel?")) return;
+
     localStorage.removeItem("admin");
-    navigate("/admin-login");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/admin-login", { replace: true });
   };
 
+  /* =========================
+     🧠 SMART TITLE MATCH
+  ========================= */
   const pageTitleMap = {
     "/admin": "Dashboard",
     "/admin/materials": "Materials",
@@ -33,7 +54,20 @@ function AdminLayout() {
     "/admin/academics/classes": "Manage Classes"
   };
 
-  const pageTitle = pageTitleMap[location.pathname] || "Admin";
+  const getPageTitle = () => {
+    const path = location.pathname;
+
+    if (path.startsWith("/admin/materials/upload")) return "Upload Material";
+    if (path.startsWith("/admin/materials")) return "Materials";
+    if (path.startsWith("/admin/users")) return "Users";
+    if (path.startsWith("/admin/orders")) return "Orders";
+    if (path.startsWith("/admin/academics/classes")) return "Manage Classes";
+    if (path.startsWith("/admin/academics")) return "Academics";
+
+    return pageTitleMap[path] || "Admin";
+  };
+
+  const pageTitle = getPageTitle();
 
   const linkStyle =
     "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200";
@@ -43,7 +77,6 @@ function AdminLayout() {
     <div className="flex min-h-screen bg-slate-100">
 
       {/* MOBILE OVERLAY */}
-
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-30 md:hidden"
@@ -52,21 +85,19 @@ function AdminLayout() {
       )}
 
       {/* SIDEBAR */}
-
       <aside
         className={`
         fixed md:sticky top-0 left-0 z-40
         w-64 h-screen
         bg-white border-r shadow-sm
-        p-6
-        flex flex-col
+        p-6 flex flex-col
+        overflow-y-auto   /* 🔥 FIX */
         transform transition-transform duration-300
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
 
         {/* HEADER */}
-
         <div className="flex items-center justify-between md:block">
 
           <div>
@@ -88,38 +119,24 @@ function AdminLayout() {
 
         </div>
 
-        {/* NAVIGATION */}
-
-        <nav className="flex flex-col gap-2 text-gray-700 flex-1 overflow-y-auto">
-
-          {/* Dashboard */}
+        {/* NAV */}
+        <nav className="flex flex-col gap-2 text-gray-700 flex-1">
 
           <NavLink
             to="/admin"
             end
-            onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `${linkStyle} ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+              `${linkStyle} ${isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             <LayoutDashboard size={18} /> Dashboard
           </NavLink>
 
           {/* Academics */}
-
           <NavLink
             to="/admin/academics"
-            onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `${linkStyle} ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+              `${linkStyle} ${location.pathname.startsWith("/admin/academics") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             <BookOpen size={18} /> Academics
@@ -127,29 +144,18 @@ function AdminLayout() {
 
           <NavLink
             to="/admin/academics/classes"
-            onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `${linkStyle} ml-6 ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+              `${linkStyle} ml-6 ${isActive ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             🎓 Manage Classes
           </NavLink>
 
-          {/* MATERIALS */}
-
+          {/* Materials */}
           <NavLink
             to="/admin/materials"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `${linkStyle} ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+            className={() =>
+              `${linkStyle} ${location.pathname.startsWith("/admin/materials") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             <FileText size={18} /> Materials
@@ -157,45 +163,28 @@ function AdminLayout() {
 
           <NavLink
             to="/admin/materials/upload"
-            onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `${linkStyle} ml-6 ${
-                isActive
-                  ? "bg-green-100 text-green-700 font-semibold"
-                  : "hover:bg-gray-100 text-green-600"
-              }`
+              `${linkStyle} ml-6 ${isActive ? "bg-green-100 text-green-700 font-semibold" : "hover:bg-gray-100 text-green-600"}`
             }
           >
             <UploadCloud size={18} /> Upload Material
           </NavLink>
 
-          {/* USERS */}
-
+          {/* Users */}
           <NavLink
             to="/admin/users"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `${linkStyle} ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+            className={() =>
+              `${linkStyle} ${location.pathname.startsWith("/admin/users") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             <Users size={18} /> Users
           </NavLink>
 
-          {/* ORDERS */}
-
+          {/* Orders */}
           <NavLink
             to="/admin/orders"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              `${linkStyle} ${
-                isActive
-                  ? "bg-blue-100 text-blue-700 font-semibold"
-                  : "hover:bg-gray-100"
-              }`
+            className={() =>
+              `${linkStyle} ${location.pathname.startsWith("/admin/orders") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
           >
             <ShoppingCart size={18} /> Orders
@@ -204,7 +193,6 @@ function AdminLayout() {
         </nav>
 
         {/* LOGOUT */}
-
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 text-red-500 hover:text-red-600 px-3 py-2 mt-4"
@@ -214,14 +202,11 @@ function AdminLayout() {
 
       </aside>
 
-      {/* MAIN AREA */}
-
+      {/* MAIN */}
       <div className="flex-1 flex flex-col">
 
         {/* MOBILE HEADER */}
-
         <header className="bg-white border-b px-4 py-3 flex items-center justify-between md:hidden">
-
           <button onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
@@ -229,21 +214,16 @@ function AdminLayout() {
           <h1 className="font-semibold text-blue-600">
             {pageTitle}
           </h1>
-
         </header>
 
-        {/* DESKTOP PAGE HEADER */}
-
+        {/* DESKTOP HEADER */}
         <div className="hidden md:flex items-center justify-between px-10 py-6">
-
           <h1 className="text-2xl font-semibold text-gray-800">
             {pageTitle}
           </h1>
-
         </div>
 
-        {/* PAGE CONTENT */}
-
+        {/* CONTENT */}
         <main className="flex-1 px-6 md:px-10 pb-10 overflow-y-auto">
           <Outlet />
         </main>

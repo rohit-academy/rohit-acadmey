@@ -12,32 +12,41 @@ function StudyMaterials() {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [error, setError] = useState("");
 
   useEffect(() => {
+
+    let isMounted = true;
 
     const fetchMaterials = async () => {
 
       try {
 
+        setLoading(true);
+        setError("");
+
         const res = await API.get(
           `/materials?classId=${classId}&subjectId=${subjectId}`
         );
 
-        const list =
-          res.data?.data ||
-          res.data ||
-          [];
+        if (!isMounted) return;
+
+        const list = res.data?.data || [];
 
         setMaterials(list);
 
       } catch (error) {
 
+        if (!isMounted) return;
+
         console.error("Materials fetch error:", error);
+
+        setError("Failed to load materials");
         setMaterials([]);
 
       } finally {
 
-        setLoading(false);
+        if (isMounted) setLoading(false);
 
       }
 
@@ -45,16 +54,48 @@ function StudyMaterials() {
 
     if (classId && subjectId) fetchMaterials();
 
+    return () => {
+      isMounted = false; // 🔥 prevent memory leak
+    };
+
   }, [classId, subjectId]);
 
+
+  /* 🎯 FILTERS */
+
   const filters = ["All", "Notes", "Sample Paper", "PYQ", "Assignment"];
+
+  const normalize = (str) => str?.toLowerCase().replace(/\s+/g, "");
 
   const filteredMaterials =
     activeFilter === "All"
       ? materials
-      : materials.filter((m) => m.type === activeFilter);
+      : materials.filter(
+          (m) => normalize(m.type) === normalize(activeFilter)
+        );
+
+  /* 🔄 LOADING */
 
   if (loading) return <Loader />;
+
+  /* ❌ ERROR */
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-bold text-red-600 mb-2">
+          {error}
+        </h2>
+
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
 
@@ -104,7 +145,7 @@ function StudyMaterials() {
 
             <ProductCard
               key={item._id}
-              {...item}   // 🔥 thumbnail already included
+              {...item}
             />
 
           ))}

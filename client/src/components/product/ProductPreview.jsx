@@ -1,90 +1,115 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { Star } from "lucide-react";
 
-function ProductPreview({
-  previews = [],
-  thumbnail = "",
-  title = "Preview"
+function RatingStars({
+  rating = 4.3,
+  reviews = 120,
+  size = 16,
+  showText = true,
+  showReviews = true,
+  color = "yellow"
 }) {
 
-  /* 🖼 THUMBNAIL PRIORITY */
+  // 🎯 dynamic colors
+  const colorMap = {
+    yellow: "text-yellow-400 fill-yellow-400",
+    orange: "text-orange-400 fill-orange-400",
+    green: "text-green-400 fill-green-400"
+  };
 
-  if (thumbnail) {
-    return (
+  const activeColor = colorMap[color] || colorMap.yellow;
 
-      <div className="flex flex-col gap-3">
+  // ✅ clamp rating
+  const safeRating = Math.max(0, Math.min(5, rating));
 
-        <div className="relative overflow-hidden rounded-xl shadow-md border border-gray-200">
+  // ✅ nearest 0.5
+  const roundedRating = Math.round(safeRating * 2) / 2;
 
-          <img
-            src={thumbnail}
-            alt="Thumbnail"
-            loading="lazy"
-            className="w-full h-[350px] object-cover transition-transform duration-300 hover:scale-105"
-            onError={(e) => {
-              e.target.src =
-                "https://via.placeholder.com/400x500?text=Thumbnail+Unavailable";
-            }}
+  const fullStars = Math.floor(roundedRating);
+  const hasHalfStar = roundedRating % 1 !== 0;
+
+  // ⭐ stars render
+  const stars = useMemo(() => {
+    return [...Array(5)].map((_, i) => {
+
+      const starIndex = i + 1;
+
+      if (starIndex <= fullStars) {
+        return (
+          <Star
+            key={i}
+            size={size}
+            className={activeColor}
           />
+        );
+      }
 
-          {/* overlay badge */}
-          <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
-            Preview
+      if (starIndex === fullStars + 1 && hasHalfStar) {
+        return (
+          <div key={i} className="relative" style={{ width: size, height: size }}>
+
+            <Star size={size} className="text-gray-300 absolute" />
+
+            <div
+              className="absolute overflow-hidden"
+              style={{ width: size / 2 }}
+            >
+              <Star size={size} className={activeColor} />
+            </div>
+
           </div>
+        );
+      }
 
-        </div>
+      return (
+        <Star
+          key={i}
+          size={size}
+          className="text-gray-300"
+        />
+      );
 
-        <p className="text-sm text-gray-500 text-center">
-          {title}
-        </p>
+    });
+  }, [fullStars, hasHalfStar, size, activeColor]);
 
-      </div>
+  // 💬 reviews format
+  const formatReviews = (num) => {
+    if (num >= 1000) {
+      const value = (num / 1000).toFixed(1);
+      return value.endsWith(".0")
+        ? `${parseInt(value)}k`
+        : `${value}k`;
+    }
+    return num;
+  };
 
-    );
-  }
-
-  /* ❌ NO PREVIEW */
-
-  if (!previews || previews.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-[300px] bg-gray-100 rounded-xl border border-gray-200">
-        <p className="text-gray-400 text-sm">
-          Preview not available
-        </p>
-      </div>
-    );
-  }
-
-  /* 📄 PREVIEW IMAGES FALLBACK */
+  const reviewText = reviews === 1 ? "review" : "reviews";
 
   return (
 
-    <div className="flex flex-col gap-4">
+    <div
+      className="flex items-center gap-2 text-sm"
+      aria-label={`Rating ${safeRating} out of 5 from ${reviews} reviews`}
+    >
 
-      {previews.slice(0, 2).map((img, i) => (
+      {/* ⭐ Stars */}
+      <div className="flex items-center">
+        {stars}
+      </div>
 
-        <div
-          key={i}
-          className="overflow-hidden rounded-lg shadow-md border border-gray-200"
-        >
+      {/* 🔢 Rating */}
+      {showText && (
+        <span className="font-medium text-gray-700">
+          {safeRating.toFixed(1)}
+        </span>
+      )}
 
-          <img
-            src={img}
-            alt={`Preview page ${i + 1}`}
-            loading="lazy"
-            className="w-full transition-transform duration-300 hover:scale-105"
-            onError={(e) => {
-              e.target.src =
-                "https://via.placeholder.com/400x500?text=Preview+Unavailable";
-            }}
-          />
-
-        </div>
-
-      ))}
-
-      <p className="text-sm text-gray-500 text-center">
-        {title} (First 2 pages preview)
-      </p>
+      {/* 💬 Reviews */}
+      {showReviews && (
+        <span className="text-gray-500">
+          ({formatReviews(reviews)} {reviewText})
+        </span>
+      )}
 
     </div>
 
@@ -92,4 +117,4 @@ function ProductPreview({
 
 }
 
-export default ProductPreview;
+export default React.memo(RatingStars);

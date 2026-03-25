@@ -1,14 +1,14 @@
 import React from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Navigate } from "react-router-dom";
-import { User, Download, LogOut } from "lucide-react";
+import { User, Download, LogOut, ShieldCheck } from "lucide-react";
 
 function Account() {
 
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
 
-  // 🔄 WAIT UNTIL USER LOAD
+  /* ⏳ LOADING */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -17,15 +17,21 @@ function Account() {
     );
   }
 
-  // 🔐 PROTECTED ROUTE
+  /* 🔐 PROTECTED */
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
+  /* 🚪 LOGOUT */
   const handleLogout = () => {
-    logout(); // clear context + token
-    navigate("/login");
+    const confirmLogout = window.confirm("Are you sure you want to logout?");
+    if (!confirmLogout) return;
+
+    logout(); // 🔥 handle navigation inside context if possible
   };
+
+  const displayName = user.name || "Student";
+  const identifier = user.email || user.phone || "No contact info";
 
   return (
 
@@ -54,22 +60,28 @@ function Account() {
 
             <div>
               <h2 className="text-xl font-semibold">
-                {user.name || "Student"}
+                {displayName}
               </h2>
 
               <p className="text-gray-600 text-sm">
-                {user.email || user.phone}
+                {identifier}
               </p>
+
+              {/* 🔐 TRUST BADGE */}
+              <div className="flex items-center gap-1 text-green-600 text-xs mt-1">
+                <ShieldCheck size={14} />
+                Secure Account
+              </div>
             </div>
 
           </div>
 
         </div>
 
-        {/* 📥 DOWNLOADS */}
-        <div
+        {/* 📥 DOWNLOADS (ACCESSIBLE BUTTON) */}
+        <button
           onClick={() => navigate("/downloads")}
-          className="bg-white p-5 rounded-xl shadow flex justify-between items-center cursor-pointer hover:shadow-md transition mb-4"
+          className="w-full bg-white p-5 rounded-xl shadow flex justify-between items-center hover:shadow-md transition mb-4"
         >
 
           <div className="flex items-center gap-3">
@@ -79,7 +91,7 @@ function Account() {
 
           <span>→</span>
 
-        </div>
+        </button>
 
         {/* 🚪 LOGOUT */}
         <button

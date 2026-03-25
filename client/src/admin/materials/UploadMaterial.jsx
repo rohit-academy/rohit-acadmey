@@ -31,21 +31,32 @@ function UploadMaterial() {
     thumbnail: null
   });
 
-  const token = JSON.parse(localStorage.getItem("admin") || "{}")?.token;
-
-  /* 🔐 Redirect */
+  /* ===============================
+     🔐 ADMIN CHECK (SAFE)
+  ============================== */
   useEffect(() => {
-    if (!token) navigate("/admin-login");
-  }, [token, navigate]);
+    const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+    if (!admin?.token) navigate("/admin-login");
+  }, [navigate]);
 
-  /* 📚 Classes */
+  /* ===============================
+     📚 FETCH CLASSES
+  ============================== */
   useEffect(() => {
-    API.get("/classes").then(res => {
-      setClasses(res.data?.data || res.data || []);
-    });
+    const fetchClasses = async () => {
+      try {
+        const res = await API.get("/classes");
+        setClasses(res.data?.data || res.data || []);
+      } catch {
+        setError("Failed to load classes");
+      }
+    };
+    fetchClasses();
   }, []);
 
-  /* 📄 Subjects */
+  /* ===============================
+     📄 FETCH SUBJECTS
+  ============================== */
   useEffect(() => {
 
     if (!formData.classId) {
@@ -53,33 +64,75 @@ function UploadMaterial() {
       return;
     }
 
-    API.get(`/subjects?classId=${formData.classId}`)
-      .then(res => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await API.get(`/subjects?classId=${formData.classId}`);
         setSubjects(res.data?.data || res.data || []);
-      });
+      } catch {
+        setError("Failed to load subjects");
+      }
+    };
+
+    fetchSubjects();
 
   }, [formData.classId]);
 
-  /* INPUT */
+  /* ===============================
+     INPUT HANDLER
+  ============================== */
   const handleChange = (e) => {
 
     const { name, value, files } = e.target;
 
-    if (name === "thumbnail" && files?.[0]) {
-      setThumbnailPreview(URL.createObjectURL(files[0]));
+    if (files) {
+
+      const file = files[0];
+
+      // ✅ FILE SIZE CHECK (10MB PDF / 2MB image)
+      if (name === "file" && file.size > 10 * 1024 * 1024) {
+        setError("PDF must be under 10MB");
+        return;
+      }
+
+      if (name === "thumbnail" && file.size > 2 * 1024 * 1024) {
+        setError("Thumbnail must be under 2MB");
+        return;
+      }
+
+      // ✅ preview cleanup
+      if (name === "thumbnail") {
+        if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+        setThumbnailPreview(URL.createObjectURL(file));
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: file
+      }));
+
+      return;
     }
 
     setFormData(prev => ({
       ...prev,
-      [name]: files ? files[0] : value
+      [name]: value
     }));
-
   };
 
-  /* 🚀 SUBMIT */
+  /* ===============================
+     🚀 SUBMIT
+  ============================== */
   const handleSubmit = async (e) => {
 
     e.preventDefault();
+
+    if (loading) return;
+
+    // ✅ VALIDATION
+    if (!formData.title || !formData.price || !formData.type) {
+      setError("Fill all required fields");
+      return;
+    }
 
     if (!formData.file) {
       setError("PDF required");
@@ -96,12 +149,14 @@ function UploadMaterial() {
       const data = new FormData();
 
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) data.append(key, value);
+        if (value !== null && value !== "") {
+          data.append(key, value);
+        }
       });
 
       await API.post("/materials", data, {
-        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => {
+          if (!e.total) return;
           const percent = Math.round((e.loaded * 100) / e.total);
           setProgress(percent);
         }
@@ -109,6 +164,7 @@ function UploadMaterial() {
 
       setSuccess(true);
 
+      // ✅ RESET
       setFormData({
         classId: "",
         subjectId: "",
@@ -121,7 +177,10 @@ function UploadMaterial() {
         thumbnail: null
       });
 
-      setThumbnailPreview(null);
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview);
+        setThumbnailPreview(null);
+      }
 
       if (fileRef.current) fileRef.current.value = "";
       if (thumbRef.current) thumbRef.current.value = "";
@@ -131,24 +190,28 @@ function UploadMaterial() {
       }, 1200);
 
     } catch (err) {
+
       setError(err.response?.data?.message || "Upload failed");
+
     } finally {
+
       setLoading(false);
+
     }
 
   };
+
+  /* =============================== UI =============================== */
 
   return (
 
     <div className="px-4 sm:px-6 py-6 max-w-2xl mx-auto">
 
-      {/* HEADER */}
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-2">
         <UploadCloud className="text-blue-600" />
         Upload Study Material
       </h1>
 
-      {/* ALERTS */}
       {success && (
         <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex gap-2 items-center">
           <CheckCircle size={18} /> Uploaded successfully
@@ -161,7 +224,6 @@ function UploadMaterial() {
         </div>
       )}
 
-      {/* PROGRESS */}
       {loading && (
         <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
           <div
@@ -171,10 +233,8 @@ function UploadMaterial() {
         </div>
       )}
 
-      {/* FORM */}
-      <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-6 rounded-2xl shadow space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white p-5 rounded-2xl shadow space-y-4">
 
-        {/* SELECTS */}
         <select name="classId" value={formData.classId} onChange={handleChange} className="input" required>
           <option value="">Select Class</option>
           {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -191,21 +251,17 @@ function UploadMaterial() {
           <option value="PYQ">PYQ</option>
         </select>
 
-        {/* INPUTS */}
-        <input name="title" placeholder="Title" onChange={handleChange} className="input" required />
-        <input name="price" type="number" placeholder="Price" onChange={handleChange} className="input" required />
+        <input name="title" value={formData.title} placeholder="Title" onChange={handleChange} className="input" required />
+        <input name="price" value={formData.price} type="number" placeholder="Price" onChange={handleChange} className="input" required />
 
-        {/* FILE UPLOADS */}
         <div className="grid sm:grid-cols-2 gap-4">
 
-          {/* PDF */}
           <label className="upload-box hover:border-blue-400">
             <FileText className="text-blue-600" />
             <span>Upload PDF</span>
             <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} hidden />
           </label>
 
-          {/* THUMBNAIL */}
           <label className="upload-box hover:border-green-400">
             <Image className="text-green-600" />
             <span>Thumbnail</span>
@@ -214,20 +270,14 @@ function UploadMaterial() {
 
         </div>
 
-        {/* FILE NAME */}
         {formData.file && (
           <p className="text-green-600 text-sm">{formData.file.name}</p>
         )}
 
-        {/* THUMB PREVIEW */}
         {thumbnailPreview && (
-          <img
-            src={thumbnailPreview}
-            className="w-full h-40 object-cover rounded-lg"
-          />
+          <img src={thumbnailPreview} className="w-full h-40 object-cover rounded-lg" />
         )}
 
-        {/* BUTTON */}
         <button
           type="submit"
           disabled={loading}

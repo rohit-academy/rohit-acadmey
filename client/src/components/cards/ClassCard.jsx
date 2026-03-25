@@ -6,60 +6,81 @@ function ClassCard({ id, name, route }) {
 
   if (!id || !name) return null;
 
-  const classNumber = name.replace("Class ", "");
+  /* 🔤 normalize */
+  const normalized = name.toLowerCase().trim();
 
-  const isStreamClass = classNumber === "11" || classNumber === "12";
+  /* 🎯 detect class number */
+  const classNumber = normalized.replace("class ", "");
 
-  const isComingSoon =
-    classNumber === "ba" ||
-    classNumber === "bsc" ||
-    classNumber === "bcom";
+  const isStreamClass = ["11", "12"].includes(classNumber);
+
+  const isComingSoon = ["ba", "bsc", "bcom"].includes(classNumber);
+
+  const safeRoute = route || "/classes";
 
   return (
-    <Link
-      to={isComingSoon ? "#" : route}
-      onClick={(e) => isComingSoon && e.preventDefault()}
-      className={`relative bg-white p-6 rounded-xl shadow transition flex flex-col items-center gap-3 text-center group
-        ${
-          isComingSoon
-            ? "opacity-70 cursor-not-allowed"
-            : "hover:shadow-lg hover:-translate-y-1"
-        }`}
-    >
 
-      {/* Icon */}
-      <GraduationCap
-        className={`transition group-hover:scale-110 ${
-          isComingSoon ? "text-gray-400" : "text-blue-600"
-        }`}
-        size={30}
-      />
+    <div className="relative">
 
-      {/* Class Name */}
-      <span
-        className={`font-semibold text-lg ${
-          isComingSoon ? "text-gray-500" : "text-gray-800"
-        }`}
+      <Link
+        to={isComingSoon ? "#" : safeRoute}
+        onClick={(e) => isComingSoon && e.preventDefault()}
+        aria-disabled={isComingSoon}
+        aria-label={`Open ${name}`}
+        className={`
+          relative bg-white p-6 rounded-xl shadow-sm
+          transition-all duration-300
+          flex flex-col items-center gap-3 text-center group
+          border border-gray-100
+
+          ${
+            isComingSoon
+              ? "opacity-60 cursor-not-allowed"
+              : "hover:shadow-xl hover:-translate-y-1"
+          }
+        `}
       >
-        {name}
-      </span>
 
-      {/* Stream hint */}
-      {isStreamClass && !isComingSoon && (
-        <span className="text-xs text-blue-500">
-          Choose Stream
+        {/* 🎓 ICON */}
+        <GraduationCap
+          size={30}
+          className={`
+            transition-transform duration-300
+            ${isComingSoon ? "text-gray-400" : "text-blue-600"}
+            ${!isComingSoon && "group-hover:scale-110"}
+          `}
+        />
+
+        {/* 📚 NAME */}
+        <span
+          className={`
+            font-semibold text-lg
+            ${isComingSoon ? "text-gray-500" : "text-gray-800"}
+          `}
+        >
+          {name}
         </span>
-      )}
 
-      {/* Coming Soon Badge */}
-      {isComingSoon && (
-        <span className="absolute top-2 right-2 bg-yellow-400 text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1">
-          <Lock size={12} /> Soon
-        </span>
-      )}
+        {/* 📊 STREAM */}
+        {isStreamClass && !isComingSoon && (
+          <span className="text-xs text-blue-500 font-medium">
+            Choose Stream
+          </span>
+        )}
 
-    </Link>
+        {/* 🔒 BADGE */}
+        {isComingSoon && (
+          <span className="absolute top-2 right-2 bg-yellow-400 text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1">
+            <Lock size={12} /> Soon
+          </span>
+        )}
+
+      </Link>
+
+    </div>
+
   );
+
 }
 
-export default ClassCard;
+export default React.memo(ClassCard);

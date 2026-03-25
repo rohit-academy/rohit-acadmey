@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CheckCircle, Download, Home } from "lucide-react";
-import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 function Success() {
@@ -13,12 +12,14 @@ function Success() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("Processing...");
 
-  const hasRun = useRef(false); // 🔥 prevent double run
+  const hasRun = useRef(false);
 
   useEffect(() => {
 
     if (hasRun.current) return;
     hasRun.current = true;
+
+    let isMounted = true; // 🔥 cleanup safety
 
     const handleSuccess = async () => {
 
@@ -34,41 +35,35 @@ function Success() {
 
           setMessage("Logging you in...");
 
-          // ✅ SAVE TOKEN
-          localStorage.setItem("token", token);
+          // ✅ use context login (handles everything)
+          await login(token);
 
-          // ✅ FETCH USER
-          const res = await API.get("/auth/me");
-          const userData = res.data?.user;
+          // 🔥 fetch updated user from context (auto)
+          const user = JSON.parse(localStorage.getItem("user"));
 
-          if (userData) {
+          if (!isMounted) return;
 
-            // ✅ SAVE USER
-            login(userData);
-
-            // 🔥 slight delay to avoid race condition
-            setTimeout(() => {
-              if (userData.authProvider === "google") {
-                navigate("/setup-username", { replace: true });
-              } else {
-                navigate("/account", { replace: true });
-              }
-            }, 50);
-
-            return;
-          } else {
-            localStorage.removeItem("token");
-            navigate("/login", { replace: true });
+          if (user) {
+            if (user.authProvider === "google") {
+              navigate("/setup-username", { replace: true });
+            } else {
+              navigate("/account", { replace: true });
+            }
             return;
           }
+
+          // ❌ fallback
+          navigate("/login", { replace: true });
+          return;
         }
 
         /* 💳 PAYMENT FLOW */
         if (payment === "success") {
+
           setMessage("Unlocking your materials...");
 
           setTimeout(() => {
-            setLoading(false);
+            if (isMounted) setLoading(false);
           }, 800);
 
           return;
@@ -82,6 +77,8 @@ function Success() {
         console.error("❌ Success Error:", error);
 
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
         navigate("/login", { replace: true });
 
       }
@@ -90,26 +87,24 @@ function Success() {
 
     handleSuccess();
 
+    return () => {
+      isMounted = false;
+    };
+
   }, [location, navigate, login]);
 
   /* 🔄 LOADING */
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-
         <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
-
-        <p className="text-lg font-medium text-gray-700">
-          {message}
-        </p>
-
+        <p className="text-lg font-medium text-gray-700">{message}</p>
       </div>
     );
   }
 
-  /* ✅ PAYMENT UI */
+  /* ✅ PAYMENT SUCCESS UI */
   return (
-
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
 
       <div className="max-w-xl w-full text-center bg-white p-8 sm:p-10 rounded-2xl shadow-lg">
@@ -147,9 +142,7 @@ function Success() {
       </div>
 
     </div>
-
   );
-
 }
 
 export default Success;

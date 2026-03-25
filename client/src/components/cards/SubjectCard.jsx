@@ -1,14 +1,13 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { BookOpen, Sparkles } from "lucide-react";
 
-function SubjectCard({ subject, streamId }) {
+function SubjectCard({ subject, streamId, classId }) {
 
-  const { classId } = useParams();
+  /* ❌ Safety */
+  if (!subject || !subject._id) return null;
 
-  if (!subject) return null;
-
-  /* 🎨 Stream based theme */
+  /* 🎨 Theme */
   const streamTheme = {
     pcb: {
       icon: "text-green-600",
@@ -27,36 +26,47 @@ function SubjectCard({ subject, streamId }) {
     }
   };
 
-  const theme = streamTheme[streamId] || {
-    icon: "text-blue-600",
-    border: "hover:border-blue-400",
-    bg: "hover:bg-blue-50"
+  const defaultTheme = {
+    icon: "text-indigo-600",
+    border: "hover:border-indigo-400",
+    bg: "hover:bg-indigo-50"
   };
 
+  const theme = streamTheme[streamId] || defaultTheme;
+
   return (
+
     <Link
-      to={`/materials/${classId}/${subject._id}`}   // ✅ correct routing
-      className={`group bg-white p-6 rounded-xl shadow hover:shadow-lg transition flex flex-col items-center gap-3 text-center border-t-4 border-transparent ${theme.border} ${theme.bg}`}
+      to={`/materials/${classId}/${subject._id}`}
+      aria-label={`Open ${subject.name} materials`}
+      className={`
+        group bg-white p-6 rounded-xl shadow-sm
+        hover:shadow-lg transition-all duration-200
+        flex flex-col items-center gap-3 text-center
+        border-t-4 border-transparent
+        ${theme.border} ${theme.bg}
+      `}
     >
 
-      {/* Icon */}
+      {/* 📘 ICON */}
       <BookOpen
-        className={`${theme.icon} group-hover:scale-110 transition`}
         size={28}
+        className={`${theme.icon} transition-transform duration-200 group-hover:scale-110`}
       />
 
-      {/* Subject Name */}
-      <span className="font-semibold">
+      {/* 📄 NAME */}
+      <span className="font-semibold text-gray-800 line-clamp-2">
         {subject.name}
       </span>
 
-      {/* Tag */}
+      {/* ✨ TAG */}
       <span className="text-xs text-gray-500 flex items-center gap-1">
         <Sparkles size={12} /> Study Materials
       </span>
 
     </Link>
+
   );
 }
 
-export default SubjectCard;
+export default React.memo(SubjectCard);

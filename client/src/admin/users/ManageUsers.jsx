@@ -6,66 +6,70 @@ function ManageUsers() {
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState("");
 
-  /* ===============================
-     📦 FETCH USERS
-  ============================== */
+  /* 📦 FETCH USERS */
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await API.get("/admin/users?page=1&limit=50");
+
+      const data = res.data?.data || [];
+
+      setUsers(data);
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-
-    const fetchUsers = async () => {
-      try {
-
-        const res = await API.get("/admin/users");
-
-        const data =
-          res.data?.data ||
-          res.data ||
-          [];
-
-        setUsers(data);
-
-      } catch (error) {
-        console.error("Users fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
-
   }, []);
 
-  /* ===============================
-     🚫 BLOCK / UNBLOCK
-  ============================== */
+  /* 🚫 BLOCK / UNBLOCK */
   const toggleBlock = async (userId, isBlocked) => {
 
     try {
 
-      await API.put(`/admin/users/${userId}/block`, {
-        isBlocked: !isBlocked
-      });
+      setActionLoading(userId);
+
+      const endpoint = isBlocked
+        ? `/admin/users/${userId}/unblock`
+        : `/admin/users/${userId}/block`;
+
+      await API.put(endpoint);
 
       setUsers((prev) =>
         prev.map((u) =>
-          u._id === userId ? { ...u, isBlocked: !isBlocked } : u
+          u._id === userId
+            ? { ...u, isBlocked: !isBlocked }
+            : u
         )
       );
 
-    } catch (error) {
-      console.error("Block error:", error);
+    } catch (err) {
+
+      console.error(err);
       alert("Action failed");
+
+    } finally {
+      setActionLoading(null);
     }
 
   };
 
-  /* ===============================
-     ⏳ LOADING
-  ============================== */
+  /* ⏳ LOADING */
   if (loading) {
     return (
-      <div className="text-center py-10">
-        <p className="text-gray-500">Loading users...</p>
+      <div className="text-center py-10 text-gray-500">
+        Loading users...
       </div>
     );
   }
@@ -75,9 +79,27 @@ function ManageUsers() {
     <div>
 
       {/* HEADER */}
-      <h1 className="text-2xl font-bold mb-6">
-        Manage Users
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+
+        <h1 className="text-2xl font-bold">
+          Manage Users
+        </h1>
+
+        <button
+          onClick={fetchUsers}
+          className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+        >
+          Refresh
+        </button>
+
+      </div>
+
+      {/* ❌ ERROR */}
+      {error && (
+        <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm text-center">
+          {error}
+        </div>
+      )}
 
       {/* EMPTY */}
       {users.length === 0 ? (
@@ -89,7 +111,7 @@ function ManageUsers() {
         <div className="bg-white rounded-xl shadow overflow-hidden">
 
           {/* TABLE HEADER */}
-          <div className="grid grid-cols-5 bg-gray-100 p-4 text-sm font-semibold">
+          <div className="hidden md:grid grid-cols-5 bg-gray-100 p-4 text-sm font-semibold">
             <span>Name</span>
             <span>Contact</span>
             <span>Provider</span>
@@ -102,7 +124,7 @@ function ManageUsers() {
 
             <div
               key={user._id}
-              className="grid grid-cols-5 items-center p-4 border-t text-sm hover:bg-gray-50 transition"
+              className="grid md:grid-cols-5 gap-3 items-center p-4 border-t text-sm hover:bg-gray-50 transition"
             >
 
               {/* NAME */}
@@ -119,7 +141,7 @@ function ManageUsers() {
               {/* PROVIDER */}
               <div>
                 <span className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs">
-                  {user.authProvider}
+                  {user.authProvider || "phone"}
                 </span>
               </div>
 
@@ -139,24 +161,33 @@ function ManageUsers() {
               {/* ACTION */}
               <div>
                 <button
+                  disabled={actionLoading === user._id}
                   onClick={() =>
                     toggleBlock(user._id, user.isBlocked)
                   }
-                  className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium ${
-                    user.isBlocked
-                      ? "bg-green-100 text-green-700 hover:bg-green-200"
-                      : "bg-red-100 text-red-600 hover:bg-red-200"
-                  }`}
+                  className={`
+                    flex items-center gap-1 px-3 py-1 rounded text-xs font-medium
+                    ${
+                      user.isBlocked
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                    }
+                    ${
+                      actionLoading === user._id
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-105"
+                    }
+                  `}
                 >
-                  {user.isBlocked ? (
+                  {actionLoading === user._id ? (
+                    "Processing..."
+                  ) : user.isBlocked ? (
                     <>
-                      <ShieldCheck size={14} />
-                      Unblock
+                      <ShieldCheck size={14} /> Unblock
                     </>
                   ) : (
                     <>
-                      <ShieldOff size={14} />
-                      Block
+                      <ShieldOff size={14} /> Block
                     </>
                   )}
                 </button>
@@ -173,6 +204,7 @@ function ManageUsers() {
     </div>
 
   );
+
 }
 
-export default ManageUsers;
+export default React.memo(ManageUsers);

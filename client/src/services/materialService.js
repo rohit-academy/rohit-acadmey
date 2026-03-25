@@ -1,58 +1,71 @@
 import API from "./api";
 
-/* 🔐 Get admin token */
-const getAuthHeaders = () => {
-  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
-  const token = admin?.token;
+/* =====================================
+   🔧 RESPONSE HANDLER
+===================================== */
+const handleResponse = (res) => res?.data?.data || res?.data;
 
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+/* =====================================
+   📚 GET MATERIALS (FILTER BY SUBJECT)
+===================================== */
+export const getMaterialsBySubject = async (subjectId) => {
+  if (!subjectId) throw new Error("Subject ID required");
+
+  const res = await API.get(`/materials?subjectId=${subjectId}`);
+  return handleResponse(res);
 };
 
-// 📚 Get materials by subject
-export const getMaterialsBySubject = (subjectId) => {
-  return API.get(`/materials/subject/${subjectId}`);
+/* =====================================
+   📄 GET MATERIAL BY ID
+===================================== */
+export const getMaterialById = async (id) => {
+  if (!id) throw new Error("Material ID required");
+
+  const res = await API.get(`/materials/${id}`);
+  return handleResponse(res);
 };
 
-// 📄 Get single material details
-export const getMaterialById = (id) => {
-  return API.get(`/materials/${id}`);
+/* =====================================
+   🔍 SEARCH MATERIALS (FRONTEND FILTER)
+   ⚠️ Backend me search API nahi hai
+===================================== */
+export const searchMaterials = async (query) => {
+  if (!query) return [];
+
+  const res = await API.get(`/materials`);
+  const materials = handleResponse(res) || [];
+
+  return materials.filter((m) =>
+    m.title.toLowerCase().includes(query.toLowerCase())
+  );
 };
 
-// 🔍 Search materials
-export const searchMaterials = (query) => {
-  return API.get(`/materials/search?q=${query}`);
+/* =====================================
+   ➕ UPLOAD MATERIAL (ADMIN)
+===================================== */
+export const uploadMaterial = async (formData) => {
+  if (!formData) throw new Error("Form data required");
+
+  const res = await API.post("/materials", formData);
+  return handleResponse(res);
 };
 
-// ➕ Upload new material (Admin)
-export const uploadMaterial = (formData) => {
-  return API.post("/materials", formData, {
-    headers: {
-      ...getAuthHeaders(),
-      "Content-Type": "multipart/form-data",
-    },
-  });
+/* =====================================
+   ✏ UPDATE MATERIAL
+===================================== */
+export const updateMaterial = async (id, formData) => {
+  if (!id) throw new Error("Material ID required");
+
+  const res = await API.put(`/materials/${id}`, formData);
+  return handleResponse(res);
 };
 
-// ✏ Update material (Admin)
-export const updateMaterial = (id, formData) => {
-  return API.put(`/materials/${id}`, formData, {
-    headers: {
-      ...getAuthHeaders(),
-      "Content-Type": "multipart/form-data",
-    },
-  });
-};
+/* =====================================
+   ❌ DELETE MATERIAL
+===================================== */
+export const deleteMaterial = async (id) => {
+  if (!id) throw new Error("Material ID required");
 
-// ❌ Delete material (Admin)
-export const deleteMaterial = (id) => {
-  return API.delete(`/materials/${id}`, {
-    headers: getAuthHeaders(),
-  });
-};
-
-// ⭐ Rate material
-export const rateMaterial = (id, rating) => {
-  return API.post(`/materials/${id}/rate`, { rating });
+  const res = await API.delete(`/materials/${id}`);
+  return handleResponse(res);
 };

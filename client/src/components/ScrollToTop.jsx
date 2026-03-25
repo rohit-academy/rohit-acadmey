@@ -2,14 +2,21 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "instant" // smooth bhi kar sakte ho
-    });
-  }, [pathname]);
+
+    /* 🔹 HASH PRESENT (anchor scroll) */
+    if (hash) return;
+
+    /* 🔹 NORMAL SCROLL */
+    window.scrollTo(0, 0);
+
+    // 👉 smooth chahiye to use karo:
+    // window.scrollTo({ top: 0, behavior: "smooth" });
+
+  }, [pathname, hash]);
 
   return null;
 }

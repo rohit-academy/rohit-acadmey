@@ -1,19 +1,18 @@
 import React, { useState } from "react";
-import { PlusCircle, Ticket, Calendar } from "lucide-react";
+import { PlusCircle, Ticket, Calendar, Trash2 } from "lucide-react";
 
 function Coupons() {
+
   const [coupons, setCoupons] = useState([
     {
       code: "WELCOME10",
       discount: 10,
-      expiry: "30 Mar 2026",
-      active: true
+      expiry: "2026-03-30"
     },
     {
       code: "EXAM50",
       discount: 50,
-      expiry: "10 Feb 2026",
-      active: false
+      expiry: "2026-02-10"
     }
   ]);
 
@@ -23,33 +22,114 @@ function Coupons() {
     expiry: ""
   });
 
-  const handleChange = (e) => {
-    setNewCoupon({ ...newCoupon, [e.target.name]: e.target.value });
+  const [error, setError] = useState("");
+
+  /* =========================
+     🧠 FORMAT DATE
+  ========================= */
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
   };
 
+  /* =========================
+     ⏳ CHECK EXPIRED
+  ========================= */
+  const isExpired = (date) => {
+    return new Date(date) < new Date();
+  };
+
+  /* =========================
+     ✏️ HANDLE INPUT
+  ========================= */
+  const handleChange = (e) => {
+
+    let { name, value } = e.target;
+
+    if (name === "code") {
+      value = value.toUpperCase().replace(/\s/g, "");
+    }
+
+    setNewCoupon((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+
+    setError("");
+  };
+
+  /* =========================
+     ➕ ADD COUPON
+  ========================= */
   const addCoupon = (e) => {
     e.preventDefault();
-    if (!newCoupon.code || !newCoupon.discount || !newCoupon.expiry) return;
 
-    setCoupons([
-      ...coupons,
-      { ...newCoupon, active: true }
+    const { code, discount, expiry } = newCoupon;
+
+    // 🔒 validation
+    if (!code || !discount || !expiry) {
+      setError("All fields required");
+      return;
+    }
+
+    if (discount <= 0 || discount > 90) {
+      setError("Discount must be between 1% - 90%");
+      return;
+    }
+
+    if (new Date(expiry) < new Date()) {
+      setError("Expiry must be future date");
+      return;
+    }
+
+    const exists = coupons.find((c) => c.code === code);
+
+    if (exists) {
+      setError("Coupon already exists");
+      return;
+    }
+
+    setCoupons((prev) => [
+      ...prev,
+      { code, discount: Number(discount), expiry }
     ]);
 
     setNewCoupon({ code: "", discount: "", expiry: "" });
   };
 
-  return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Coupon Management</h1>
+  /* =========================
+     ❌ DELETE
+  ========================= */
+  const deleteCoupon = (code) => {
+    setCoupons((prev) => prev.filter((c) => c.code !== code));
+  };
 
-      {/* Add Coupon Form */}
-      <div className="bg-white p-6 rounded-xl shadow mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+  return (
+
+    <div className="p-4 md:p-6">
+
+      <h1 className="text-2xl md:text-3xl font-bold mb-6">
+        Coupon Management
+      </h1>
+
+      {/* ================= FORM ================= */}
+      <div className="bg-white p-5 rounded-xl shadow mb-8">
+
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <PlusCircle size={20} /> Create New Coupon
         </h2>
 
+        {error && (
+          <p className="text-red-500 text-sm mb-3">
+            {error}
+          </p>
+        )}
+
         <form onSubmit={addCoupon} className="grid md:grid-cols-4 gap-4">
+
           <input
             type="text"
             name="code"
@@ -79,48 +159,92 @@ function Coupons() {
           <button className="bg-blue-600 text-white rounded-lg p-3 hover:bg-blue-700 transition">
             Add Coupon
           </button>
+
         </form>
+
       </div>
 
-      {/* Coupon Table */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-blue-600 text-white">
-            <tr>
-              <th className="p-3">Code</th>
-              <th className="p-3">Discount</th>
-              <th className="p-3">Expiry</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
+      {/* ================= TABLE ================= */}
+      <div className="bg-white rounded-xl shadow overflow-hidden">
 
-          <tbody>
-            {coupons.map((coupon, index) => (
-              <tr key={index} className="border-b hover:bg-gray-50">
-                <td className="p-3 flex items-center gap-2">
-                  <Ticket size={18} className="text-purple-600" />
-                  {coupon.code}
-                </td>
-                <td className="p-3 font-semibold text-green-600">
-                  {coupon.discount}% OFF
-                </td>
-                <td className="p-3 flex items-center gap-2 text-gray-600">
-                  <Calendar size={16} />
-                  {coupon.expiry}
-                </td>
-                <td className="p-3">
-                  {coupon.active ? (
-                    <span className="text-green-600 font-semibold">Active</span>
-                  ) : (
-                    <span className="text-red-500 font-semibold">Expired</span>
-                  )}
-                </td>
+        {coupons.length === 0 ? (
+          <p className="text-center py-6 text-gray-500">
+            No coupons created yet
+          </p>
+        ) : (
+
+          <table className="w-full text-left">
+
+            <thead className="bg-blue-600 text-white">
+              <tr>
+                <th className="p-3">Code</th>
+                <th className="p-3">Discount</th>
+                <th className="p-3">Expiry</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 text-center">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {coupons.map((coupon) => {
+
+                const expired = isExpired(coupon.expiry);
+
+                return (
+                  <tr
+                    key={coupon.code}
+                    className="border-b hover:bg-gray-50"
+                  >
+
+                    <td className="p-3 flex items-center gap-2">
+                      <Ticket size={18} className="text-purple-600" />
+                      {coupon.code}
+                    </td>
+
+                    <td className="p-3 font-semibold text-green-600">
+                      {coupon.discount}% OFF
+                    </td>
+
+                    <td className="p-3 flex items-center gap-2 text-gray-600">
+                      <Calendar size={16} />
+                      {formatDate(coupon.expiry)}
+                    </td>
+
+                    <td className="p-3">
+                      {expired ? (
+                        <span className="text-red-500 font-semibold">
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="text-green-600 font-semibold">
+                          Active
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => deleteCoupon(coupon.code)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+
+                  </tr>
+                );
+
+              })}
+            </tbody>
+
+          </table>
+
+        )}
+
       </div>
+
     </div>
+
   );
 }
 

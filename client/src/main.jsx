@@ -11,31 +11,72 @@ import { ProductProvider } from "./context/ProductContext";
 
 import "./styles/theme.css";
 
+/* =====================================
+   🔥 PROVIDER COMPOSITION (CLEAN)
+===================================== */
+function Providers({ children }) {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <DownloadProvider>
+          <ProductProvider>
+            {children}
+          </ProductProvider>
+        </DownloadProvider>
+      </CartProvider>
+    </AuthProvider>
+  );
+}
+
+/* =====================================
+   🛡 SIMPLE ERROR BOUNDARY
+===================================== */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error("🔥 App Crash:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-center p-6">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Something went wrong 😢</h1>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+/* =====================================
+   🚀 ROOT RENDER
+===================================== */
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-
-      {/* 🔐 User Auth */}
-      <AuthProvider>
-
-        {/* 🛒 Shopping Cart */}
-        <CartProvider>
-
-          {/* 📥 Purchased Files */}
-          <DownloadProvider>
-
-            {/* 📚 Study Materials */}
-            <ProductProvider>
-              <App />
-            </ProductProvider>
-
-          </DownloadProvider>
-        </CartProvider>
-
-      </AuthProvider>
-
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter>
+    <ErrorBoundary>
+      <Providers>
+        <App />
+      </Providers>
+    </ErrorBoundary>
+  </BrowserRouter>
 );

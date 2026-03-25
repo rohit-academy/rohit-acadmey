@@ -5,11 +5,13 @@ import {
   Users,
   Download,
   ShoppingCart,
-  Settings
+  Settings,
+  RefreshCw
 } from "lucide-react";
-import axios from "axios";
+import API from "../../services/api";
 
 function AdminDashboard() {
+
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -20,19 +22,21 @@ function AdminDashboard() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
+  /* =========================
+     📦 FETCH STATS
+  ========================= */
   const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem("token");
 
-      const { data } = await axios.get(
-        "/api/admin/stats",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+    try {
+
+      setLoading(true);
+      setError("");
+
+      const res = await API.get("/admin/stats");
+
+      const data = res.data?.data || res.data || {};
 
       setStats({
         totalMaterials: data.totalMaterials || 0,
@@ -41,119 +45,207 @@ function AdminDashboard() {
         totalDownloads: data.totalDownloads || 0
       });
 
-    } catch (error) {
-      console.error("Stats fetch error:", error);
+    } catch (err) {
+
+      console.error("Stats fetch error:", err);
+
+      setError("Failed to load dashboard");
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
   useEffect(() => {
     fetchStats();
   }, []);
 
-  const statsCards = [
-    {
-      title: "Total Materials",
-      value: stats.totalMaterials,
-      icon: <FileText size={28} className="text-blue-600" />
-    },
-    {
-      title: "Total Users",
-      value: stats.totalUsers,
-      icon: <Users size={28} className="text-green-600" />
-    },
-    {
-      title: "Total Orders",
-      value: stats.totalOrders,
-      icon: <ShoppingCart size={28} className="text-purple-600" />
-    },
-    {
-      title: "Total Downloads",
-      value: stats.totalDownloads,
-      icon: <Download size={28} className="text-pink-600" />
-    }
-  ];
-
+  /* =========================
+     ⏳ LOADING
+  ========================= */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading dashboard...
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+  /* =========================
+     ❌ ERROR UI
+  ========================= */
+  if (error) {
+    return (
+      <div className="text-center py-20">
 
-      {/* 📊 Stats */}
+        <p className="text-red-500 mb-4">
+          {error}
+        </p>
+
+        <button
+          onClick={fetchStats}
+          className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+        >
+          <RefreshCw size={16} />
+          Retry
+        </button>
+
+      </div>
+    );
+  }
+
+  /* =========================
+     📊 STATS CARDS
+  ========================= */
+  const statsCards = [
+    {
+      title: "Total Materials",
+      value: stats.totalMaterials,
+      icon: <FileText size={26} />,
+      color: "blue"
+    },
+    {
+      title: "Total Users",
+      value: stats.totalUsers,
+      icon: <Users size={26} />,
+      color: "green"
+    },
+    {
+      title: "Total Orders",
+      value: stats.totalOrders,
+      icon: <ShoppingCart size={26} />,
+      color: "purple"
+    },
+    {
+      title: "Total Downloads",
+      value: stats.totalDownloads,
+      icon: <Download size={26} />,
+      color: "pink"
+    }
+  ];
+
+  const colorMap = {
+    blue: "bg-blue-100 text-blue-600",
+    green: "bg-green-100 text-green-600",
+    purple: "bg-purple-100 text-purple-600",
+    pink: "bg-pink-100 text-pink-600"
+  };
+
+  return (
+
+    <div className="p-4 md:p-6">
+
+      {/* ================= STATS ================= */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+
         {statsCards.map((item, index) => (
+
           <div
             key={index}
-            className="bg-white p-6 rounded-xl shadow flex items-center gap-4"
+            className="bg-white p-5 rounded-xl shadow hover:shadow-md transition flex items-center gap-4"
           >
-            {item.icon}
-            <div>
-              <p className="text-gray-500 text-sm">{item.title}</p>
-              <p className="text-2xl font-bold">{item.value}</p>
+
+            <div className={`p-3 rounded-lg ${colorMap[item.color]}`}>
+              {item.icon}
             </div>
+
+            <div>
+              <p className="text-gray-500 text-sm">
+                {item.title}
+              </p>
+              <p className="text-2xl font-bold">
+                {item.value}
+              </p>
+            </div>
+
           </div>
+
         ))}
+
       </div>
 
-      {/* ⚙ Quick Actions */}
-      <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+      {/* ================= QUICK ACTIONS ================= */}
+      <h2 className="text-lg md:text-xl font-semibold mb-4">
+        Quick Actions
+      </h2>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
-          <h3 className="font-semibold mb-2">📚 Manage Study Materials</h3>
-          <p className="text-sm text-gray-600">
-            Add, edit or remove PDFs and notes.
-          </p>
-          <button
-            onClick={() => navigate("/admin/materials")}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Open
-          </button>
-        </div>
 
-        <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
-          <h3 className="font-semibold mb-2">👨‍🎓 Manage Users</h3>
-          <p className="text-sm text-gray-600">
-            View students and activity.
-          </p>
-          <button
-            onClick={() => navigate("/admin/users")}
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-          >
-            Open
-          </button>
-        </div>
+        <ActionCard
+          title="📚 Manage Materials"
+          desc="Add, edit or remove PDFs"
+          color="blue"
+          onClick={() => navigate("/admin/materials")}
+        />
 
-        <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
-          <h3 className="font-semibold mb-2">💰 Orders & Payments</h3>
-          <p className="text-sm text-gray-600">
-            Track purchases and revenue.
-          </p>
-          <button
-            onClick={() => navigate("/admin/orders")}
-            className="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-          >
-            Open
-          </button>
-        </div>
+        <ActionCard
+          title="👨‍🎓 Manage Users"
+          desc="View and manage students"
+          color="green"
+          onClick={() => navigate("/admin/users")}
+        />
+
+        <ActionCard
+          title="💰 Orders & Payments"
+          desc="Track revenue & purchases"
+          color="purple"
+          onClick={() => navigate("/admin/orders")}
+        />
+
       </div>
 
-      {/* ⚡ System */}
-      <div className="mt-12 bg-white p-6 rounded-xl shadow flex items-center gap-4">
+      {/* ================= SYSTEM ================= */}
+      <div className="mt-12 bg-white p-5 rounded-xl shadow flex items-center gap-3">
+
         <Settings className="text-gray-600" />
+
         <p className="text-sm text-gray-600">
           System running in{" "}
-          <span className="font-semibold">Development Mode</span>
+          <span className="font-semibold text-blue-600">
+            Development Mode
+          </span>
         </p>
+
       </div>
+
+    </div>
+
+  );
+
+}
+
+/* =========================
+   🔥 ACTION CARD
+========================= */
+function ActionCard({ title, desc, onClick, color }) {
+
+  const colorMap = {
+    blue: "bg-blue-600 hover:bg-blue-700",
+    green: "bg-green-600 hover:bg-green-700",
+    purple: "bg-purple-600 hover:bg-purple-700"
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+
+      <h3 className="font-semibold mb-2">
+        {title}
+      </h3>
+
+      <p className="text-sm text-gray-600">
+        {desc}
+      </p>
+
+      <button
+        onClick={onClick}
+        className={`mt-4 text-white px-4 py-2 rounded-lg ${colorMap[color]}`}
+      >
+        Open
+      </button>
+
     </div>
   );
 }

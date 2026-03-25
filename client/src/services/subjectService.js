@@ -1,31 +1,78 @@
 import API from "./api";
 
-/* 📚 Get subjects by class */
-export const getSubjectsByClass = (classId) => {
-  return API.get(`/subjects?classId=${classId}`);
+/* =====================================
+   🔧 HELPER → BUILD QUERY SAFELY
+===================================== */
+const buildQuery = (params) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      query.append(key, value);
+    }
+  });
+
+  return query.toString();
 };
 
-/* 🎓 Get subjects by class + stream */
-export const getSubjectsByStream = (classId, stream) => {
-  return API.get(`/subjects?classId=${classId}&stream=${stream}`);
+/* =====================================
+   📚 GET SUBJECTS BY CLASS
+===================================== */
+export const getSubjectsByClass = async (classId) => {
+  if (!classId) throw new Error("classId is required");
+
+  const query = buildQuery({ classId });
+
+  const res = await API.get(`/subjects?${query}`);
+  return res.data;
 };
 
-/* ➕ Add subject (Admin) */
-export const createSubject = (subjectData) => {
-  return API.post("/subjects", subjectData);
+/* =====================================
+   🎓 GET SUBJECTS BY STREAM
+===================================== */
+export const getSubjectsByStream = async (classId, stream) => {
+  if (!classId) throw new Error("classId is required");
+
+  const query = buildQuery({ classId, stream });
+
+  const res = await API.get(`/subjects?${query}`);
+  return res.data;
 };
 
-/* ✏ Update subject (Admin) */
-export const updateSubject = (id, subjectData) => {
-  return API.put(`/subjects/${id}`, subjectData);
+/* =====================================
+   ➕ CREATE SUBJECT
+===================================== */
+export const createSubject = async (subjectData) => {
+  if (!subjectData) throw new Error("Subject data required");
+
+  const res = await API.post("/subjects", subjectData);
+  return res.data;
 };
 
-/* ❌ Delete subject (Admin) */
-export const deleteSubject = (id) => {
-  return API.delete(`/subjects/${id}`);
+/* =====================================
+   ✏ UPDATE SUBJECT
+===================================== */
+export const updateSubject = async (id, subjectData) => {
+  if (!id) throw new Error("Subject ID required");
+
+  const res = await API.put(`/subjects/${id}`, subjectData);
+  return res.data;
 };
 
-/* 📄 Get all subjects */
-export const getAllSubjects = () => {
-  return API.get("/subjects");
+/* =====================================
+   ❌ DELETE SUBJECT
+===================================== */
+export const deleteSubject = async (id) => {
+  if (!id) throw new Error("Subject ID required");
+
+  const res = await API.delete(`/subjects/${id}`);
+  return res.data;
+};
+
+/* =====================================
+   📄 GET ALL SUBJECTS
+===================================== */
+export const getAllSubjects = async () => {
+  const res = await API.get("/subjects");
+  return res.data;
 };

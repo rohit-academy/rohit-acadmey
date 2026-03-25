@@ -9,21 +9,33 @@ function ProductCard({
   pages = 0,
   price = 0,
   rating = 4.5,
-  thumbnail // ✅ ADD THIS
+  thumbnail
 }) {
 
+  /* ❌ Safety */
   if (!_id) return null;
+
+  /* 💰 Price format */
+  const formatPrice = (num) =>
+    `₹${Number(num).toLocaleString("en-IN")}`;
+
+  /* ⭐ Safe rating */
+  const safeRating = Math.max(0, Math.min(5, rating));
 
   return (
 
-    <div className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col">
+    <div className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col hover:-translate-y-1">
 
-      {/* 🔥 THUMBNAIL */}
+      {/* 🖼 THUMBNAIL */}
       {thumbnail ? (
         <img
           src={thumbnail}
           alt={title}
-          className="w-full h-40 object-cover"
+          loading="lazy"
+          className="w-full h-40 object-cover group-hover:scale-105 transition duration-300"
+          onError={(e) => {
+            e.target.src = "https://via.placeholder.com/400x250?text=PDF";
+          }}
         />
       ) : (
         <div className="w-full h-40 flex items-center justify-center bg-gray-100">
@@ -31,10 +43,10 @@ function ProductCard({
         </div>
       )}
 
-      {/* CONTENT */}
+      {/* 📦 CONTENT */}
       <div className="p-5 flex flex-col justify-between flex-1">
 
-        {/* TOP */}
+        {/* 🔼 TOP */}
         <div>
 
           <div className="flex items-center justify-between mb-2">
@@ -45,12 +57,12 @@ function ProductCard({
 
             <div className="flex items-center gap-1 text-yellow-500 text-sm font-semibold">
               <Star size={14} fill="currentColor" />
-              {rating}
+              {safeRating.toFixed(1)}
             </div>
 
           </div>
 
-          <h2 className="font-semibold text-lg leading-tight line-clamp-2">
+          <h2 className="font-semibold text-lg leading-tight line-clamp-2 text-gray-800">
             {title}
           </h2>
 
@@ -68,16 +80,17 @@ function ProductCard({
 
         </div>
 
-        {/* BOTTOM */}
+        {/* 🔽 BOTTOM */}
         <div className="mt-5">
 
           <p className="text-2xl font-bold text-blue-600 mb-3">
-            ₹{price}
+            {formatPrice(price)}
           </p>
 
           <Link
             to={`/product/${_id}`}
-            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-medium"
+            aria-label={`View details of ${title}`}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-medium active:scale-95"
           >
             <Download size={16} />
             View Details
@@ -93,4 +106,4 @@ function ProductCard({
 
 }
 
-export default ProductCard;
+export default React.memo(ProductCard);

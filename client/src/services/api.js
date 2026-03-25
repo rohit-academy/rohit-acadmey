@@ -1,13 +1,28 @@
 import axios from "axios";
 
 /* =====================================
-   🌐 BASE URL (FIXED)
+   🌐 BASE CONFIG
 ===================================== */
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-acadmey.onrender.com/api", // ✅ FIXED
+    "https://rohit-acadmey.onrender.com/api",
+  timeout: 15000, // 🔥 prevent hanging
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
+
+/* =====================================
+   🔧 SAFE JSON PARSE
+===================================== */
+const safeParse = (data) => {
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+};
 
 /* =====================================
    🔐 REQUEST INTERCEPTOR
@@ -17,15 +32,19 @@ API.interceptors.request.use(
     try {
       const userToken = localStorage.getItem("token");
 
-      // 🔥 admin separate rakho (optional future)
-      const adminData = JSON.parse(
-        localStorage.getItem("admin") || "{}"
-      );
+      const adminData = safeParse(localStorage.getItem("admin"));
       const adminToken = adminData?.token;
 
-      // ✅ safer logic
-      const isAdminRoute = req.url?.includes("/admin");
-      const token = isAdminRoute ? adminToken : userToken;
+      /* 🔥 BETTER LOGIC */
+      const isAdminRoute = req.url?.startsWith("/admin");
+
+      let token = null;
+
+      if (isAdminRoute) {
+        token = adminToken;
+      } else {
+        token = userToken;
+      }
 
       if (token) {
         req.headers.Authorization = `Bearer ${token}`;
@@ -43,13 +62,12 @@ API.interceptors.request.use(
 /* =====================================
    🚨 RESPONSE INTERCEPTOR
 ===================================== */
-let isRedirecting = false; // 🔥 prevent multi redirect
+let isRedirecting = false;
 
 API.interceptors.response.use(
   (response) => response,
 
   (error) => {
-
     const status = error.response?.status;
 
     /* 🔐 401 */
@@ -63,23 +81,24 @@ API.interceptors.response.use(
       localStorage.removeItem("user");
       localStorage.removeItem("admin");
 
-      // 🔥 prevent loop
       if (!window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
+
+      /* 🔥 RESET FLAG AFTER DELAY */
+      setTimeout(() => {
+        isRedirecting = false;
+      }, 2000);
     }
 
     /* 🚫 403 */
     if (status === 403) {
       console.warn("🚫 Access forbidden");
-
-      // 👉 better than alert
-      console.error("Access denied");
     }
 
-    /* 🌐 NETWORK */
+    /* 🌐 NETWORK / TIMEOUT */
     if (!error.response) {
-      console.error("🌐 Network error");
+      console.error("🌐 Network error or timeout");
     }
 
     return Promise.reject(error);

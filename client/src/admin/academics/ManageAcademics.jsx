@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import API from "../../services/api";
 
 function ManageAcademics() {
@@ -8,7 +8,12 @@ function ManageAcademics() {
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
 
-  /* 📚 LOAD CLASSES */
+  const [newSubject, setNewSubject] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+
+  /* ================= CLASSES ================= */
   const fetchClasses = async () => {
     try {
 
@@ -18,24 +23,25 @@ function ManageAcademics() {
 
       setClasses(list);
 
-      if (list.length) {
+      if (list.length > 0) {
         setSelectedClass(list[0]._id);
       }
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Class fetch error:", error);
+      setError("Failed to load classes");
 
     }
   };
 
-
-  /* 📚 LOAD SUBJECTS */
+  /* ================= SUBJECTS ================= */
   const fetchSubjects = async (classId) => {
 
     if (!classId) return;
 
     try {
+
+      setLoading(true);
 
       const res = await API.get(`/subjects?classId=${classId}`);
 
@@ -43,19 +49,19 @@ function ManageAcademics() {
 
       setSubjects(list);
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Subject fetch error:", error);
+      setError("Failed to load subjects");
 
+    } finally {
+      setLoading(false);
     }
 
   };
 
-
   useEffect(() => {
     fetchClasses();
   }, []);
-
 
   useEffect(() => {
     if (selectedClass) {
@@ -63,49 +69,68 @@ function ManageAcademics() {
     }
   }, [selectedClass]);
 
-
-  /* ➕ ADD SUBJECT */
+  /* ================= ADD ================= */
   const addSubject = async () => {
 
-    const name = prompt("Enter subject name");
+    const name = newSubject.trim();
 
     if (!name) return;
 
+    // 🔥 duplicate check
+    const exists = subjects.find(
+      (s) => s.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (exists) {
+      setError("Subject already exists");
+      return;
+    }
+
     try {
 
-      await API.post("/subjects", {
+      setAdding(true);
+      setError("");
+
+      const res = await API.post("/subjects", {
         name,
         classId: selectedClass
       });
 
-      fetchSubjects(selectedClass);
+      const newItem = res.data?.data || { name, _id: Date.now() };
 
-    } catch (error) {
+      // 🔥 optimistic update
+      setSubjects((prev) => [...prev, newItem]);
 
-      console.error("Add subject error:", error);
+      setNewSubject("");
 
+    } catch (err) {
+
+      setError(err.response?.data?.message || "Add failed");
+
+    } finally {
+      setAdding(false);
     }
-
   };
 
+  /* ================= DELETE ================= */
+  const deleteSubject = async (id, name) => {
 
-  /* ❌ DELETE SUBJECT */
-  const deleteSubject = async (id) => {
+    if (!window.confirm(`Delete "${name}"?`)) return;
 
     try {
 
       await API.delete(`/subjects/${id}`);
 
-      fetchSubjects(selectedClass);
+      // 🔥 instant UI update
+      setSubjects((prev) => prev.filter((s) => s._id !== id));
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Delete subject error:", error);
+      setError("Delete failed");
 
     }
 
   };
-
 
   return (
 
@@ -115,8 +140,12 @@ function ManageAcademics() {
         Manage Subjects
       </h1>
 
+      {/* ERROR */}
+      {error && (
+        <p className="text-red-500 mb-4">{error}</p>
+      )}
 
-      {/* SELECT CLASS */}
+      {/* ================= SELECT CLASS ================= */}
       <div className="mb-6">
 
         <label className="block mb-2 font-semibold">
@@ -139,48 +168,81 @@ function ManageAcademics() {
 
       </div>
 
-
+      {/* ================= SUBJECT BOX ================= */}
       <div className="bg-white p-5 rounded-xl shadow">
 
-        <div className="flex justify-between mb-4">
+        <div className="flex justify-between items-center mb-4">
 
           <h2 className="font-bold text-lg">
             Subjects
           </h2>
 
+        </div>
+
+        {/* ➕ ADD INPUT */}
+        <div className="flex gap-2 mb-4">
+
+          <input
+            value={newSubject}
+            onChange={(e) => setNewSubject(e.target.value)}
+            placeholder="Enter subject name"
+            className="border p-2 rounded flex-1"
+            onKeyDown={(e) => e.key === "Enter" && addSubject()}
+          />
+
           <button
             onClick={addSubject}
-            className="bg-blue-600 text-white px-3 py-1 rounded flex items-center gap-1"
+            disabled={adding}
+            className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-1 disabled:opacity-60"
           >
-            <Plus size={16} /> Add
+            {adding ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <>
+                <Plus size={16} /> Add
+              </>
+            )}
           </button>
 
         </div>
 
+        {/* ================= LIST ================= */}
 
-        <ul className="space-y-2">
+        {loading ? (
 
-          {subjects.map((sub) => (
+          <p className="text-gray-500">Loading...</p>
 
-            <li
-              key={sub._id}
-              className="flex justify-between items-center bg-gray-50 p-2 rounded"
-            >
+        ) : subjects.length === 0 ? (
 
-              {sub.name}
+          <p className="text-gray-500">No subjects found</p>
 
-              <button
-                onClick={() => deleteSubject(sub._id)}
-                className="text-red-500"
+        ) : (
+
+          <ul className="space-y-2">
+
+            {subjects.map((sub) => (
+
+              <li
+                key={sub._id}
+                className="flex justify-between items-center bg-gray-50 p-2 rounded"
               >
-                <Trash2 size={16} />
-              </button>
 
-            </li>
+                {sub.name}
 
-          ))}
+                <button
+                  onClick={() => deleteSubject(sub._id, sub.name)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={16} />
+                </button>
 
-        </ul>
+              </li>
+
+            ))}
+
+          </ul>
+
+        )}
 
       </div>
 

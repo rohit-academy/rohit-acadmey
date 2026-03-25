@@ -11,51 +11,110 @@ function ProductDetails() {
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
 
   /* 📦 FETCH PRODUCT */
   useEffect(() => {
+
+    let isMounted = true;
 
     const fetchProduct = async () => {
 
       try {
 
+        setLoading(true);
+        setError("");
+
         const res = await API.get(`/materials/${id}`);
 
-        const data =
-          res.data?.data ||
-          res.data ||
-          null;
+        if (!isMounted) return;
+
+        const data = res.data?.data || null;
 
         setProduct(data);
 
-      } catch (error) {
+      } catch (err) {
 
-        console.error("Product fetch error:", error);
+        if (!isMounted) return;
+
+        console.error("Product fetch error:", err);
+
+        setError("Failed to load product");
         setProduct(null);
 
       } finally {
 
-        setLoading(false);
+        if (isMounted) setLoading(false);
 
       }
 
     };
 
-    fetchProduct();
+    if (id) fetchProduct();
+
+    return () => {
+      isMounted = false;
+    };
 
   }, [id]);
+
+  /* 🛒 CHECK ALREADY IN CART */
+  const isInCart = cartItems?.some(item => item._id === product?._id);
+
+  /* 🛒 ADD TO CART */
+  const handleAddToCart = async () => {
+
+    if (!product || adding) return;
+
+    setAdding(true);
+
+    try {
+
+      if (!isInCart) {
+        addToCart(product);
+      }
+
+      // 👉 better UX: delay + redirect
+      setTimeout(() => {
+        navigate("/cart");
+      }, 400);
+
+    } catch (err) {
+      console.error("Cart error:", err);
+    } finally {
+      setAdding(false);
+    }
+
+  };
 
   /* ⏳ LOADING */
   if (loading) return <Loader />;
 
+  /* ❌ ERROR */
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-bold text-red-600 mb-3">
+          {error}
+        </h2>
+
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   /* ❌ NOT FOUND */
   if (!product) {
-
     return (
       <div className="text-center py-20">
 
@@ -72,35 +131,23 @@ function ProductDetails() {
 
       </div>
     );
-
   }
-
-  /* 🛒 ADD TO CART */
-  const handleAddToCart = () => {
-
-    setAdding(true);
-
-    addToCart(product);
-
-    setTimeout(() => navigate("/cart"), 300);
-
-  };
 
   return (
 
     <div className="grid md:grid-cols-2 gap-10 items-start">
 
-      {/* 🔹 LEFT SIDE - PREVIEW ONLY (NO THUMBNAIL) */}
+      {/* LEFT */}
       <div className="bg-white p-6 rounded-xl shadow">
 
         <ProductPreview
-          previews={product.previewImages}   // ✅ ONLY preview
+          previews={product.previewImages || []}
           title={product.title}
         />
 
       </div>
 
-      {/* 🔹 RIGHT SIDE */}
+      {/* RIGHT */}
       <div className="bg-white p-8 rounded-xl shadow">
 
         <h1 className="text-3xl font-bold mb-1">
@@ -113,15 +160,13 @@ function ProductDetails() {
         />
 
         <p className="text-gray-600 my-4 leading-relaxed">
-          {product.description}
+          {product.description || "No description available"}
         </p>
 
-        {/* 📊 DETAILS */}
+        {/* DETAILS */}
         <div className="space-y-2 text-sm text-gray-600 mb-6">
 
-          <p>
-            📄 Pages: <strong>{product.pages}</strong>
-          </p>
+          <p>📄 Pages: <strong>{product.pages || 0}</strong></p>
 
           <p>
             📘 Type:{" "}
@@ -131,35 +176,32 @@ function ProductDetails() {
           </p>
 
           <p className="flex items-center gap-2 text-green-600 font-medium">
-            <ShieldCheck size={16} /> Instant & Secure Download after purchase
+            <ShieldCheck size={16} /> Instant & Secure Download
           </p>
 
         </div>
 
-        {/* 💰 PRICE */}
+        {/* PRICE */}
         <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6">
-
-          <p className="text-sm text-gray-500">
-            Price
-          </p>
-
+          <p className="text-sm text-gray-500">Price</p>
           <p className="text-3xl font-bold text-blue-600">
             ₹{product.price}
           </p>
-
         </div>
 
-        {/* 🛒 BUTTON */}
+        {/* BUTTON */}
         <button
           onClick={handleAddToCart}
           disabled={adding}
           className="w-full bg-blue-600 text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-60 font-semibold"
         >
-
           <ShoppingCart size={18} />
 
-          {adding ? "Adding..." : "Add to Cart"}
-
+          {adding
+            ? "Adding..."
+            : isInCart
+            ? "Go to Cart"
+            : "Add to Cart"}
         </button>
 
       </div>

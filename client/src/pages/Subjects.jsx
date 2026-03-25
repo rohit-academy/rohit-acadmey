@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import SubjectCard from "../components/cards/SubjectCard";
-import SubjectsSkeleton from "../components/ui/SubjectsSkeleton"; // ✅ FIXED PATH
+import SubjectsSkeleton from "../components/ui/SubjectsSkeleton";
 import API from "../services/api";
 
 function Subjects() {
@@ -10,19 +10,21 @@ function Subjects() {
 
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  /* 🔥 NORMALIZE */
+  const normalizedClass = classId?.toLowerCase();
+  const normalizedStream = streamId?.toLowerCase();
 
   const comingSoonCourses = ["ba", "bsc", "bcom"];
 
-  /* 🚧 Coming Soon Courses */
+  /* 🚧 Coming Soon */
 
-  if (comingSoonCourses.includes(classId)) {
-
+  if (comingSoonCourses.includes(normalizedClass)) {
     return (
-
       <div className="text-center py-24 max-w-3xl mx-auto px-4">
-
         <h1 className="text-4xl font-bold mb-4 uppercase">
-          {classId} Study Materials
+          {normalizedClass} Study Materials
         </h1>
 
         <p className="text-gray-600 text-lg mb-6">
@@ -32,98 +34,109 @@ function Subjects() {
         <div className="inline-block bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full font-semibold shadow">
           🚧 Coming Soon
         </div>
-
       </div>
-
     );
-
   }
 
   /* 📦 LOAD SUBJECTS */
 
   useEffect(() => {
 
-    const fetchSubjects = async () => {
+    let isMounted = true;
 
+    const fetchSubjects = async () => {
       try {
 
         setLoading(true);
+        setError("");
 
         let url = `/subjects?classId=${classId}`;
 
-        if (streamId) {
-          url += `&stream=${streamId.toUpperCase()}`;
+        if (normalizedStream) {
+          url += `&stream=${normalizedStream.toUpperCase()}`;
         }
 
         const res = await API.get(url);
+
+        if (!isMounted) return;
 
         const subjectList = res.data?.data || [];
 
         setSubjects(subjectList);
 
-      } catch (error) {
+      } catch (err) {
 
-        console.error("Subjects fetch error:", error);
+        if (!isMounted) return;
 
+        console.error("Subjects fetch error:", err);
+        setError("Failed to load subjects");
         setSubjects([]);
 
       } finally {
 
-        setLoading(false);
+        if (isMounted) setLoading(false);
 
       }
-
     };
 
-    if (classId) {
-      fetchSubjects();
-    }
+    if (classId) fetchSubjects();
 
-  }, [classId, streamId]);
+    return () => {
+      isMounted = false; // 🔥 prevent memory leak
+    };
 
+  }, [classId, normalizedStream]);
+
+
+  /* 🎨 STREAM UI */
 
   const streamNameMap = {
-
     pcb: "PCB (Biology)",
     pcm: "PCM (Maths)",
     arts: "Arts Stream"
-
   };
 
   const streamBadgeStyle = {
-
     pcb: "bg-green-100 text-green-700",
     pcm: "bg-blue-100 text-blue-700",
     arts: "bg-pink-100 text-pink-700"
-
   };
 
 
-  /* ⏳ LOADING SKELETON */
+  /* ⏳ LOADING */
 
   if (loading) {
-
     return (
-
       <div className="max-w-6xl mx-auto px-4 py-12">
-
         <SubjectsSkeleton />
-
       </div>
-
     );
-
   }
 
+  /* ❌ ERROR */
 
-  /* ❌ EMPTY STATE */
+  if (error) {
+    return (
+      <div className="text-center py-24 px-4">
+        <h1 className="text-2xl font-bold mb-3 text-red-600">
+          {error}
+        </h1>
+
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  /* ❌ EMPTY */
 
   if (!subjects.length) {
-
     return (
-
       <div className="text-center py-24 px-4">
-
         <h1 className="text-3xl font-bold mb-3">
           Subjects Not Available
         </h1>
@@ -131,13 +144,9 @@ function Subjects() {
         <p className="text-gray-600">
           Content for this class is currently under preparation.
         </p>
-
       </div>
-
     );
-
   }
-
 
   return (
 
@@ -151,33 +160,28 @@ function Subjects() {
           Subjects
         </h1>
 
-        {streamId && (
+        {normalizedStream && streamNameMap[normalizedStream] && (
 
           <span
-            className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-semibold ${streamBadgeStyle[streamId]}`}
+            className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-semibold ${streamBadgeStyle[normalizedStream]}`}
           >
-
-            {streamNameMap[streamId]}
-
+            {streamNameMap[normalizedStream]}
           </span>
 
         )}
 
       </div>
 
-
-      {/* SUBJECT GRID */}
+      {/* GRID */}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
 
         {subjects.map((subject) => (
-
           <SubjectCard
             key={subject._id}
             subject={subject}
-            streamId={streamId}
+            streamId={normalizedStream}
           />
-
         ))}
 
       </div>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "./Navbar";
@@ -9,30 +9,37 @@ function UserLayout() {
 
   const { loading } = useAuth();
 
-  /* =====================================
-     ⏳ GLOBAL AUTH LOADING (IMPORTANT)
-  ===================================== */
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader />
-      </div>
-    );
-  }
-
   return (
 
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
 
-      {/* 🔝 NAVBAR */}
+      {/* 🔝 NAVBAR (always visible → no layout shift) */}
       <Navbar />
 
-      {/* 📄 MAIN CONTENT */}
+      {/* 📄 MAIN */}
       <main className="flex-grow w-full">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
 
-          <Outlet />
+          {/* 🔥 AUTH LOADING (only content area) */}
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader text="Loading your dashboard..." />
+            </div>
+          ) : (
+
+            /* ⚡ SUPPORT LAZY ROUTES */
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-20">
+                  <Loader text="Loading page..." />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
+
+          )}
 
         </div>
 
@@ -46,4 +53,4 @@ function UserLayout() {
   );
 }
 
-export default UserLayout;
+export default React.memo(UserLayout);

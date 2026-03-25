@@ -1,14 +1,23 @@
 import React from "react";
-import { Mail, BookOpen, Instagram, Youtube, Send, ArrowRight } from "lucide-react";
+import {
+  Mail,
+  BookOpen,
+  Instagram,
+  Youtube,
+  Send,
+  ArrowRight
+} from "lucide-react";
 import { Link } from "react-router-dom";
+
+const year = new Date().getFullYear();
 
 function Footer() {
   return (
     <footer className="bg-gradient-to-b from-white to-slate-50 border-t mt-16">
 
-      <div className="container mx-auto px-4 py-14 grid grid-cols-1 md:grid-cols-3 gap-10 text-sm">
+      <div className="container py-14 grid grid-cols-1 md:grid-cols-3 gap-10 text-sm">
 
-        {/* 🟦 Brand Section */}
+        {/* 🟦 BRAND */}
         <div>
           <h2 className="text-2xl font-bold text-blue-600 mb-4 flex items-center gap-2">
             <BookOpen size={22} />
@@ -21,81 +30,81 @@ function Footer() {
           </p>
 
           <p className="text-xs text-gray-400 mt-4">
-            Login via OTP • Instant PDF Access • Secure Checkout
+            OTP Login • Instant PDF Access • Secure Checkout
           </p>
         </div>
 
-        {/* 🟩 Quick Links */}
+        {/* 🟩 QUICK LINKS */}
         <div>
           <h3 className="font-semibold text-base mb-4">Quick Links</h3>
 
           <div className="flex flex-col gap-3 text-gray-600">
 
-            <Link
-              to="/"
-              className="flex items-center gap-2 hover:text-blue-600 transition"
-            >
-              <ArrowRight size={14} />
-              Home
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/">
+              <ArrowRight size={14} /> Home
             </Link>
 
-            <Link
-              to="/classes"
-              className="flex items-center gap-2 hover:text-blue-600 transition"
-            >
-              <ArrowRight size={14} />
-              Browse Classes
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/classes">
+              <ArrowRight size={14} /> Browse Classes
             </Link>
 
-            <Link
-              to="/downloads"
-              className="flex items-center gap-2 hover:text-blue-600 transition"
-            >
-              <ArrowRight size={14} />
-              My Downloads
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/downloads">
+              <ArrowRight size={14} /> My Downloads
             </Link>
 
-            <Link
-              to="/login"
-              className="flex items-center gap-2 hover:text-blue-600 transition"
-            >
-              <ArrowRight size={14} />
-              Student Login
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/login">
+              <ArrowRight size={14} /> Student Login
+            </Link>
+
+            {/* 🔥 IMPORTANT */}
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/privacy">
+              <ArrowRight size={14} /> Privacy Policy
+            </Link>
+
+            <Link className="flex items-center gap-2 hover:text-blue-600" to="/terms">
+              <ArrowRight size={14} /> Terms & Conditions
             </Link>
 
           </div>
         </div>
 
-        {/* 🟨 Contact & Social */}
+        {/* 🟨 CONTACT */}
         <div>
           <h3 className="font-semibold text-base mb-4">Connect With Us</h3>
 
-          {/* Email */}
-          <a
-            href="mailto:help.rohitacademy@gmail.com"
-            className="flex items-center gap-3 text-gray-600 hover:text-blue-600 transition mb-4"
-          >
-            <Mail size={18} className="text-blue-600" />
-            help.rohitacademy@gmail.com
-          </a>
+          {/* EMAIL */}
+          <div className="flex items-center gap-3 text-gray-600 mb-4">
 
-          {/* Social Icons */}
+            <Mail size={18} className="text-blue-600" />
+
+            <a
+              href="mailto:help.rohitacademy@gmail.com"
+              className="hover:text-blue-600 transition"
+            >
+              help.rohitacademy@gmail.com
+            </a>
+
+          </div>
+
+          {/* SOCIAL */}
           <div className="flex items-center gap-4">
 
             <a
-              href="https://www.instagram.com/rohitacademy1234?igsh=MWJmYXN1b3hyaXc1Yg=="
+              href="https://www.instagram.com/rohitacademy1234"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 bg-white border rounded-full shadow-sm hover:shadow-md hover:scale-105 transition"
+              aria-label="Instagram"
+              className="p-2 bg-white border rounded-full hover:scale-105 transition"
             >
               <Instagram size={18} className="text-pink-600" />
             </a>
 
             <a
-              href="https://youtube.com/@rohitacademy1234?si=Brwm5lBxX6Rfzr_-"
+              href="https://youtube.com/@rohitacademy1234"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 bg-white border rounded-full shadow-sm hover:shadow-md hover:scale-105 transition"
+              aria-label="YouTube"
+              className="p-2 bg-white border rounded-full hover:scale-105 transition"
             >
               <Youtube size={18} className="text-red-600" />
             </a>
@@ -104,7 +113,8 @@ function Footer() {
               href="https://t.me/RohitAcademy1234"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 bg-white border rounded-full shadow-sm hover:shadow-md hover:scale-105 transition"
+              aria-label="Telegram"
+              className="p-2 bg-white border rounded-full hover:scale-105 transition"
             >
               <Send size={18} className="text-blue-500" />
             </a>
@@ -112,16 +122,16 @@ function Footer() {
           </div>
 
           <p className="text-xs text-gray-400 mt-4">
-            Follow us for updates, syllabus alerts & free study resources.
+            Follow us for updates & free study resources.
           </p>
         </div>
 
       </div>
 
-      {/* Bottom Bar */}
+      {/* 🔻 BOTTOM */}
       <div className="border-t bg-white/60 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-5 text-center text-gray-500 text-xs">
-          © {new Date().getFullYear()} Rohit Academy. All rights reserved.
+        <div className="container py-5 text-center text-gray-500 text-xs">
+          © {year} Rohit Academy. All rights reserved.
         </div>
       </div>
 
@@ -129,4 +139,4 @@ function Footer() {
   );
 }
 
-export default Footer;
+export default React.memo(Footer);

@@ -1,14 +1,25 @@
 import API from "./api";
 
 /* =====================================
+   🔧 GLOBAL ERROR HANDLER
+===================================== */
+const handleError = (error, fallback) => {
+  throw error?.response?.data || { message: fallback };
+};
+
+/* =====================================
    📲 SEND OTP
 ===================================== */
 export const sendOtp = async (phone) => {
+  if (!/^[0-9]{10}$/.test(phone)) {
+    throw { message: "Valid phone number required" };
+  }
+
   try {
-    const { data } = await API.post("/otp/send", { phone });
-    return data;
+    const res = await API.post("/otp/send", { phone });
+    return res.data;
   } catch (error) {
-    throw error.response?.data || { message: "Failed to send OTP" };
+    handleError(error, "Failed to send OTP");
   }
 };
 
@@ -16,11 +27,15 @@ export const sendOtp = async (phone) => {
    🔢 VERIFY OTP
 ===================================== */
 export const verifyOtp = async (phone, otp) => {
+  if (!/^[0-9]{4,6}$/.test(otp)) {
+    throw { message: "Invalid OTP format" };
+  }
+
   try {
-    const { data } = await API.post("/otp/verify", { phone, otp });
-    return data;
+    const res = await API.post("/otp/verify", { phone, otp });
+    return res.data;
   } catch (error) {
-    throw error.response?.data || { message: "Invalid OTP" };
+    handleError(error, "Invalid OTP");
   }
 };
 
@@ -28,16 +43,17 @@ export const verifyOtp = async (phone, otp) => {
    📲 LOGIN WITH PHONE
 ===================================== */
 export const loginWithPhone = async (phone) => {
-  try {
-    const { data } = await API.post("/auth/login-phone", { phone });
+  if (!/^[0-9]{10}$/.test(phone)) {
+    throw { message: "Valid phone number required" };
+  }
 
-    return {
-      token: data?.token,
-      user: data?.user,
-    };
+  try {
+    const res = await API.post("/auth/login-phone", { phone });
+
+    return res.data; // ✅ consistent
 
   } catch (error) {
-    throw error.response?.data || { message: "Login failed" };
+    handleError(error, "Login failed");
   }
 };
 
@@ -46,12 +62,12 @@ export const loginWithPhone = async (phone) => {
 ===================================== */
 export const getProfile = async () => {
   try {
-    const { data } = await API.get("/auth/me");
+    const res = await API.get("/auth/me");
 
-    return data?.user; // ✅ FIXED
+    return res.data?.data; // ✅ FIXED
 
   } catch (error) {
-    throw error.response?.data || { message: "Failed to fetch profile" };
+    handleError(error, "Failed to fetch profile");
   }
 };
 
@@ -79,7 +95,6 @@ export const logoutUser = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("admin");
 
-  // 🔥 optional: redirect safe
   if (!window.location.pathname.includes("/login")) {
     window.location.href = "/login";
   }

@@ -1,16 +1,24 @@
-/* 🌿 Tailwind Base Setup */
+/* 🌿 Tailwind Base */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 🔄 Global Reset */
-* {
+/* =====================================
+   🔄 SAFE RESET (IMPROVED)
+===================================== */
+html, body {
   margin: 0;
   padding: 0;
+}
+
+/* Box sizing safe */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-/* 🌍 Body */
+/* =====================================
+   🌍 BODY
+===================================== */
 body {
   font-family: 'Poppins', sans-serif;
   background-color: #f8fafc;
@@ -19,68 +27,95 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 🎯 Text Selection */
+/* =====================================
+   🎯 TEXT SELECTION
+===================================== */
 ::selection {
   background-color: #2563eb;
   color: white;
 }
 
-/* 📦 Container Utility */
-.container {
+/* =====================================
+   📦 CONTAINER (RENAMED → no conflict)
+===================================== */
+.app-container {
   @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
 
-/* 🔘 Buttons */
+/* =====================================
+   🔘 BUTTONS
+===================================== */
+.btn {
+  @apply px-5 py-2 rounded-lg transition-all duration-200 active:scale-95;
+}
+
 .btn-primary {
-  @apply bg-blue-600 text-white px-5 py-2 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition-all duration-200;
+  @apply btn bg-blue-600 text-white shadow hover:bg-blue-700;
 }
 
 .btn-secondary {
-  @apply bg-gray-200 text-gray-800 px-5 py-2 rounded-lg hover:bg-gray-300 active:scale-95 transition-all duration-200;
+  @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300;
 }
 
 .btn-danger {
-  @apply bg-red-500 text-white px-5 py-2 rounded-lg hover:bg-red-600 active:scale-95 transition-all duration-200;
+  @apply btn bg-red-500 text-white hover:bg-red-600;
 }
 
-/* ⛔ Disabled Button */
+/* Disabled */
 button:disabled {
   @apply opacity-60 cursor-not-allowed;
 }
 
-/* 🧾 Cards */
+/* =====================================
+   🧾 CARDS
+===================================== */
 .card {
   @apply bg-white rounded-xl shadow-md p-5 transition hover:shadow-lg;
 }
 
-/* 📝 Headings */
+/* =====================================
+   📝 HEADINGS
+===================================== */
 h1 { @apply text-3xl md:text-4xl font-semibold text-slate-800; }
 h2 { @apply text-2xl md:text-3xl font-semibold text-slate-800; }
 h3 { @apply text-xl font-semibold text-slate-800; }
 h4 { @apply text-lg font-semibold text-slate-800; }
 
-/* 🔗 Links */
+/* =====================================
+   🔗 LINKS
+===================================== */
 a {
   @apply transition duration-200;
 }
 
-/* 🧠 Inputs */
+/* =====================================
+   🧠 INPUTS
+===================================== */
 input, textarea, select {
   @apply border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition;
 }
 
-/* 🧊 Sections spacing helper */
+/* =====================================
+   📐 SECTION SPACING
+===================================== */
 .section {
   @apply py-10 md:py-14;
 }
 
-/* ✨ Glass Effect */
+/* =====================================
+   ✨ GLASS EFFECT (FIXED)
+===================================== */
 .glass {
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   background: rgba(255, 255, 255, 0.75);
 }
 
-/* 🖥 Scrollbar */
+/* =====================================
+   🖥 SCROLLBAR (ALL BROWSERS)
+===================================== */
+
+/* Chrome */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -92,65 +127,139 @@ input, textarea, select {
   background: #94a3b8;
 }
 
-/* ===================================================== */
-/* 🔥 MOBILE SIDEBAR ANIMATION (Chrome Style) */
-/* ===================================================== */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* =====================================
+   🎬 ANIMATIONS (PERFORMANCE FIX)
+===================================== */
 
 @keyframes slideInRight {
   from {
-    transform: translateX(40px) scale(0.96);
+    transform: translate3d(40px, 0, 0) scale(0.96);
     opacity: 0;
   }
   to {
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
     opacity: 1;
   }
 }
 
 @keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-slideInRight {
   animation: slideInRight 0.25s ease-out;
+  will-change: transform, opacity;
 }
 
 .animate-fadeIn {
   animation: fadeInOverlay 0.2s ease-out;
 }
 
-/* ===================================================== */
-/* ✨ FLOATING PARTICLES ANIMATION (CTA Button) */
-/* ===================================================== */
+/* =====================================
+   ✨ FLOATING PARTICLES
+===================================== */
 
 @keyframes float {
-  0% {
-    transform: translateY(0px);
-    opacity: 0.7;
-  }
-  50% {
-    transform: translateY(-8px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0px);
-    opacity: 0.7;
-  }
+  0% { transform: translateY(0px); opacity: 0.7; }
+  50% { transform: translateY(-8px); opacity: 1; }
+  100% { transform: translateY(0px); opacity: 0.7; }
 }
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
+  will-change: transform;
 }
 
+/* =====================================
+   🧩 INPUT + UPLOAD
+===================================== */
 .input {
   @apply border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-500 outline-none;
 }
 
 .upload-box {
-  @apply border-2 border-dashed p-5 rounded-xl text-center cursor-pointer flex flex-col items-center gap-2 transition;
+  @apply border-2 border-dashed p-5 rounded-xl text-center cursor-pointer flex flex-col items-center gap-2 transition hover:border-blue-400;
+}
+
+/* =====================================
+   🌙 DARK MODE READY (FUTURE)
+===================================== */
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* 🔥 SHIMMER FIXED */
+.shimmer {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.5),
+    transparent
+  );
+  animation: shimmerMove 1.4s infinite;
+}
+
+@keyframes shimmerMove {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 🔥 FLOAT */
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+/* 🔥 DOT WAVE */
+.dot {
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border-radius: 50%;
+  animation: wave 1.4s infinite;
+}
+
+.delay-1 { animation-delay: 0.2s; }
+.delay-2 { animation-delay: 0.4s; }
+
+@keyframes wave {
+  0% { transform: translateY(0); opacity: .6; }
+  50% { transform: translateY(-4px); opacity: 1; }
+  100% { transform: translateY(0); opacity: .6; }
+}
+
+/* 🔥 SPEED CONTROL */
+.slow-spin {
+  animation-duration: 1.8s;
+}
+
+.slower-spin {
+  animation-duration: 2.4s;
+}
+
+/* 🔥 Hide scrollbar (cross-browser safe) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

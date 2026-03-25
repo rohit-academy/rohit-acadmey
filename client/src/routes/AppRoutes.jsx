@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 /* 🔒 ROUTE GUARDS */
 import ProtectedRoute from "../components/layout/ProtectedRoute";
@@ -44,22 +44,20 @@ function AppRoutes() {
   return (
     <Routes>
 
-      {/* 🔐 AUTH */}
+      {/* ================= AUTH ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* 🔥 GOOGLE CALLBACK */}
       <Route path="/success" element={<Success />} />
 
-      {/* 🌍 USER */}
+      {/* ================= USER ================= */}
       <Route element={<UserLayout />}>
 
         <Route index element={<Home />} />
-
         <Route path="/classes" element={<Classes />} />
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* ✅ CLEAN SUBJECT ROUTE */}
         <Route path="/subjects/:classId/:streamId?" element={<Subjects />} />
 
         <Route
@@ -70,47 +68,21 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute>
-              <Account />
-            </ProtectedRoute>
-          }
-        />
+        {/* 🔐 PROTECTED GROUP */}
+        <Route element={<ProtectedRoute />}>
 
-        <Route
-          path="/setup-username"
-          element={
-            <ProtectedRoute>
-              <SetupUsername />
-            </ProtectedRoute>
-          }
-        />
+          <Route path="/account" element={<Account />} />
+          <Route path="/setup-username" element={<SetupUsername />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/downloads" element={<MyDownloads />} />
 
-        <Route
-          path="/checkout"
-          element={
-            <ProtectedRoute>
-              <Checkout />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/downloads"
-          element={
-            <ProtectedRoute>
-              <MyDownloads />
-            </ProtectedRoute>
-          }
-        />
+        </Route>
 
       </Route>
 
-      {/* 🛠 ADMIN */}
-      <Route element={<AdminRoute />}>
-        <Route path="/admin" element={<AdminLayout />}>
+      {/* ================= ADMIN ================= */}
+      <Route path="/admin" element={<AdminRoute />}>
+        <Route element={<AdminLayout />}>
 
           <Route index element={<AdminDashboard />} />
 
@@ -130,7 +102,7 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* ❌ 404 */}
+      {/* ================= FALLBACK ================= */}
       <Route path="*" element={<NotFound />} />
 
     </Routes>

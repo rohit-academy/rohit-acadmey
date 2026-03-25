@@ -1,94 +1,67 @@
 import React from "react";
 import { GraduationCap } from "lucide-react";
 
-function Loader({ text = "Loading study materials..." }) {
+function Loader({
+  text = "Loading study materials...",
+  fullScreen = false,
+  size = "md" // sm | md | lg
+}) {
+
+  const sizeMap = {
+    sm: "w-12 h-12",
+    md: "w-20 h-20",
+    lg: "w-28 h-28"
+  };
 
   return (
 
-    <div className="flex items-center justify-center min-h-[320px] px-4">
+    <div
+      className={`flex items-center justify-center px-4 ${
+        fullScreen ? "min-h-screen" : "min-h-[320px]"
+      }`}
+      role="status"
+      aria-live="polite"
+    >
 
       <div className="flex flex-col items-center gap-6">
 
-        {/* Spinner Area */}
+        {/* 🔥 Spinner */}
+        <div className={`relative flex items-center justify-center ${sizeMap[size]}`}>
 
-        <div className="relative flex items-center justify-center w-20 h-20">
+          {/* Glow */}
+          <div className={`absolute ${sizeMap[size]} bg-blue-200 rounded-full blur-2xl opacity-40 animate-pulse`}></div>
 
-          {/* Background Glow */}
+          {/* Rings */}
+          <div className={`absolute ${sizeMap[size]} rounded-full border-[3px] border-blue-500 border-t-transparent animate-spin`}></div>
 
-          <div className="absolute w-20 h-20 bg-blue-200 rounded-full blur-2xl opacity-40 animate-pulse"></div>
+          <div className="absolute w-[80%] h-[80%] rounded-full border-[3px] border-blue-300 border-b-transparent animate-spin slow-spin"></div>
 
-          {/* Outer Ring */}
-
-          <div className="absolute w-20 h-20 rounded-full border-[3px] border-blue-500 border-t-transparent animate-spin"></div>
-
-          {/* Middle Ring */}
-
-          <div className="absolute w-16 h-16 rounded-full border-[3px] border-blue-300 border-b-transparent animate-spin [animation-duration:1.8s]"></div>
-
-          {/* Inner Ring */}
-
-          <div className="absolute w-12 h-12 rounded-full border-[3px] border-blue-200 border-l-transparent animate-spin [animation-duration:2.4s]"></div>
+          <div className="absolute w-[60%] h-[60%] rounded-full border-[3px] border-blue-200 border-l-transparent animate-spin slower-spin"></div>
 
           {/* Center Icon */}
-
-          <div className="relative flex items-center justify-center">
-
-            <div className="animate-[float_3s_ease-in-out_infinite]">
-
-              <GraduationCap
-                size={28}
-                className="text-blue-600"
-              />
-
-            </div>
-
+          <div className="relative flex items-center justify-center float">
+            <GraduationCap size={28} className="text-blue-600" />
           </div>
 
         </div>
 
-        {/* Loading Text */}
-
+        {/* 📝 Text */}
         <div className="flex flex-col items-center gap-2">
 
           <p className="text-sm text-gray-600 font-medium tracking-wide">
-
             {text}
-
           </p>
 
-          {/* Animated Dots */}
-
+          {/* Dots */}
           <div className="flex gap-2">
-
-            <span className="w-2 h-2 bg-blue-500 rounded-full animate-[wave_1.4s_infinite]"></span>
-            <span className="w-2 h-2 bg-blue-500 rounded-full animate-[wave_1.4s_infinite] [animation-delay:0.2s]"></span>
-            <span className="w-2 h-2 bg-blue-500 rounded-full animate-[wave_1.4s_infinite] [animation-delay:0.4s]"></span>
-
+            <span className="dot"></span>
+            <span className="dot delay-1"></span>
+            <span className="dot delay-2"></span>
           </div>
 
         </div>
 
       </div>
-
-      {/* Custom Animations */}
-
-      <style>
-        {`
-
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-6px); }
-          100% { transform: translateY(0px); }
-        }
-
-        @keyframes wave {
-          0% { transform: translateY(0); opacity: .6; }
-          50% { transform: translateY(-4px); opacity: 1; }
-          100% { transform: translateY(0); opacity: .6; }
-        }
-
-        `}
-      </style>
 
     </div>
 

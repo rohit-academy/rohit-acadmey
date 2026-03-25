@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /* =====================================
-     🔄 AUTO LOAD USER FROM TOKEN
+     🔄 AUTO LOAD USER
   ===================================== */
   useEffect(() => {
 
@@ -19,21 +19,28 @@ export function AuthProvider({ children }) {
 
         const token = localStorage.getItem("token");
 
+        /* 🔹 NO TOKEN */
         if (!token) {
           setUser(null);
+          setLoading(false); // ✅ FIX
           return;
         }
 
+        /* 🔹 LOAD FROM CACHE (FAST UI) */
+        const cachedUser = localStorage.getItem("user");
+        if (cachedUser) {
+          setUser(JSON.parse(cachedUser));
+        }
+
+        /* 🔹 VERIFY WITH BACKEND */
         const res = await API.get("/auth/me");
 
-        const userData = res.data?.user; // ✅ FIXED
+        const userData = res.data?.user;
 
-        if (userData) {
-          setUser(userData);
-          localStorage.setItem("user", JSON.stringify(userData));
-        } else {
-          throw new Error("Invalid user");
-        }
+        if (!userData) throw new Error("Invalid user");
+
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
 
       } catch (error) {
 
@@ -45,6 +52,7 @@ export function AuthProvider({ children }) {
         setUser(null);
 
       } finally {
+
         setLoading(false);
       }
 
@@ -52,17 +60,27 @@ export function AuthProvider({ children }) {
 
     loadUser();
 
+    /* 🔥 MULTI TAB SYNC */
+    const syncLogout = (e) => {
+      if (e.key === "token" && !e.newValue) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener("storage", syncLogout);
+
+    return () => window.removeEventListener("storage", syncLogout);
+
   }, []);
 
   /* =====================================
      🔐 LOGIN
-     - supports token OR user
   ===================================== */
   const login = async (data) => {
 
     try {
 
-      /* 🔥 CASE 1: TOKEN PASSED */
+      /* 🔥 CASE 1: TOKEN */
       if (typeof data === "string") {
 
         localStorage.setItem("token", data);
@@ -78,7 +96,7 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      /* 🔥 CASE 2: USER PASSED (Google flow) */
+      /* 🔥 CASE 2: USER OBJECT */
       if (typeof data === "object") {
 
         setUser(data);
@@ -112,13 +130,28 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
 /* =====================================
-   🔹 HOOK
+   🔹 SAFE HOOK
 ===================================== */
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+
+  return context;
+};

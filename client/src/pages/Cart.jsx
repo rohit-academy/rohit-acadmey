@@ -1,16 +1,29 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trash2, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 function Cart() {
 
-  const { cartItems, removeFromCart, total } = useCart();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const formatPrice = (price) => `₹${price.toLocaleString("en-IN")}`;
+  const {
+    cartItems,
+    removeFromCart,
+    clearCart,
+    total
+  } = useCart();
 
-  /* ================= EMPTY CART ================= */
-  if (cartItems.length === 0) {
+  const formatPrice = (price) =>
+    `₹${(price || 0).toLocaleString("en-IN")}`;
+
+  /* 🔥 SAFE ITEMS */
+  const validItems = cartItems.filter(item => item && (item._id || item.id));
+
+  /* ================= EMPTY ================= */
+  if (validItems.length === 0) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4">
 
@@ -41,7 +54,24 @@ function Cart() {
     );
   }
 
-  /* ================= FILLED CART ================= */
+  /* 🔐 CHECKOUT HANDLER */
+  const handleCheckout = () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    navigate("/checkout");
+  };
+
+  /* ❌ REMOVE WITH CONFIRM */
+  const handleRemove = (id) => {
+    const confirmDelete = window.confirm("Remove this item?");
+    if (confirmDelete) {
+      removeFromCart(id);
+    }
+  };
+
+  /* ================= FILLED ================= */
   return (
 
     <div className="min-h-screen bg-slate-50 px-4 md:px-6 py-6">
@@ -52,60 +82,63 @@ function Cart() {
 
       <div className="grid lg:grid-cols-3 gap-8">
 
-        {/* 🛒 CART ITEMS */}
+        {/* 🛒 ITEMS */}
         <div className="lg:col-span-2 space-y-4">
 
-          {cartItems.map((item) => (
+          {validItems.map((item) => {
 
-            <div
-              key={item._id || item.id}
-              className="bg-white p-4 md:p-5 rounded-xl shadow-sm flex gap-4 items-start hover:shadow-md transition"
-            >
+            const id = item._id || item.id;
 
-              {/* 🖼 THUMBNAIL */}
-              <img
-                src={
-                  item.thumbnail ||
-                  item.previewImages?.[0] ||
-                  "https://via.placeholder.com/100x120?text=PDF"
-                }
-                alt={item.title}
-                className="w-20 h-24 object-cover rounded-lg border"
-              />
+            return (
+              <div
+                key={id}
+                className="bg-white p-4 md:p-5 rounded-xl shadow-sm flex gap-4 items-start hover:shadow-md transition"
+              >
 
-              {/* 📄 INFO */}
-              <div className="flex-1">
+                {/* IMAGE */}
+                <img
+                  src={
+                    item.thumbnail ||
+                    item.previewImages?.[0] ||
+                    "https://via.placeholder.com/100x120?text=PDF"
+                  }
+                  alt={item.title}
+                  className="w-20 h-24 object-cover rounded-lg border"
+                />
 
-                <h2 className="font-semibold text-lg line-clamp-2">
-                  {item.title}
-                </h2>
+                {/* INFO */}
+                <div className="flex-1">
 
-                <div className="text-sm text-gray-500 mt-1 space-y-1">
-                  {item.type && <p>📘 {item.type}</p>}
-                  {item.pages && <p>📄 {item.pages} pages</p>}
+                  <h2 className="font-semibold text-lg line-clamp-2">
+                    {item.title || "Untitled"}
+                  </h2>
+
+                  <div className="text-sm text-gray-500 mt-1 space-y-1">
+                    {item.type && <p>📘 {item.type}</p>}
+                    {item.pages && <p>📄 {item.pages} pages</p>}
+                  </div>
+
+                  <p className="text-blue-600 font-bold mt-2">
+                    {formatPrice(item.price)}
+                  </p>
+
                 </div>
 
-                <p className="text-blue-600 font-bold mt-2">
-                  {formatPrice(item.price)}
-                </p>
+                {/* REMOVE */}
+                <button
+                  onClick={() => handleRemove(id)}
+                  className="text-red-500 hover:text-red-700 transition"
+                >
+                  <Trash2 size={20} />
+                </button>
 
               </div>
-
-              {/* ❌ REMOVE */}
-              <button
-                onClick={() => removeFromCart(item._id || item.id)}
-                className="text-red-500 hover:text-red-700 transition"
-              >
-                <Trash2 size={20} />
-              </button>
-
-            </div>
-
-          ))}
+            );
+          })}
 
         </div>
 
-        {/* 📦 ORDER SUMMARY */}
+        {/* 📦 SUMMARY */}
         <div className="bg-white p-6 rounded-xl shadow-md h-fit sticky top-24">
 
           <h2 className="text-xl font-semibold mb-4">
@@ -114,7 +147,7 @@ function Cart() {
 
           <div className="flex justify-between mb-2 text-gray-600">
             <span>Items</span>
-            <span>{cartItems.length}</span>
+            <span>{validItems.length}</span>
           </div>
 
           <div className="flex justify-between mb-4 font-semibold text-lg">
@@ -124,12 +157,21 @@ function Cart() {
             </span>
           </div>
 
-          <Link
-            to="/checkout"
-            className="block text-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold"
+          {/* 🔥 CTA */}
+          <button
+            onClick={handleCheckout}
+            className="w-full text-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold mb-3"
           >
             Proceed to Checkout
-          </Link>
+          </button>
+
+          {/* 🧹 CLEAR CART */}
+          <button
+            onClick={clearCart}
+            className="w-full text-sm text-red-500 hover:underline"
+          >
+            Clear Cart
+          </button>
 
         </div>
 

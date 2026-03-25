@@ -3,13 +3,19 @@ import { useParams, Link, Navigate } from "react-router-dom";
 import { Atom, Calculator, Palette, ArrowLeft } from "lucide-react";
 
 function Streams() {
+
   const { classId } = useParams();
 
-  // ❌ Safety: Only 11 & 12 allowed
-  if (classId !== "11" && classId !== "12") {
+  /* 🔥 NORMALIZE */
+  const validClasses = ["11", "12"];
+  const normalizedClass = String(classId).trim();
+
+  /* ❌ INVALID CLASS */
+  if (!validClasses.includes(normalizedClass)) {
     return <Navigate to="/classes" replace />;
   }
 
+  /* 📚 STREAMS DATA */
   const streams = [
     {
       id: "pcb",
@@ -38,44 +44,73 @@ function Streams() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto">
 
-      {/* Header */}
+    <div className="max-w-5xl mx-auto px-4">
+
+      {/* HEADER */}
       <div className="text-center mb-10">
+
         <h1 className="text-3xl md:text-4xl font-bold">
-          Class {classId} Stream Selection
+          Class {normalizedClass} Stream Selection
         </h1>
+
         <p className="text-gray-600 mt-2">
           Choose your stream to view subjects and study materials
         </p>
+
       </div>
 
-      {/* Streams Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* GRID */}
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+
         {streams.map((stream) => (
+
           <Link
             key={stream.id}
-            to={`/subjects/${classId}/${stream.id}`}
-            className={`p-6 rounded-xl border ${stream.border} shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-200 flex flex-col items-center text-center gap-3 ${stream.bg}`}
+            to={`/subjects/${normalizedClass}/${stream.id}`}
+            className={`
+              p-6 rounded-xl border ${stream.border}
+              shadow-sm flex flex-col items-center text-center gap-3
+              ${stream.bg}
+              transition-all duration-300
+              hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02]
+              active:scale-95
+            `}
           >
+
             {stream.icon}
-            <span className="font-semibold text-lg">{stream.name}</span>
-            <p className="text-sm text-gray-600">{stream.desc}</p>
+
+            <span className="font-semibold text-lg">
+              {stream.name}
+            </span>
+
+            <p className="text-sm text-gray-600">
+              {stream.desc}
+            </p>
+
           </Link>
+
         ))}
+
       </div>
 
-      {/* Back Button */}
+      {/* BACK BUTTON */}
       <div className="text-center mt-10">
+
         <Link
           to="/classes"
-          className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:underline"
+          className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:underline transition"
         >
-          <ArrowLeft size={16} /> Back to Classes
+          <ArrowLeft size={16} />
+          Back to Classes
         </Link>
+
       </div>
+
     </div>
+
   );
+
 }
 
 export default Streams;

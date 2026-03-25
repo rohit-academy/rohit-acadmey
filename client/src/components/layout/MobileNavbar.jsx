@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
   X,
@@ -9,7 +9,6 @@ import {
   Download,
   User,
   LogOut,
-  Phone,
   LogIn
 } from "lucide-react";
 
@@ -24,29 +23,62 @@ function MobileNavbar() {
 
   const { cartItems } = useCart();
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  /* 🔒 SCROLL LOCK FIX */
+  useEffect(() => {
+    const original = document.body.style.overflow;
+
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [menuOpen]);
+
+  /* 🔄 CLOSE MENU ON ROUTE CHANGE */
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  /* ⌨️ ESC CLOSE */
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setShowSearch(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  /* 🔍 SEARCH */
   const handleSearch = (query) => {
     console.log("Searching:", query);
     setShowSearch(false);
+    navigate(`/search?q=${encodeURIComponent(query)}`); // 🔥 future ready
   };
 
-  /* 🔒 Prevent background scroll */
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "auto";
-  }, [menuOpen]);
+  /* 🛒 SAFE COUNT */
+  const cartCount =
+    cartItems.length > 99 ? "99+" : cartItems.length;
 
   return (
 
     <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 md:hidden">
 
-      {/* =========================
-          🔝 TOP BAR
-      ========================= */}
+      {/* 🔝 TOP BAR */}
       <div className="flex items-center justify-between px-4 py-3">
 
         {/* LEFT */}
         <div className="flex-1">
+
           {!showSearch ? (
             <Link
               to="/"
@@ -55,8 +87,18 @@ function MobileNavbar() {
               Rohit Academy
             </Link>
           ) : (
-            <SearchBar onSearch={handleSearch} autoFocus />
+            <div className="flex items-center gap-2">
+              <SearchBar onSearch={handleSearch} autoFocus />
+              <button
+                onClick={() => setShowSearch(false)}
+                className="p-2"
+                aria-label="Close search"
+              >
+                <X size={20} />
+              </button>
+            </div>
           )}
+
         </div>
 
         {/* RIGHT */}
@@ -66,7 +108,8 @@ function MobileNavbar() {
             {/* 🔍 SEARCH */}
             <button
               onClick={() => setShowSearch(true)}
-              className="p-2 rounded-full hover:bg-gray-100 active:scale-95 transition"
+              className="p-2 rounded-full hover:bg-gray-100 active:scale-95"
+              aria-label="Search"
             >
               <Search size={22} />
             </button>
@@ -74,13 +117,14 @@ function MobileNavbar() {
             {/* 🛒 CART */}
             <Link
               to="/cart"
-              className="relative p-2 rounded-full hover:bg-gray-100 active:scale-95 transition"
+              className="relative p-2 rounded-full hover:bg-gray-100 active:scale-95"
+              aria-label="Cart"
             >
               <ShoppingCart size={22} />
 
               {cartItems.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium shadow">
-                  {cartItems.length}
+                  {cartCount}
                 </span>
               )}
             </Link>
@@ -88,7 +132,8 @@ function MobileNavbar() {
             {/* ☰ MENU */}
             <button
               onClick={() => setMenuOpen(true)}
-              className="p-2 rounded-full hover:bg-gray-100 active:scale-95 transition"
+              className="p-2 rounded-full hover:bg-gray-100 active:scale-95"
+              aria-label="Open menu"
             >
               <Menu size={24} />
             </button>
@@ -97,9 +142,7 @@ function MobileNavbar() {
         )}
       </div>
 
-      {/* =========================
-          🔥 SIDEBAR
-      ========================= */}
+      {/* 🔥 SIDEBAR */}
       {menuOpen && (
         <>
           {/* BACKDROP */}
@@ -109,7 +152,7 @@ function MobileNavbar() {
           />
 
           {/* SIDEBAR */}
-          <div className="fixed top-6 right-4 w-[70%] max-w-[260px] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden animate-slideIn">
+          <div className="fixed top-6 right-4 w-[70%] max-w-[260px] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden animate-slideInRight">
 
             {/* HEADER */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
@@ -133,83 +176,45 @@ function MobileNavbar() {
             {/* MENU */}
             <div className="flex flex-col py-2">
 
-              {/* HOME */}
-              <Link
-                to="/"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
-              >
-                <Home size={18} />
-                Home
+              <Link to="/" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100">
+                <Home size={18} /> Home
               </Link>
 
-              {/* ACCOUNT */}
               {user && (
-                <Link
-                  to="/account"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
-                >
-                  <User size={18} />
-                  My Account
+                <Link to="/account" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100">
+                  <User size={18} /> My Account
                 </Link>
               )}
 
-              {/* DOWNLOADS */}
-              <Link
-                to="/downloads"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
-              >
-                <Download size={18} />
-                My Downloads
+              <Link to="/downloads" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100">
+                <Download size={18} /> My Downloads
               </Link>
 
               <div className="border-t my-2 opacity-50" />
 
-              {/* ================= USER SECTION ================= */}
               {user ? (
                 <>
-
-                  {/* USER CARD */}
-                  <div className="px-5 py-3 bg-blue-50 text-sm space-y-1">
-
-                    <div className="flex items-center gap-2 text-blue-700 font-semibold">
-                      <User size={16} />
-                      {user.name || "Student"}
-                    </div>
-
-                    <div className="text-gray-600 text-xs break-all">
+                  <div className="px-5 py-3 bg-blue-50 text-sm">
+                    <p className="font-semibold">{user.name || "Student"}</p>
+                    <p className="text-xs text-gray-600 break-all">
                       {user.email || user.phone}
-                    </div>
-
+                    </p>
                   </div>
 
-                  {/* LOGOUT */}
                   <button
                     onClick={() => {
                       logout();
-                      setMenuOpen(false);
                       navigate("/login");
                     }}
-                    className="flex items-center gap-3 px-5 py-3 text-red-500 hover:bg-red-50 transition"
+                    className="flex items-center gap-3 px-5 py-3 text-red-500 hover:bg-red-50"
                   >
-                    <LogOut size={18} />
-                    Logout
+                    <LogOut size={18} /> Logout
                   </button>
-
                 </>
               ) : (
-
-                <Link
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition"
-                >
-                  <LogIn size={18} />
-                  Login
+                <Link to="/login" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-100">
+                  <LogIn size={18} /> Login
                 </Link>
-
               )}
 
             </div>
@@ -222,4 +227,4 @@ function MobileNavbar() {
   );
 }
 
-export default MobileNavbar;
+export default React.memo(MobileNavbar);

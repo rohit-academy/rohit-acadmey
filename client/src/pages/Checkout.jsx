@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -12,57 +12,68 @@ function Checkout() {
   const { cartItems, clearCart, total } = useCart();
 
   const [processing, setProcessing] = useState(false);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
 
   const formatPrice = (price) => `₹${price.toLocaleString("en-IN")}`;
 
-  /* 🔄 LOAD RAZORPAY */
-  const loadRazorpayScript = () =>
-    new Promise((resolve) => {
+  /* 🔄 LOAD RAZORPAY ONCE */
+  useEffect(() => {
+
+    const loadScript = () => {
+
+      if (window.Razorpay) {
+        setSdkLoaded(true);
+        return;
+      }
+
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
+      script.onload = () => setSdkLoaded(true);
+      script.onerror = () => setSdkLoaded(false);
+
       document.body.appendChild(script);
-    });
+    };
+
+    loadScript();
+
+  }, []);
+
+  /* 🔒 REDIRECT FIX */
+  useEffect(() => {
+
+    if (!user) navigate("/login");
+
+    if (cartItems.length === 0) {
+      navigate("/cart");
+    }
+
+  }, [user, cartItems, navigate]);
 
   /* 💳 PAYMENT */
   const handlePayment = async () => {
 
-    if (!user) {
-      alert("Please login first");
+    if (!sdkLoaded) {
+      alert("Payment system loading... try again");
       return;
     }
 
-    if (cartItems.length === 0) {
-      alert("Cart is empty");
-      return;
-    }
+    if (processing) return;
 
     try {
 
       setProcessing(true);
 
-      /* LOAD SDK */
-      const loaded = await loadRazorpayScript();
-
-      if (!loaded) {
-        alert("Razorpay SDK failed to load");
-        return;
-      }
-
-      /* 🔹 CREATE ORDER */
-      const orderRes = await API.post("/orders", {
+      /* 🔥 ONLY SEND IDS (secure) */
+      const orderRes = await API.post("/orders/create-order", {
         materials: cartItems.map((i) => i._id),
-        amount: total
       });
 
       const order = orderRes.data;
 
-      /* 💳 RAZORPAY OPTIONS */
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY,
         amount: order.amount,
-        currency: "INR",
+        currency: order.currency,
         name: "Rohit Academy",
         description: "Study Materials Purchase",
         order_id: order.orderId,
@@ -71,11 +82,9 @@ function Checkout() {
 
           try {
 
-            /* 🔹 VERIFY PAYMENT */
             await API.post("/orders/verify-payment", {
               ...response,
               materials: cartItems.map((i) => i._id),
-              amount: total
             });
 
             clearCart();
@@ -88,6 +97,12 @@ function Checkout() {
 
         },
 
+        modal: {
+          ondismiss: () => {
+            setProcessing(false);
+          }
+        },
+
         prefill: {
           contact: user?.phone || "",
         },
@@ -98,6 +113,14 @@ function Checkout() {
       };
 
       const rzp = new window.Razorpay(options);
+
+      /* ❌ PAYMENT FAILED */
+      rzp.on("payment.failed", function (response) {
+        console.error("Payment Failed:", response.error);
+        alert("Payment failed. Please try again.");
+        setProcessing(false);
+      });
+
       rzp.open();
 
     } catch (err) {
@@ -105,13 +128,14 @@ function Checkout() {
       console.error(err);
       alert(err.response?.data?.message || "Payment failed");
 
-    } finally {
       setProcessing(false);
+
     }
 
   };
 
-  /* ================= UI ================= */
+  /* ⛔ BLOCK RENDER */
+  if (!user || cartItems.length === 0) return null;
 
   return (
 
@@ -119,7 +143,7 @@ function Checkout() {
 
       <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
 
-        {/* LEFT - ITEMS */}
+        {/* LEFT */}
         <div className="bg-white p-6 rounded-xl shadow">
 
           <h2 className="text-xl font-semibold mb-4">
@@ -166,7 +190,7 @@ function Checkout() {
 
         </div>
 
-        {/* RIGHT - SUMMARY */}
+        {/* RIGHT */}
         <div className="bg-white p-6 rounded-xl shadow h-fit">
 
           <h2 className="text-xl font-semibold mb-4">

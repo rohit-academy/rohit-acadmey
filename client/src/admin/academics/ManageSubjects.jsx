@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, BookOpen } from "lucide-react";
+import { Plus, Trash2, BookOpen, Loader2 } from "lucide-react";
 import API from "../../services/api";
 
 function ManageSubjects() {
@@ -9,37 +9,54 @@ function ManageSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [newSubject, setNewSubject] = useState("");
 
-  /* 📚 Load Classes */
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+
+  /* =========================
+     📚 LOAD CLASSES
+  ========================= */
   const fetchClasses = async () => {
     try {
 
       const res = await API.get("/classes");
+      const list = res.data?.data || res.data || [];
 
-      const classList = res.data?.data || res.data || [];
+      setClasses(list);
 
-      setClasses(classList);
-
-      if (classList.length > 0) {
-        setSelectedClass(classList[0]._id);
+      if (list.length > 0) {
+        setSelectedClass(list[0]._id);
       }
 
-    } catch (error) {
-      console.error("Fetch classes error:", error);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load classes");
     }
   };
 
-  /* 📄 Load Subjects */
+  /* =========================
+     📄 LOAD SUBJECTS
+  ========================= */
   const fetchSubjects = async (classId) => {
     try {
 
+      setLoading(true);
+
       const res = await API.get(`/subjects?classId=${classId}`);
+      const list = res.data?.data || res.data || [];
 
-      const subjectList = res.data?.data || res.data || [];
+      // 🔥 SORT A-Z
+      const sorted = list.sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
 
-      setSubjects(subjectList);
+      setSubjects(sorted);
 
-    } catch (error) {
-      console.error("Fetch subjects error:", error);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load subjects");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,59 +70,89 @@ function ManageSubjects() {
     }
   }, [selectedClass]);
 
-  /* ➕ Add Subject */
+  /* =========================
+     ➕ ADD SUBJECT
+  ========================= */
   const handleAddSubject = async () => {
 
-    if (!newSubject.trim()) return;
+    const name = newSubject.trim();
+
+    if (!name) return;
+
+    // 🔥 duplicate check
+    const exists = subjects.find(
+      (s) => s.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (exists) {
+      setError("Subject already exists");
+      return;
+    }
 
     try {
 
+      setAdding(true);
+      setError("");
+
       await API.post("/subjects", {
-        name: newSubject,
+        name,
         classId: selectedClass
       });
 
       setNewSubject("");
-
       fetchSubjects(selectedClass);
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Add subject error:", error);
+      console.error(err);
 
-      alert(error.response?.data?.message || "Failed to add subject");
+      setError(err.response?.data?.message || "Add failed");
 
+    } finally {
+      setAdding(false);
     }
-
   };
 
-  /* ❌ Delete Subject */
-  const handleDelete = async (id) => {
+  /* =========================
+     ❌ DELETE SUBJECT
+  ========================= */
+  const handleDelete = async (id, name) => {
+
+    if (!window.confirm(`Delete "${name}"?`)) return;
 
     try {
 
       await API.delete(`/subjects/${id}`);
 
-      fetchSubjects(selectedClass);
+      setSubjects((prev) =>
+        prev.filter((s) => s._id !== id)
+      );
 
-    } catch (error) {
+    } catch (err) {
 
-      console.error("Delete subject error:", error);
-
-      alert("Failed to delete subject");
+      console.error(err);
+      setError("Delete failed");
 
     }
 
   };
 
   return (
-    <div className="p-6">
 
-      <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
+    <div className="p-4 md:p-6">
+
+      <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-2">
         <BookOpen className="text-blue-600" /> Manage Subjects
       </h1>
 
-      {/* Select Class */}
+      {/* ERROR */}
+      {error && (
+        <p className="text-red-500 mb-4">
+          {error}
+        </p>
+      )}
+
+      {/* ================= CLASS SELECT ================= */}
       <div className="mb-6">
 
         <label className="block mb-2 font-semibold">
@@ -117,18 +164,16 @@ function ManageSubjects() {
           onChange={(e) => setSelectedClass(e.target.value)}
           className="border p-3 rounded-lg w-full max-w-xs"
         >
-
           {classes.map((cls) => (
             <option key={cls._id} value={cls._id}>
               {cls.name}
             </option>
           ))}
-
         </select>
 
       </div>
 
-      {/* Add Subject */}
+      {/* ================= ADD SUBJECT ================= */}
       <div className="flex gap-3 mb-8 max-w-xl">
 
         <input
@@ -136,51 +181,77 @@ function ManageSubjects() {
           placeholder="Enter subject name"
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAddSubject()}
           className="border p-3 rounded-lg flex-1"
         />
 
         <button
           onClick={handleAddSubject}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          disabled={adding}
+          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition disabled:opacity-60"
         >
-          <Plus size={18} /> Add
+          {adding ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <>
+              <Plus size={18} /> Add
+            </>
+          )}
         </button>
 
       </div>
 
-      {/* Subject List */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* ================= SUBJECT LIST ================= */}
+      {loading ? (
 
-        {subjects.length === 0 && (
-          <p className="text-gray-500">No subjects found</p>
-        )}
+        <div className="text-center py-10 text-gray-500">
+          Loading subjects...
+        </div>
 
-        {subjects.map((subject) => (
+      ) : (
 
-          <div
-            key={subject._id}
-            className="bg-white p-5 rounded-xl shadow flex justify-between items-center"
-          >
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-            <span className="font-semibold text-lg">
-              {subject.name}
-            </span>
+          {subjects.length === 0 ? (
+            <p className="text-gray-500">
+              No subjects found
+            </p>
+          ) : (
 
-            <button
-              onClick={() => handleDelete(subject._id)}
-              className="text-red-500 hover:text-red-700"
-            >
-              <Trash2 size={18} />
-            </button>
+            subjects.map((subject) => (
 
-          </div>
+              <div
+                key={subject._id}
+                className="bg-white p-5 rounded-xl shadow flex justify-between items-center hover:shadow-md transition"
+              >
 
-        ))}
+                <span className="font-semibold text-lg">
+                  {subject.name}
+                </span>
 
-      </div>
+                <button
+                  onClick={() =>
+                    handleDelete(subject._id, subject.name)
+                  }
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 size={18} />
+                </button>
+
+              </div>
+
+            ))
+
+          )}
+
+        </div>
+
+      )}
 
     </div>
+
   );
+
 }
 
 export default ManageSubjects;

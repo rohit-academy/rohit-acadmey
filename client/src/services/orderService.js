@@ -1,53 +1,38 @@
 import API from "./api";
 
 /* =====================================
+   🔧 SAFE RESPONSE HANDLER
+===================================== */
+const handleResponse = (res) => res?.data?.data || res?.data;
+
+/* =====================================
    🛒 CREATE ORDER
 ===================================== */
 export const createOrder = async (orderData) => {
-  const res = await API.post("/orders", orderData);
-  return res.data;
+  if (!orderData?.materials?.length) {
+    throw new Error("Materials required");
+  }
+
+  const res = await API.post("/orders/create-order", orderData);
+  return handleResponse(res);
 };
 
 /* =====================================
-   💳 VERIFY PAYMENT (RAZORPAY)
+   💳 VERIFY PAYMENT
 ===================================== */
 export const verifyPayment = async (paymentData) => {
+  if (!paymentData) {
+    throw new Error("Payment data required");
+  }
+
   const res = await API.post("/orders/verify-payment", paymentData);
-  return res.data;
+  return handleResponse(res);
 };
 
 /* =====================================
-   📜 GET MY ORDERS
-===================================== */
-export const getMyOrders = async () => {
-  const res = await API.get("/orders/my");
-  return res.data?.data || res.data;
-};
-
-/* =====================================
-   📦 GET ORDER BY ID
-===================================== */
-export const getOrderById = async (id) => {
-  if (!id) throw new Error("Order ID required");
-
-  const res = await API.get(`/orders/${id}`);
-  return res.data?.data || res.data;
-};
-
-/* =====================================
-   ❌ CANCEL ORDER
-===================================== */
-export const cancelOrder = async (id) => {
-  if (!id) throw new Error("Order ID required");
-
-  const res = await API.put(`/orders/${id}/cancel`);
-  return res.data;
-};
-
-/* =====================================
-   📥 DOWNLOAD MATERIALS (BONUS)
+   📥 GET PURCHASED MATERIALS (🔥 MATCH BACKEND)
 ===================================== */
 export const getMyDownloads = async () => {
-  const res = await API.get("/orders/my-downloads");
-  return res.data?.data || res.data;
+  const res = await API.get("/orders/my-materials");
+  return handleResponse(res);
 };

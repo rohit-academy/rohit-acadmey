@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -7,14 +7,16 @@ import { Phone, Chrome, ArrowLeft } from "lucide-react";
 
 import {
   sendOtp,
-  verifyOtp,
-  loginWithPhone
+  verifyOtp
 } from "../../services/authService";
 
 function Login() {
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  const otpRef = useRef(null);
 
   const [step, setStep] = useState("choose");
   const [phone, setPhone] = useState("");
@@ -22,12 +24,36 @@ function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [timer, setTimer] = useState(0);
 
-  /* 📱 SEND OTP */
+  /* 🔙 REDIRECT FIX */
+  const redirectPath = location.state?.from || "/account";
+
+  /* 📱 CLEAN PHONE */
+  const getCleanPhone = () => {
+    const digits = phone.replace(/\D/g, "");
+    return digits.slice(-10); // ✅ always last 10 digits
+  };
+
+  /* ⏱ TIMER */
+  useEffect(() => {
+    if (timer <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimer((t) => t - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  /* 📲 SEND OTP */
   const handleSendOtp = async (e) => {
     e.preventDefault();
+    if (loading) return;
 
-    if (phone.length < 10) {
+    const cleanPhone = getCleanPhone();
+
+    if (cleanPhone.length !== 10) {
       setError("Enter valid phone number");
       return;
     }
@@ -36,12 +62,15 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await sendOtp(phone);
+      await sendOtp(cleanPhone);
 
       setOtpSent(true);
+      setTimer(60);
+
+      setTimeout(() => otpRef.current?.focus(), 200);
 
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
+      setError(err?.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -50,6 +79,7 @@ function Login() {
   /* ✅ VERIFY OTP */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    if (loading) return;
 
     if (!/^[0-9]{4,6}$/.test(otp)) {
       setError("Enter valid OTP");
@@ -60,30 +90,22 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await verifyOtp(phone, otp);
+      const cleanPhone = getCleanPhone();
 
-      /* 🔐 LOGIN AFTER VERIFY */
-      const res = await loginWithPhone(phone);
+      const res = await verifyOtp(cleanPhone, otp);
 
-      const token = res.data?.token;
-      const user = res.data?.user;
+      if (!res?.token) throw new Error("Login failed");
 
-      if (!token) {
-        throw new Error("Token not received");
-      }
+      localStorage.setItem("token", res.token);
+      login(res.user);
 
-      // ✅ SAVE TOKEN
-      localStorage.setItem("token", token);
-
-      // ✅ SET USER IN CONTEXT
-      login(user);
-
-      navigate("/account");
+      /* 🔥 REDIRECT FIX */
+      navigate(redirectPath, { replace: true });
 
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-        err.message ||
+        err?.response?.data?.message ||
+        err?.message ||
         "Invalid OTP"
       );
     } finally {
@@ -93,9 +115,11 @@ function Login() {
 
   /* 🔁 RESEND */
   const handleResend = async () => {
+    if (timer > 0 || loading) return;
+
     try {
-      await sendOtp(phone);
-      setError("");
+      setTimer(60);
+      await sendOtp(getCleanPhone());
     } catch {
       setError("Failed to resend OTP");
     }
@@ -119,7 +143,7 @@ function Login() {
 
       <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
 
-        {/* 🔙 BACK */}
+        {/* BACK */}
         {step !== "choose" && (
           <button
             onClick={() => {
@@ -127,6 +151,7 @@ function Login() {
               setOtpSent(false);
               setError("");
               setOtp("");
+              setPhone("");
             }}
             className="mb-4 text-gray-500 flex items-center gap-1"
           >
@@ -134,7 +159,7 @@ function Login() {
           </button>
         )}
 
-        {/* ❌ ERROR */}
+        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
             {error}
@@ -143,7 +168,6 @@ function Login() {
 
         {/* STEP 1 */}
         {step === "choose" && (
-
           <div className="text-center">
 
             <h1 className="text-2xl font-bold mb-6">
@@ -171,7 +195,6 @@ function Login() {
 
         {/* STEP 2 */}
         {step === "phone" && (
-
           <div>
 
             <h2 className="text-xl font-semibold text-center mb-6">
@@ -189,15 +212,14 @@ function Login() {
                   inputStyle={{
                     width: "100%",
                     height: "52px",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0"
+                    borderRadius: "12px"
                   }}
                 />
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition"
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl"
                 >
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
@@ -209,24 +231,24 @@ function Login() {
               <form onSubmit={handleVerifyOtp} className="space-y-5">
 
                 <p className="text-center text-gray-600">
-                  OTP sent to <strong>{phone}</strong>
+                  OTP sent to <strong>{getCleanPhone()}</strong>
                 </p>
 
                 <input
+                  ref={otpRef}
                   type="tel"
-                  placeholder="Enter OTP"
                   value={otp}
-                  required
                   onChange={(e) =>
                     setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
-                  className="w-full border p-4 rounded-xl text-center text-xl tracking-widest focus:ring-2 focus:ring-green-500 outline-none"
+                  placeholder="Enter OTP"
+                  className="w-full border p-4 rounded-xl text-center text-xl tracking-widest"
                 />
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition"
+                  className="w-full bg-green-600 text-white py-3 rounded-xl"
                 >
                   {loading ? "Verifying..." : "Verify & Login"}
                 </button>
@@ -243,10 +265,11 @@ function Login() {
 
                   <button
                     type="button"
+                    disabled={timer > 0}
                     onClick={handleResend}
-                    className="text-blue-600"
+                    className={timer > 0 ? "text-gray-400" : "text-blue-600"}
                   >
-                    Resend OTP
+                    {timer > 0 ? `Resend in ${timer}s` : "Resend OTP"}
                   </button>
 
                 </div>
@@ -261,9 +284,7 @@ function Login() {
       </div>
 
     </div>
-
   );
-
 }
 
 export default Login;
