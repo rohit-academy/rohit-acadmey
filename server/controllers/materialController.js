@@ -226,3 +226,35 @@ export const deleteMaterial = async (req, res, next) => {
     next(err);
   }
 };
+
+/* =====================================
+   🔁 TOGGLE MATERIAL STATUS ✅ FIX
+===================================== */
+export const toggleMaterialStatus = async (req, res, next) => {
+  try {
+    const material = await Material.findById(req.params.id);
+
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        message: "Material not found"
+      });
+    }
+
+    // 🔁 Toggle active/inactive
+    material.isActive = !material.isActive;
+
+    await material.save();
+
+    res.json({
+      success: true,
+      message: `Material ${
+        material.isActive ? "activated" : "disabled"
+      }`,
+      data: material
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
