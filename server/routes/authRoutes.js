@@ -37,12 +37,12 @@ router.post("/admin-login", authLimiter, adminLogin);
    🔵 GOOGLE LOGIN
 ===================================== */
 
-/* 👉 STEP 1: REDIRECT TO GOOGLE */
+/* 👉 STEP 1: REDIRECT */
 router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    prompt: "select_account" // 🔥 better UX
+    prompt: "select_account"
   })
 );
 
@@ -59,7 +59,7 @@ router.get("/google/callback", (req, res, next) => {
       const FRONTEND_URL =
         process.env.FRONTEND_URL || "http://localhost:5173";
 
-      /* ❌ ERROR */
+      /* ❌ PASSPORT ERROR */
       if (err) {
         console.error("❌ Passport Error:", err);
         return res.redirect(`${FRONTEND_URL}/login?error=google_failed`);
@@ -81,9 +81,9 @@ router.get("/google/callback", (req, res, next) => {
 
       console.log(`✅ Google login success: ${user.email}`);
 
-      /* ✅ SUCCESS */
+      /* ✅ FIXED SUCCESS REDIRECT */
       return res.redirect(
-        `${FRONTEND_URL}/login-success?token=${token}`
+        `${FRONTEND_URL}/success?token=${token}`
       );
 
     }
