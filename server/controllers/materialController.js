@@ -44,10 +44,8 @@ export const addMaterial = async (req, res, next) => {
     }
 
     if (price < 0) throw new Error("Invalid price");
-
     if (!pdfFile) throw new Error("PDF required");
 
-    /* 🔍 VALIDATE RELATION */
     const [cls, sub] = await Promise.all([
       Class.findById(classId),
       Subject.findById(subjectId)
@@ -55,20 +53,16 @@ export const addMaterial = async (req, res, next) => {
 
     if (!cls || !sub) throw new Error("Invalid class/subject");
 
-    /* 🔥 UNIQUE TEMP PATH */
     const tempName = Date.now() + "-" + Math.random();
     const tempPdfPath = path.join("uploads", `${tempName}.pdf`);
 
     await fs.mkdir("uploads", { recursive: true });
     await fs.writeFile(tempPdfPath, pdfFile.buffer);
 
-    /* PREVIEW */
     await generatePreview(tempPdfPath, "uploads");
 
-    /* PDF UPLOAD */
     const pdf = await uploadPDFToCloudinary(pdfFile.buffer);
 
-    /* PREVIEW UPLOAD */
     let previews = [];
 
     for (let i = 1; i <= 2; i++) {
@@ -77,17 +71,16 @@ export const addMaterial = async (req, res, next) => {
       try {
         await fs.access(file);
 
-        const res = await cloudinary.uploader.upload(file, {
+        const resUpload = await cloudinary.uploader.upload(file, {
           folder: "materials/previews"
         });
 
-        previews.push(res.secure_url);
-
+        previews.push(resUpload.secure_url);
         await fs.unlink(file);
+
       } catch {}
     }
 
-    /* THUMBNAIL */
     let thumb = "";
 
     if (thumbnailFile) {
@@ -126,7 +119,7 @@ export const addMaterial = async (req, res, next) => {
 };
 
 /* =====================================
-   📄 GET MATERIALS
+   📄 GET ALL MATERIALS
 ===================================== */
 export const getMaterials = async (req, res, next) => {
   try {
@@ -143,7 +136,33 @@ export const getMaterials = async (req, res, next) => {
 };
 
 /* =====================================
-   ✏ UPDATE MATERIAL (SAFE)
+   🔍 GET SINGLE MATERIAL ✅ FIXED
+===================================== */
+export const getMaterialById = async (req, res, next) => {
+  try {
+    const material = await Material.findById(req.params.id)
+      .populate("classId", "name")
+      .populate("subjectId", "name");
+
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        message: "Material not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      data: material
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
+   ✏ UPDATE MATERIAL
 ===================================== */
 export const updateMaterial = async (req, res, next) => {
   try {
@@ -168,7 +187,7 @@ export const updateMaterial = async (req, res, next) => {
 };
 
 /* =====================================
-   ❌ DELETE MATERIAL (FULL CLEAN)
+   ❌ DELETE MATERIAL (FIXED)
 ===================================== */
 export const deleteMaterial = async (req, res, next) => {
   try {
@@ -176,17 +195,24 @@ export const deleteMaterial = async (req, res, next) => {
 
     if (!material) throw new Error("Material not found");
 
-    /* DELETE MAIN FILE */
     if (material.cloudinaryId) {
       await cloudinary.uploader.destroy(material.cloudinaryId, {
         resource_type: "raw"
       });
     }
 
-    /* DELETE PREVIEWS */
+    /* ✅ FIXED PREVIEW DELETE */
     for (const url of material.previewImages || []) {
-      const id = url.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(`materials/previews/${id}`);
+      try {
+        const publicId = url
+          .split("/")
+          .slice(-2)
+          .join("/")
+          .split(".")[0];
+
+        await cloudinary.uploader.destroy(publicId);
+
+      } catch {}
     }
 
     await material.deleteOne();
