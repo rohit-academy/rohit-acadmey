@@ -37,11 +37,12 @@ router.post("/admin-login", authLimiter, adminLogin);
    🔵 GOOGLE LOGIN
 ===================================== */
 
-/* 👉 STEP 1: Redirect */
+/* 👉 STEP 1: REDIRECT TO GOOGLE */
 router.get(
   "/google",
   passport.authenticate("google", {
-    scope: ["profile", "email"]
+    scope: ["profile", "email"],
+    prompt: "select_account" // 🔥 better UX
   })
 );
 
@@ -58,31 +59,31 @@ router.get("/google/callback", (req, res, next) => {
       const FRONTEND_URL =
         process.env.FRONTEND_URL || "http://localhost:5173";
 
-      /* ❌ PASSPORT ERROR */
+      /* ❌ ERROR */
       if (err) {
         console.error("❌ Passport Error:", err);
-        return res.redirect(`${FRONTEND_URL}/login`);
+        return res.redirect(`${FRONTEND_URL}/login?error=google_failed`);
       }
 
-      /* ❌ NO RESULT */
+      /* ❌ INVALID RESULT */
       if (!result || !result.user) {
-        console.warn("❌ Invalid passport result:", result);
-        return res.redirect(`${FRONTEND_URL}/login`);
+        console.warn("❌ Invalid result:", result);
+        return res.redirect(`${FRONTEND_URL}/login?error=no_user`);
       }
 
       const { token, user } = result;
 
-      /* ❌ TOKEN CHECK */
+      /* ❌ TOKEN MISSING */
       if (!token) {
         console.warn("❌ Token missing:", result);
-        return res.redirect(`${FRONTEND_URL}/login`);
+        return res.redirect(`${FRONTEND_URL}/login?error=no_token`);
       }
 
       console.log(`✅ Google login success: ${user.email}`);
 
-      /* ✅ SUCCESS REDIRECT */
+      /* ✅ SUCCESS */
       return res.redirect(
-        `${FRONTEND_URL}/success?token=${token}`
+        `${FRONTEND_URL}/login-success?token=${token}`
       );
 
     }
