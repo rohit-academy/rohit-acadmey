@@ -30,19 +30,25 @@ const app = express();
 app.use(helmet());
 
 /* =====================================
-   🌍 CORS (FIXED)
+   🌍 CORS (FINAL FIX)
 ===================================== */
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  "https://rohitacademy.net",
+  "https://www.rohitacademy.net",
   "http://localhost:5173",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // allow requests with no origin (mobile apps, postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+
+      console.log("❌ Blocked by CORS:", origin);
       return callback(new Error("CORS blocked"));
     },
     credentials: true,
@@ -99,7 +105,7 @@ const otpLimiter = rateLimit({
 app.use("/api/otp", otpLimiter);
 
 /* =====================================
-   ❤️ HEALTH
+   ❤️ HEALTH CHECK
 ===================================== */
 app.get("/", (req, res) => {
   res.send("🚀 Rohit Academy API Running...");
@@ -123,7 +129,7 @@ app.use("/api/admin", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
 
 /* =====================================
-   ❌ 404
+   ❌ 404 HANDLER
 ===================================== */
 app.use((req, res) => {
   res.status(404).json({
