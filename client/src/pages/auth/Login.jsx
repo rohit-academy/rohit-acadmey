@@ -25,14 +25,14 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [timer, setTimer] = useState(0);
+  const [otpRequests, setOtpRequests] = useState(0); // 🔥 anti-spam
 
-  /* 🔙 REDIRECT FIX */
   const redirectPath = location.state?.from || "/account";
 
   /* 📱 CLEAN PHONE */
   const getCleanPhone = () => {
     const digits = phone.replace(/\D/g, "");
-    return digits.slice(-10); // ✅ always last 10 digits
+    return digits.slice(-10);
   };
 
   /* ⏱ TIMER */
@@ -58,6 +58,12 @@ function Login() {
       return;
     }
 
+    // 🔥 Limit OTP requests (frontend)
+    if (otpRequests >= 5) {
+      setError("Too many attempts. Try again later.");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -66,11 +72,12 @@ function Login() {
 
       setOtpSent(true);
       setTimer(60);
+      setOtpRequests((prev) => prev + 1);
 
       setTimeout(() => otpRef.current?.focus(), 200);
 
     } catch (err) {
-      setError(err?.message || "Failed to send OTP");
+      setError(err?.response?.data?.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -99,7 +106,6 @@ function Login() {
       localStorage.setItem("token", res.token);
       login(res.user);
 
-      /* 🔥 REDIRECT FIX */
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
@@ -143,7 +149,6 @@ function Login() {
 
       <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
 
-        {/* BACK */}
         {step !== "choose" && (
           <button
             onClick={() => {
@@ -159,14 +164,12 @@ function Login() {
           </button>
         )}
 
-        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
             {error}
           </div>
         )}
 
-        {/* STEP 1 */}
         {step === "choose" && (
           <div className="text-center">
 
@@ -193,7 +196,6 @@ function Login() {
           </div>
         )}
 
-        {/* STEP 2 */}
         {step === "phone" && (
           <div>
 
