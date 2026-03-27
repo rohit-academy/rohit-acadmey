@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
+    /* 🔥 FIREBASE ID (MOST IMPORTANT) */
+    firebaseId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+
     /* 📱 PHONE */
     phone: {
       type: String,
@@ -21,14 +28,6 @@ const userSchema = new mongoose.Schema(
       default: undefined
     },
 
-    /* 🔵 GOOGLE ID */
-    googleId: {
-      type: String,
-      unique: true,
-      sparse: true,
-      default: undefined
-    },
-
     /* 👤 USERNAME */
     name: {
       type: String,
@@ -36,7 +35,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       unique: true,
       sparse: true,
-      default: undefined, // ✅ FIXED
+      default: undefined,
       minlength: 3,
       maxlength: 20,
       match: [/^[a-z0-9_]+$/, "Invalid username"]
@@ -51,8 +50,8 @@ const userSchema = new mongoose.Schema(
     /* 🔐 AUTH PROVIDER */
     authProvider: {
       type: String,
-      enum: ["phone", "google"],
-      default: "phone"
+      enum: ["phone", "firebase"],
+      default: "firebase"
     },
 
     /* 👑 ROLE */
@@ -85,8 +84,14 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 SAFE UNIQUE INDEXES (PARTIAL)
+   🔥 SAFE UNIQUE INDEXES
 ===================================== */
+
+userSchema.index(
+  { firebaseId: 1 },
+  { unique: true, partialFilterExpression: { firebaseId: { $exists: true } } }
+);
+
 userSchema.index(
   { phone: 1 },
   { unique: true, partialFilterExpression: { phone: { $exists: true } } }
@@ -98,17 +103,12 @@ userSchema.index(
 );
 
 userSchema.index(
-  { googleId: 1 },
-  { unique: true, partialFilterExpression: { googleId: { $exists: true } } }
-);
-
-userSchema.index(
   { name: 1 },
   { unique: true, partialFilterExpression: { name: { $exists: true } } }
 );
 
 /* =====================================
-   🔥 PRE-SAVE CLEAN USERNAME
+   🔥 CLEAN USERNAME
 ===================================== */
 userSchema.pre("save", function (next) {
 

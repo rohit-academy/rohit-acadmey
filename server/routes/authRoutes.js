@@ -1,11 +1,11 @@
 import express from "express";
-import passport from "passport";
 
 import {
   loginWithPhone,
   getMe,
   adminLogin,
-  setUsername
+  setUsername,
+  firebaseLogin
 } from "../controllers/authController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -14,9 +14,14 @@ import { authLimiter } from "../middleware/rateLimitMiddleware.js";
 const router = express.Router();
 
 /* =====================================
-   📲 PHONE LOGIN
+   📲 PHONE LOGIN (optional)
 ===================================== */
 router.post("/login-phone", authLimiter, loginWithPhone);
+
+/* =====================================
+   🔥 FIREBASE LOGIN (MAIN)
+===================================== */
+router.post("/firebase-login", firebaseLogin);
 
 /* =====================================
    👤 GET LOGGED IN USER
@@ -32,63 +37,5 @@ router.put("/set-username", authMiddleware, setUsername);
    🛠 ADMIN LOGIN
 ===================================== */
 router.post("/admin-login", authLimiter, adminLogin);
-
-/* =====================================
-   🔵 GOOGLE LOGIN
-===================================== */
-
-/* 👉 STEP 1: REDIRECT */
-router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account"
-  })
-);
-
-/* =====================================
-   👉 STEP 2: CALLBACK
-===================================== */
-router.get("/google/callback", (req, res, next) => {
-
-  passport.authenticate(
-    "google",
-    { session: false },
-    (err, result) => {
-
-      const FRONTEND_URL =
-        process.env.FRONTEND_URL || "http://localhost:5173";
-
-      /* ❌ PASSPORT ERROR */
-      if (err) {
-        console.error("❌ Passport Error:", err);
-        return res.redirect(`${FRONTEND_URL}/login?error=google_failed`);
-      }
-
-      /* ❌ INVALID RESULT */
-      if (!result || !result.user) {
-        console.warn("❌ Invalid result:", result);
-        return res.redirect(`${FRONTEND_URL}/login?error=no_user`);
-      }
-
-      const { token, user } = result;
-
-      /* ❌ TOKEN MISSING */
-      if (!token) {
-        console.warn("❌ Token missing:", result);
-        return res.redirect(`${FRONTEND_URL}/login?error=no_token`);
-      }
-
-      console.log(`✅ Google login success: ${user.email}`);
-
-      /* ✅ FIXED SUCCESS REDIRECT */
-      return res.redirect(
-        `${FRONTEND_URL}/success?token=${token}`
-      );
-
-    }
-  )(req, res, next);
-
-});
 
 export default router;
