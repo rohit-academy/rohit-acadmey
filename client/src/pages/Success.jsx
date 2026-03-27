@@ -19,7 +19,7 @@ function Success() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    let isMounted = true; // 🔥 cleanup safety
+    let isMounted = true;
 
     const handleSuccess = async () => {
 
@@ -35,20 +35,22 @@ function Success() {
 
           setMessage("Logging you in...");
 
-          // ✅ use context login (handles everything)
+          // 🔥 login via context (handles token + user)
           await login(token);
-
-          // 🔥 fetch updated user from context (auto)
-          const user = JSON.parse(localStorage.getItem("user"));
 
           if (!isMounted) return;
 
+          const user = JSON.parse(localStorage.getItem("user"));
+
           if (user) {
-            if (user.authProvider === "google") {
+
+            // 🔥 smart redirect
+            if (!user.username) {
               navigate("/setup-username", { replace: true });
             } else {
               navigate("/account", { replace: true });
             }
+
             return;
           }
 
@@ -91,7 +93,7 @@ function Success() {
       isMounted = false;
     };
 
-  }, [location, navigate, login]);
+  }, [location.search, navigate, login]);
 
   /* 🔄 LOADING */
   if (loading) {

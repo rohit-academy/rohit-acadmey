@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 /* 🔒 ROUTE GUARDS */
 import ProtectedRoute from "../components/layout/ProtectedRoute";
@@ -22,6 +22,7 @@ import SetupUsername from "../pages/SetupUsername";
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
+import VerifyOtp from "../pages/auth/VerifyOtp"; // 🔥 NEW
 import AdminLogin from "../pages/AdminLogin";
 
 /* ❌ COMMON */
@@ -46,6 +47,10 @@ function AppRoutes() {
 
       {/* ================= AUTH ================= */}
       <Route path="/login" element={<Login />} />
+      
+      {/* 🔥 NEW VERIFY OTP ROUTE */}
+      <Route path="/verify-otp" element={<VerifyOtp />} />
+
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* 🔥 GOOGLE CALLBACK */}

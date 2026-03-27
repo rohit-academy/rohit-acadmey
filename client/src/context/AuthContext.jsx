@@ -16,23 +16,21 @@ export function AuthProvider({ children }) {
     const loadUser = async () => {
 
       try {
-
         const token = localStorage.getItem("token");
 
-        /* 🔹 NO TOKEN */
         if (!token) {
           setUser(null);
-          setLoading(false); // ✅ FIX
+          setLoading(false);
           return;
         }
 
-        /* 🔹 LOAD FROM CACHE (FAST UI) */
+        /* ⚡ FAST LOAD FROM CACHE */
         const cachedUser = localStorage.getItem("user");
         if (cachedUser) {
           setUser(JSON.parse(cachedUser));
         }
 
-        /* 🔹 VERIFY WITH BACKEND */
+        /* 🔥 VERIFY TOKEN WITH BACKEND */
         const res = await API.get("/auth/me");
 
         const userData = res.data?.user;
@@ -52,10 +50,8 @@ export function AuthProvider({ children }) {
         setUser(null);
 
       } finally {
-
         setLoading(false);
       }
-
     };
 
     loadUser();
@@ -74,7 +70,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =====================================
-     🔐 LOGIN
+     🔐 LOGIN (UPDATED 🔥)
   ===================================== */
   const login = async (data) => {
 
@@ -96,13 +92,22 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      /* 🔥 CASE 2: USER OBJECT */
+      /* 🔥 CASE 2: USER + TOKEN OBJECT */
       if (typeof data === "object") {
 
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+        }
+
+        if (data.user) {
+          setUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          return;
+        }
+
+        /* fallback */
         setUser(data);
         localStorage.setItem("user", JSON.stringify(data));
-
-        return;
       }
 
     } catch (error) {
@@ -113,9 +118,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("user");
 
       setUser(null);
-
     }
-
   };
 
   /* =====================================

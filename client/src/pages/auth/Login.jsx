@@ -5,10 +5,8 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { Phone, Chrome, ArrowLeft } from "lucide-react";
 
-import {
-  sendOtp,
-  verifyOtp
-} from "../../services/authService";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../../firebase";
 
 function Login() {
 
@@ -17,6 +15,7 @@ function Login() {
   const { login } = useAuth();
 
   const otpRef = useRef(null);
+  const recaptchaRef = useRef(null); // 🔥 FIX
 
   const [step, setStep] = useState("choose");
   const [phone, setPhone] = useState("");
@@ -25,28 +24,34 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [timer, setTimer] = useState(0);
-  const [otpRequests, setOtpRequests] = useState(0); // 🔥 anti-spam
+  const [otpRequests, setOtpRequests] = useState(0);
 
   const redirectPath = location.state?.from || "/account";
 
-  /* 📱 CLEAN PHONE */
   const getCleanPhone = () => {
     const digits = phone.replace(/\D/g, "");
     return digits.slice(-10);
   };
 
-  /* ⏱ TIMER */
   useEffect(() => {
     if (timer <= 0) return;
-
-    const interval = setInterval(() => {
-      setTimer((t) => t - 1);
-    }, 1000);
-
+    const interval = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* 📲 SEND OTP */
+  /* 🔥 INIT RECAPTCHA (ONCE ONLY) */
+  const setupRecaptcha = () => {
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        { size: "invisible" }
+      );
+    }
+    return recaptchaRef.current;
+  };
+
+  /* 🔥 SEND OTP */
   const handleSendOtp = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -58,9 +63,8 @@ function Login() {
       return;
     }
 
-    // 🔥 Limit OTP requests (frontend)
     if (otpRequests >= 5) {
-      setError("Too many attempts. Try again later.");
+      setError("Too many attempts. Try later.");
       return;
     }
 
@@ -68,52 +72,69 @@ function Login() {
       setLoading(true);
       setError("");
 
-      await sendOtp(cleanPhone);
+      const appVerifier = setupRecaptcha();
+
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        "+91" + cleanPhone,
+        appVerifier
+      );
+
+      window.confirmationResult = confirmationResult;
 
       setOtpSent(true);
       setTimer(60);
-      setOtpRequests((prev) => prev + 1);
+      setOtpRequests((p) => p + 1);
 
       setTimeout(() => otpRef.current?.focus(), 200);
 
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to send OTP");
+      setError(err.message || "OTP failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ✅ VERIFY OTP */
+  /* 🔥 VERIFY OTP */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (loading) return;
-
-    if (!/^[0-9]{4,6}$/.test(otp)) {
-      setError("Enter valid OTP");
-      return;
-    }
 
     try {
       setLoading(true);
       setError("");
 
-      const cleanPhone = getCleanPhone();
+      if (!window.confirmationResult) {
+        throw new Error("OTP session expired");
+      }
 
-      const res = await verifyOtp(cleanPhone, otp);
+      const result = await window.confirmationResult.confirm(otp);
+      const firebaseUser = result.user;
 
-      if (!res?.token) throw new Error("Login failed");
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/firebase-login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: firebaseUser.phoneNumber
+          })
+        }
+      );
 
-      localStorage.setItem("token", res.token);
-      login(res.user);
+      const data = await res.json();
+
+      if (!data?.token || !data?.user) {
+        throw new Error("Login failed");
+      }
+
+      /* 🔥 BEST PRACTICE */
+      login(data); // full object
 
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Invalid OTP"
-      );
+      setError(err.message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -122,29 +143,17 @@ function Login() {
   /* 🔁 RESEND */
   const handleResend = async () => {
     if (timer > 0 || loading) return;
-
-    try {
-      setTimer(60);
-      await sendOtp(getCleanPhone());
-    } catch {
-      setError("Failed to resend OTP");
-    }
+    setTimer(60);
+    await handleSendOtp({ preventDefault: () => {} });
   };
 
   /* 🔵 GOOGLE LOGIN */
   const handleGoogleLogin = () => {
     const API_URL = import.meta.env.VITE_API_URL;
-
-    if (!API_URL) {
-      setError("API URL not configured");
-      return;
-    }
-
     window.location.href = `${API_URL}/auth/google`;
   };
 
   return (
-
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
 
       <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
@@ -172,14 +181,13 @@ function Login() {
 
         {step === "choose" && (
           <div className="text-center">
-
             <h1 className="text-2xl font-bold mb-6">
               Login to Rohit Academy
             </h1>
 
             <button
               onClick={() => setStep("phone")}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4 hover:bg-blue-700 transition"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4"
             >
               <Phone size={18} />
               Continue with Phone
@@ -187,12 +195,11 @@ function Login() {
 
             <button
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl hover:bg-gray-100 transition"
+              className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl"
             >
               <Chrome size={18} />
               Continue with Google
             </button>
-
           </div>
         )}
 
@@ -206,7 +213,6 @@ function Login() {
             {!otpSent ? (
 
               <form onSubmit={handleSendOtp} className="space-y-5">
-
                 <PhoneInput
                   country={"in"}
                   value={phone}
@@ -225,7 +231,6 @@ function Login() {
                 >
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
-
               </form>
 
             ) : (
@@ -244,8 +249,10 @@ function Login() {
                     setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
                   placeholder="Enter OTP"
-                  className="w-full border p-4 rounded-xl text-center text-xl tracking-widest"
+                  className="w-full border p-4 rounded-xl text-center text-xl"
                 />
+
+                <div id="recaptcha-container"></div>
 
                 <button
                   type="submit"
@@ -256,7 +263,6 @@ function Login() {
                 </button>
 
                 <div className="flex justify-between text-sm">
-
                   <button
                     type="button"
                     onClick={() => setOtpSent(false)}
@@ -273,7 +279,6 @@ function Login() {
                   >
                     {timer > 0 ? `Resend in ${timer}s` : "Resend OTP"}
                   </button>
-
                 </div>
 
               </form>
