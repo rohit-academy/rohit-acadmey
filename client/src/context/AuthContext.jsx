@@ -14,7 +14,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
 
     const loadUser = async () => {
-
       try {
         const token = localStorage.getItem("token");
 
@@ -24,31 +23,26 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        /* ⚡ FAST LOAD FROM CACHE */
+        /* ⚡ FAST LOAD */
         const cachedUser = localStorage.getItem("user");
         if (cachedUser) {
           setUser(JSON.parse(cachedUser));
         }
 
-        /* 🔥 VERIFY TOKEN WITH BACKEND */
+        /* 🔥 VERIFY TOKEN */
         const res = await API.get("/auth/me");
 
         const userData = res.data?.user;
 
-        if (!userData) throw new Error("Invalid user");
+        if (!userData) throw new Error();
 
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
 
-      } catch (error) {
-
-        console.log("Auto login failed");
-
+      } catch {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-
         setUser(null);
-
       } finally {
         setLoading(false);
       }
@@ -56,7 +50,7 @@ export function AuthProvider({ children }) {
 
     loadUser();
 
-    /* 🔥 MULTI TAB SYNC */
+    /* 🔥 MULTI TAB LOGOUT SYNC */
     const syncLogout = (e) => {
       if (e.key === "token" && !e.newValue) {
         setUser(null);
@@ -64,59 +58,48 @@ export function AuthProvider({ children }) {
     };
 
     window.addEventListener("storage", syncLogout);
-
     return () => window.removeEventListener("storage", syncLogout);
 
   }, []);
 
   /* =====================================
-     🔐 LOGIN (UPDATED 🔥)
+     🔐 LOGIN (FINAL FIX 🔥)
   ===================================== */
   const login = async (data) => {
-
     try {
 
-      /* 🔥 CASE 1: TOKEN */
-      if (typeof data === "string") {
+      /* 🔥 CASE 1: {token, user} */
+      if (data?.token && data?.user) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        setUser(data.user);
+        return;
+      }
 
+      /* 🔥 CASE 2: ONLY TOKEN */
+      if (typeof data === "string") {
         localStorage.setItem("token", data);
 
         const res = await API.get("/auth/me");
         const userData = res.data?.user;
 
-        if (!userData) throw new Error("User not found");
+        if (!userData) throw new Error();
 
-        setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
-
+        setUser(userData);
         return;
       }
 
-      /* 🔥 CASE 2: USER + TOKEN OBJECT */
+      /* 🔥 CASE 3: ONLY USER (fallback) */
       if (typeof data === "object") {
-
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-        }
-
-        if (data.user) {
-          setUser(data.user);
-          localStorage.setItem("user", JSON.stringify(data.user));
-          return;
-        }
-
-        /* fallback */
-        setUser(data);
         localStorage.setItem("user", JSON.stringify(data));
+        setUser(data);
+        return;
       }
 
-    } catch (error) {
-
-      console.log("Login failed");
-
+    } catch {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       setUser(null);
     }
   };
@@ -125,11 +108,9 @@ export function AuthProvider({ children }) {
      🚪 LOGOUT
   ===================================== */
   const logout = () => {
-
-    setUser(null);
-
-    localStorage.removeItem("user");
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
   };
 
   return (

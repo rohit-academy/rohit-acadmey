@@ -1,5 +1,6 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 /* 🔒 ROUTE GUARDS */
 import ProtectedRoute from "../components/layout/ProtectedRoute";
@@ -22,7 +23,7 @@ import SetupUsername from "../pages/SetupUsername";
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
-import VerifyOtp from "../pages/auth/VerifyOtp"; // 🔥 NEW
+import VerifyOtp from "../pages/auth/VerifyOtp";
 import AdminLogin from "../pages/AdminLogin";
 
 /* ❌ COMMON */
@@ -42,18 +43,27 @@ import Coupons from "../admin/finance/Coupons";
 import SalesReport from "../admin/finance/SalesReport";
 
 function AppRoutes() {
+
+  const { user } = useAuth();
+
   return (
     <Routes>
 
       {/* ================= AUTH ================= */}
-      <Route path="/login" element={<Login />} />
-      
-      {/* 🔥 NEW VERIFY OTP ROUTE */}
-      <Route path="/verify-otp" element={<VerifyOtp />} />
+
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/account" replace /> : <Login />}
+      />
+
+      <Route
+        path="/verify-otp"
+        element={user ? <Navigate to="/account" replace /> : <VerifyOtp />}
+      />
 
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🔥 GOOGLE CALLBACK */}
+      {/* 🔥 GOOGLE / PAYMENT CALLBACK */}
       <Route path="/success" element={<Success />} />
 
       {/* ================= USER ================= */}
@@ -73,7 +83,7 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 🔐 PROTECTED GROUP */}
+        {/* 🔐 PROTECTED */}
         <Route element={<ProtectedRoute />}>
 
           <Route path="/account" element={<Account />} />

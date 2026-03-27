@@ -6,8 +6,8 @@ import axios from "axios";
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-acadmey.onrender.com/api",
-  timeout: 15000, // 🔥 prevent hanging
+    "https://rohit-academy.onrender.com/api",
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -35,16 +35,10 @@ API.interceptors.request.use(
       const adminData = safeParse(localStorage.getItem("admin"));
       const adminToken = adminData?.token;
 
-      /* 🔥 BETTER LOGIC */
+      /* 🔥 ADMIN ROUTE CHECK */
       const isAdminRoute = req.url?.startsWith("/admin");
 
-      let token = null;
-
-      if (isAdminRoute) {
-        token = adminToken;
-      } else {
-        token = userToken;
-      }
+      const token = isAdminRoute ? adminToken : userToken;
 
       if (token) {
         req.headers.Authorization = `Bearer ${token}`;
@@ -70,7 +64,7 @@ API.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    /* 🔐 401 */
+    /* 🔐 401 → LOGOUT */
     if (status === 401 && !isRedirecting) {
 
       isRedirecting = true;
@@ -81,14 +75,14 @@ API.interceptors.response.use(
       localStorage.removeItem("user");
       localStorage.removeItem("admin");
 
+      /* 🔥 SAFE REDIRECT */
       if (!window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
 
-      /* 🔥 RESET FLAG AFTER DELAY */
       setTimeout(() => {
         isRedirecting = false;
-      }, 2000);
+      }, 1500);
     }
 
     /* 🚫 403 */
@@ -96,9 +90,9 @@ API.interceptors.response.use(
       console.warn("🚫 Access forbidden");
     }
 
-    /* 🌐 NETWORK / TIMEOUT */
+    /* 🌐 NETWORK ERROR */
     if (!error.response) {
-      console.error("🌐 Network error or timeout");
+      console.error("🌐 Network error / timeout");
     }
 
     return Promise.reject(error);

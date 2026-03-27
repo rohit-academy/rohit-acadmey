@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../../config/firebase";
 
 function VerifyOtp() {
 
@@ -18,7 +20,7 @@ function VerifyOtp() {
   const phone = location.state?.phone;
   const redirectPath = location.state?.from || "/account";
 
-  /* ❌ NO PHONE → REDIRECT */
+  /* ❌ NO PHONE */
   useEffect(() => {
     if (!phone) {
       navigate("/login");
@@ -78,25 +80,28 @@ function VerifyOtp() {
     }
   };
 
-  /* 🔁 RESEND */
+  /* 🔁 RESEND OTP (FIXED 🔥) */
   const handleResend = async () => {
     if (timer > 0 || loading) return;
 
     try {
+      setError("");
       setTimer(60);
 
       if (!window.recaptchaVerifier) {
         throw new Error("Session expired. Go back.");
       }
 
-      const confirmationResult = await window.signInWithPhoneNumber(
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        phone,
         window.recaptchaVerifier
       );
 
       window.confirmationResult = confirmationResult;
 
     } catch (err) {
-      setError("Resend failed. Try again.");
+      setError(err.message || "Resend failed");
     }
   };
 

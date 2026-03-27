@@ -24,7 +24,6 @@ function Success() {
     const handleSuccess = async () => {
 
       try {
-
         const params = new URLSearchParams(location.search);
 
         const token = params.get("token");
@@ -35,31 +34,33 @@ function Success() {
 
           setMessage("Logging you in...");
 
-          // 🔥 login via context (handles token + user)
-          await login(token);
+          // 🔥 context login (handles token + user)
+          login(token);
 
-          if (!isMounted) return;
+          // 🔥 small delay to allow state update
+          setTimeout(() => {
 
-          const user = JSON.parse(localStorage.getItem("user"));
+            if (!isMounted) return;
 
-          if (user) {
+            const storedUser = localStorage.getItem("user");
+            const user = storedUser ? JSON.parse(storedUser) : null;
 
-            // 🔥 smart redirect
-            if (!user.username) {
-              navigate("/setup-username", { replace: true });
+            if (user) {
+              if (!user.username) {
+                navigate("/setup-username", { replace: true });
+              } else {
+                navigate("/account", { replace: true });
+              }
             } else {
-              navigate("/account", { replace: true });
+              navigate("/login", { replace: true });
             }
 
-            return;
-          }
+          }, 300);
 
-          // ❌ fallback
-          navigate("/login", { replace: true });
           return;
         }
 
-        /* 💳 PAYMENT FLOW */
+        /* 💳 PAYMENT SUCCESS */
         if (payment === "success") {
 
           setMessage("Unlocking your materials...");
@@ -71,7 +72,7 @@ function Success() {
           return;
         }
 
-        /* ❌ INVALID ACCESS */
+        /* ❌ INVALID */
         navigate("/login", { replace: true });
 
       } catch (error) {
@@ -105,7 +106,7 @@ function Success() {
     );
   }
 
-  /* ✅ PAYMENT SUCCESS UI */
+  /* ✅ PAYMENT UI */
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
 
