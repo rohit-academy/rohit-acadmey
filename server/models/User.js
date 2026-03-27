@@ -2,20 +2,23 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    /* 🔥 FIREBASE ID (MOST IMPORTANT) */
+    /* 🔥 FIREBASE UID */
     firebaseId: {
       type: String,
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true,
+      trim: true
     },
 
-    /* 📱 PHONE */
+    /* 📱 PHONE (10 DIGITS ONLY) */
     phone: {
       type: String,
       unique: true,
       sparse: true,
-      default: undefined,
-      match: [/^[0-9]{10}$/, "Phone must be 10 digits"]
+      index: true,
+      match: [/^[6-9]\d{9}$/, "Invalid phone number"],
+      default: undefined
     },
 
     /* 📧 EMAIL */
@@ -25,20 +28,28 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       lowercase: true,
       trim: true,
+      index: true,
       default: undefined
     },
 
-    /* 👤 USERNAME */
+    /* 👤 USERNAME (UNIQUE HANDLE) */
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 20,
+      match: [/^[a-z0-9_]+$/, "Invalid username"],
+      default: undefined
+    },
+
+    /* 👤 DISPLAY NAME */
     name: {
       type: String,
       trim: true,
-      lowercase: true,
-      unique: true,
-      sparse: true,
-      default: undefined,
-      minlength: 3,
-      maxlength: 20,
-      match: [/^[a-z0-9_]+$/, "Invalid username"]
+      maxlength: 50
     },
 
     /* 🖼 AVATAR */
@@ -50,7 +61,7 @@ const userSchema = new mongoose.Schema(
     /* 🔐 AUTH PROVIDER */
     authProvider: {
       type: String,
-      enum: ["phone", "firebase"],
+      enum: ["firebase", "google", "phone"],
       default: "firebase"
     },
 
@@ -58,24 +69,27 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["user", "admin"],
-      default: "user"
+      default: "user",
+      index: true
     },
 
     /* ✅ VERIFIED */
     isVerified: {
       type: Boolean,
-      default: false
+      default: true
     },
 
     /* 🚫 BLOCK */
     isBlocked: {
       type: Boolean,
-      default: false
+      default: false,
+      index: true
     },
 
     /* 🕒 LAST LOGIN */
     lastLogin: {
-      type: Date
+      type: Date,
+      default: Date.now
     }
   },
   {
@@ -84,7 +98,7 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 SAFE UNIQUE INDEXES
+   🔥 SAFE INDEXES
 ===================================== */
 
 userSchema.index(
@@ -103,21 +117,27 @@ userSchema.index(
 );
 
 userSchema.index(
-  { name: 1 },
-  { unique: true, partialFilterExpression: { name: { $exists: true } } }
+  { username: 1 },
+  { unique: true, partialFilterExpression: { username: { $exists: true } } }
 );
 
 /* =====================================
-   🔥 CLEAN USERNAME
+   🔥 PRE SAVE CLEANUP
 ===================================== */
 userSchema.pre("save", function (next) {
 
-  if (this.name) {
-    this.name = this.name
+  /* 🔹 USERNAME CLEAN */
+  if (this.username) {
+    this.username = this.username
       .toLowerCase()
       .trim()
       .replace(/\s+/g, "_")
       .replace(/[^a-z0-9_]/g, "");
+  }
+
+  /* 🔹 PHONE CLEAN (+91 REMOVE) */
+  if (this.phone) {
+    this.phone = this.phone.replace(/\D/g, "").slice(-10);
   }
 
   next();
@@ -126,11 +146,14 @@ userSchema.pre("save", function (next) {
 /* =====================================
    🔹 METHODS
 ===================================== */
+
+/* 🔥 UPDATE LOGIN TIME */
 userSchema.methods.updateLoginTime = function () {
   this.lastLogin = new Date();
   return this.save();
 };
 
+/* 🔥 CLEAN RESPONSE */
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.__v;

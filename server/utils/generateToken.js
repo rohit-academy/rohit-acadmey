@@ -5,8 +5,7 @@ import jwt from "jsonwebtoken";
  * @param {Object} payload - { id, role }
  * @param {String} expiresIn - default: 7d
  */
-const generateToken = (payload, expiresIn = "7d") => {
-
+const generateToken = (payload = {}, expiresIn = "7d") => {
   try {
 
     /* ❌ SECRET CHECK */
@@ -14,33 +13,36 @@ const generateToken = (payload, expiresIn = "7d") => {
       throw new Error("JWT_SECRET not defined");
     }
 
-    /* ❌ PAYLOAD CHECK */
-    if (!payload || typeof payload !== "object") {
-      throw new Error("Payload must be a plain object");
+    /* ❌ PAYLOAD VALIDATION */
+    if (!payload.id) {
+      throw new Error("Payload must contain user id");
     }
 
-    /* 🔥 SAFE PAYLOAD (WHITELIST) */
+    /* 🔥 SAFE PAYLOAD */
     const safePayload = {
       id: payload.id,
       role: payload.role || "user"
     };
 
     /* 🔐 SIGN TOKEN */
-    return jwt.sign(
+    const token = jwt.sign(
       safePayload,
       process.env.JWT_SECRET,
       {
         expiresIn,
         algorithm: "HS256",
         issuer: "rohit-academy",
+        subject: String(payload.id) // 🔥 useful for tracking
       }
     );
+
+    return token;
 
   } catch (error) {
 
     console.error("❌ Token generation failed:", error.message);
-    throw new Error("Failed to generate token");
 
+    throw new Error("Token generation failed");
   }
 };
 

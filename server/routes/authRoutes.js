@@ -1,7 +1,6 @@
 import express from "express";
 
 import {
-  loginWithPhone,
   getMe,
   adminLogin,
   setUsername,
@@ -14,17 +13,12 @@ import { authLimiter } from "../middleware/rateLimitMiddleware.js";
 const router = express.Router();
 
 /* =====================================
-   📲 PHONE LOGIN (optional)
+   🔥 FIREBASE LOGIN (MAIN AUTH)
 ===================================== */
-router.post("/login-phone", authLimiter, loginWithPhone);
+router.post("/firebase-login", authLimiter, firebaseLogin);
 
 /* =====================================
-   🔥 FIREBASE LOGIN (MAIN)
-===================================== */
-router.post("/firebase-login", firebaseLogin);
-
-/* =====================================
-   👤 GET LOGGED IN USER
+   👤 GET CURRENT USER
 ===================================== */
 router.get("/me", authMiddleware, getMe);
 

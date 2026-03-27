@@ -2,15 +2,14 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const authMiddleware = async (req, res, next) => {
-
   try {
 
     /* =====================================
-       🔐 TOKEN EXTRACT
+       🔐 EXTRACT TOKEN
     ===================================== */
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
         message: "Authorization token missing"
@@ -28,23 +27,21 @@ const authMiddleware = async (req, res, next) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
 
-      if (err.name === "TokenExpiredError") {
-        return res.status(401).json({
-          success: false,
-          message: "Session expired, please login again"
-        });
-      }
+      const message =
+        err.name === "TokenExpiredError"
+          ? "Session expired, please login again"
+          : "Invalid token";
 
       return res.status(401).json({
         success: false,
-        message: "Invalid token"
+        message
       });
     }
 
     /* =====================================
-       ⚠️ TOKEN STRUCTURE CHECK
+       ⚠️ PAYLOAD CHECK
     ===================================== */
-    if (!decoded || !decoded.id) {
+    if (!decoded?.id) {
       return res.status(401).json({
         success: false,
         message: "Invalid token payload"
@@ -52,24 +49,22 @@ const authMiddleware = async (req, res, next) => {
     }
 
     /* =====================================
-       🛠 ADMIN SHORT-CIRCUIT (🔥 FIX)
+       🛠 ADMIN SHORT-CIRCUIT
     ===================================== */
     if (decoded.role === "admin") {
-
       req.user = {
         id: "admin",
         role: "admin"
       };
-
       return next();
     }
 
     /* =====================================
-       👤 FETCH USER (OPTIMIZED)
+       👤 FETCH USER
     ===================================== */
     const user = await User.findById(decoded.id)
       .select("_id name phone email role isBlocked authProvider avatar lastLogin")
-      .lean(); // ✅ performance boost
+      .lean();
 
     if (!user) {
       return res.status(401).json({
@@ -115,7 +110,6 @@ const authMiddleware = async (req, res, next) => {
     });
 
   }
-
 };
 
 /* =====================================
