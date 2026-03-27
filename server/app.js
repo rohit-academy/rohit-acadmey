@@ -4,14 +4,10 @@ import morgan from "morgan";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-/* 🔥 PASSPORT */
-import passport from "./config/passport.js";
-
 import errorMiddleware from "./middleware/errorMiddleware.js";
 
 /* 🔹 ROUTES */
 import authRoutes from "./routes/authRoutes.js";
-import otpRoutes from "./routes/otpRoutes.js";
 import classRoutes from "./routes/classRoutes.js";
 import subjectRoutes from "./routes/subjectRoutes.js";
 import materialRoutes from "./routes/materialRoutes.js";
@@ -40,8 +36,7 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (mobile apps, postman)
+    origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -90,21 +85,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =====================================
-   🔥 PASSPORT INIT
-===================================== */
-app.use(passport.initialize());
-
-/* =====================================
-   📲 OTP RATE LIMIT
-===================================== */
-const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 5,
-  message: "Too many OTP requests. Try later.",
-});
-app.use("/api/otp", otpLimiter);
-
-/* =====================================
    ❤️ HEALTH CHECK
 ===================================== */
 app.get("/", (req, res) => {
@@ -115,7 +95,6 @@ app.get("/", (req, res) => {
    🔹 ROUTES
 ===================================== */
 app.use("/api/auth", authRoutes);
-app.use("/api/otp", otpRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/materials", materialRoutes);
