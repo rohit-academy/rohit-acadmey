@@ -34,7 +34,7 @@ function VerifyOtp() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* 🔥 VERIFY OTP */
+  /* 🔥 VERIFY OTP (FINAL FIX) */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -47,9 +47,14 @@ function VerifyOtp() {
         throw new Error("OTP expired. Try again.");
       }
 
+      /* 🔥 VERIFY WITH FIREBASE */
       const result = await window.confirmationResult.confirm(otp);
       const firebaseUser = result.user;
 
+      /* 🔥 GET FIREBASE ID TOKEN (MOST IMPORTANT) */
+      const idToken = await firebaseUser.getIdToken();
+
+      /* 🔥 SEND TOKEN TO BACKEND */
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/auth/firebase-login`,
         {
@@ -58,7 +63,7 @@ function VerifyOtp() {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            phone: firebaseUser.phoneNumber
+            token: idToken // ✅ FIXED
           })
         }
       );
@@ -66,21 +71,24 @@ function VerifyOtp() {
       const data = await res.json();
 
       if (!data?.token || !data?.user) {
-        throw new Error("Login failed");
+        throw new Error(data?.message || "Login failed");
       }
 
+      /* 🔥 LOGIN CONTEXT */
       login(data);
 
+      /* 🔁 REDIRECT */
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
+      console.error("❌ OTP Verify Error:", err);
       setError(err.message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
   };
 
-  /* 🔁 RESEND OTP (FIXED 🔥) */
+  /* 🔁 RESEND OTP */
   const handleResend = async () => {
     if (timer > 0 || loading) return;
 
