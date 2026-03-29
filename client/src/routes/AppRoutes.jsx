@@ -44,7 +44,18 @@ import SalesReport from "../admin/finance/SalesReport";
 
 function AppRoutes() {
 
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  /* =====================================
+     ⏳ GLOBAL LOADER (VERY IMPORTANT 🔥)
+  ===================================== */
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
@@ -63,7 +74,7 @@ function AppRoutes() {
 
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🔥 GOOGLE / PAYMENT CALLBACK */}
+      {/* 🔥 CALLBACK */}
       <Route path="/success" element={<Success />} />
 
       {/* ================= USER ================= */}
