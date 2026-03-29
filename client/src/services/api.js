@@ -6,7 +6,7 @@ import axios from "axios";
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-academy.onrender.com/api",
+    "https://rohit-acadmey.onrender.com/api",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -25,7 +25,7 @@ const safeParse = (data) => {
 };
 
 /* =====================================
-   🔐 REQUEST INTERCEPTOR
+   🔐 REQUEST INTERCEPTOR (FIXED 🔥)
 ===================================== */
 API.interceptors.request.use(
   (req) => {
@@ -41,6 +41,7 @@ API.interceptors.request.use(
       const token = isAdminRoute ? adminToken : userToken;
 
       if (token) {
+        req.headers = req.headers || {};
         req.headers.Authorization = `Bearer ${token}`;
       }
 
