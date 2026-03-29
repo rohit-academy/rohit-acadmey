@@ -8,7 +8,9 @@ function Account() {
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
 
-  /* ⏳ LOADING */
+  /* =====================================
+     ⏳ LOADING STATE
+  ===================================== */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -17,23 +19,27 @@ function Account() {
     );
   }
 
-  /* 🔐 PROTECTED */
-  if (!user) {
+  /* =====================================
+     🔐 PROTECTED ROUTE (FIXED 🔥)
+  ===================================== */
+  if (!loading && !user) {
     return <Navigate to="/login" replace />;
   }
 
-  /* 🚪 LOGOUT */
+  /* =====================================
+     🚪 LOGOUT
+  ===================================== */
   const handleLogout = () => {
     const confirmLogout = window.confirm("Are you sure you want to logout?");
     if (!confirmLogout) return;
 
     logout();
-
-    // 🔥 redirect after logout
     navigate("/login", { replace: true });
   };
 
-  /* 🔥 SAFE DATA */
+  /* =====================================
+     🔥 SAFE DATA
+  ===================================== */
   const displayName =
     user?.name ||
     user?.username ||
@@ -48,16 +54,16 @@ function Account() {
   const isAdmin = user?.role === "admin";
 
   return (
-
     <div className="min-h-screen bg-slate-50 px-4 py-6">
 
       <div className="max-w-3xl mx-auto space-y-6">
 
-        {/* 👤 PROFILE */}
+        {/* 👤 PROFILE CARD */}
         <div className="bg-white p-6 rounded-xl shadow">
 
           <div className="flex items-center gap-4">
 
+            {/* AVATAR */}
             <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
 
               {user?.avatar ? (
@@ -72,6 +78,7 @@ function Account() {
 
             </div>
 
+            {/* USER INFO */}
             <div className="flex-1">
               <h2 className="text-xl font-semibold">
                 {displayName}
@@ -87,7 +94,7 @@ function Account() {
                 Secure Account
               </div>
 
-              {/* 🔥 ADMIN BADGE */}
+              {/* 👑 ADMIN BADGE */}
               {isAdmin && (
                 <span className="inline-block mt-2 text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">
                   Admin
@@ -123,7 +130,6 @@ function Account() {
       </div>
 
     </div>
-
   );
 }
 
