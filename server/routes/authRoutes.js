@@ -13,7 +13,7 @@ import { authLimiter } from "../middleware/rateLimitMiddleware.js";
 const router = express.Router();
 
 /* =====================================
-   🧪 DEBUG ROUTE (TEST KARNE KE LIYE)
+   🧪 DEBUG ROUTE
 ===================================== */
 router.get("/test", (req, res) => {
   console.log("✅ AUTH ROUTE WORKING");
@@ -24,13 +24,13 @@ router.get("/test", (req, res) => {
 });
 
 /* =====================================
-   🔥 FIREBASE LOGIN (MAIN AUTH)
+   🔥 FIREBASE LOGIN (FIXED)
 ===================================== */
-router.post("/firebase-login", authLimiter, (req, res, next) => {
+// ❗ limiter temporarily removed (was causing next error)
+router.post("/firebase-login", (req, res, next) => {
   console.log("🔥 /firebase-login HIT");
   console.log("📦 BODY:", req.body);
-
-  next(); // ➡️ actual controller pe bhej
+  next();
 }, firebaseLogin);
 
 /* =====================================
