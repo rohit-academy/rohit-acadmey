@@ -9,48 +9,62 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /* =====================================
-     🔄 AUTO LOAD USER
+     🔄 LOAD USER
+  ===================================== */
+  const loadUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      console.log("🔐 TOKEN:", token);
+
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      /* ⚡ FAST CACHE LOAD */
+      const cachedUser = localStorage.getItem("user");
+      if (cachedUser) {
+        console.log("⚡ Using cached user");
+        setUser(JSON.parse(cachedUser));
+      }
+
+      /* 🔥 VERIFY FROM SERVER */
+      console.log("📡 Calling /auth/me...");
+
+      const res = await API.get("/auth/me");
+
+      console.log("✅ /auth/me RESPONSE:", res.data);
+
+      const userData = res.data?.user;
+
+      if (!userData) {
+        throw new Error("No user data");
+      }
+
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+    } catch (err) {
+      console.error("❌ AUTH LOAD ERROR:", err.response?.data || err.message);
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* =====================================
+     🚀 AUTO LOAD
   ===================================== */
   useEffect(() => {
 
-    const loadUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        /* ⚡ FAST LOAD */
-        const cachedUser = localStorage.getItem("user");
-        if (cachedUser) {
-          setUser(JSON.parse(cachedUser));
-        }
-
-        /* 🔥 VERIFY TOKEN */
-        const res = await API.get("/auth/me");
-
-        const userData = res.data?.user;
-
-        if (!userData) throw new Error();
-
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-
-      } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadUser();
 
-    /* 🔥 MULTI TAB LOGOUT SYNC */
+    /* 🔥 MULTI TAB SYNC */
     const syncLogout = (e) => {
       if (e.key === "token" && !e.newValue) {
         setUser(null);
@@ -63,41 +77,40 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =====================================
-     🔐 LOGIN (FINAL FIX 🔥)
+     🔐 LOGIN
   ===================================== */
   const login = async (data) => {
     try {
 
-      /* 🔥 CASE 1: {token, user} */
+      console.log("🔐 LOGIN DATA:", data);
+
+      /* ✅ CASE 1: token + user */
       if (data?.token && data?.user) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
+
         setUser(data.user);
         return;
       }
 
-      /* 🔥 CASE 2: ONLY TOKEN */
+      /* ✅ CASE 2: only token */
       if (typeof data === "string") {
         localStorage.setItem("token", data);
 
-        const res = await API.get("/auth/me");
-        const userData = res.data?.user;
-
-        if (!userData) throw new Error();
-
-        localStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
+        await loadUser(); // 🔥 IMPORTANT FIX
         return;
       }
 
-      /* 🔥 CASE 3: ONLY USER (fallback) */
+      /* ✅ CASE 3: only user */
       if (typeof data === "object") {
         localStorage.setItem("user", JSON.stringify(data));
         setUser(data);
         return;
       }
 
-    } catch {
+    } catch (err) {
+      console.error("❌ LOGIN ERROR:", err);
+
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
@@ -114,21 +127,14 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        loading
-      }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 /* =====================================
-   🔹 SAFE HOOK
+   🔹 HOOK
 ===================================== */
 export const useAuth = () => {
   const context = useContext(AuthContext);
