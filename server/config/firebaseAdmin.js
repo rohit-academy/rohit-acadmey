@@ -1,15 +1,29 @@
 import admin from "firebase-admin";
+import fs from "fs";
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY
-        ?.replace(/\\n/g, "\n")
-        ?.replace(/\n/g, "\n"), // 🔥 DOUBLE SAFETY
-    }),
-  });
+let serviceAccount;
+
+try {
+  if (process.env.NODE_ENV === "production") {
+    // 🔥 Render Secret File
+    serviceAccount = JSON.parse(
+      fs.readFileSync("/etc/secrets/serviceAccount.json", "utf8")
+    );
+  } else {
+    // 💻 Local Development
+    serviceAccount = JSON.parse(
+      fs.readFileSync("./config/serviceAccount.json", "utf8")
+    );
+  }
+
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+} catch (error) {
+  console.error("🔥 Firebase Admin Init Error:", error.message);
 }
 
 export default admin;
