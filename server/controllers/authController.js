@@ -13,13 +13,13 @@ const safeUser = (user) => ({
   name: user.name,
   avatar: user.avatar,
   role: user.role,
-  authProvider: user.authProvider
+  authProvider: user.authProvider,
 });
 
 /* =====================================
-   🔥 FIREBASE LOGIN (DEBUG VERSION)
+   🔥 FIREBASE LOGIN (FINAL FIXED)
 ===================================== */
-export const firebaseLogin = async (req, res) => {
+export const firebaseLogin = async (req, res, next) => {
   try {
     const { token } = req.body;
 
@@ -28,7 +28,7 @@ export const firebaseLogin = async (req, res) => {
     if (!token) {
       return res.status(400).json({
         success: false,
-        message: "Firebase token required"
+        message: "Firebase token required",
       });
     }
 
@@ -36,30 +36,22 @@ export const firebaseLogin = async (req, res) => {
 
     /* 🔐 VERIFY FIREBASE TOKEN */
     let decoded;
-
     try {
       decoded = await admin.auth().verifyIdToken(token, true);
       console.log("✅ TOKEN VERIFIED");
-      console.log("🧾 DECODED TOKEN:", decoded);
     } catch (err) {
       console.error("❌ TOKEN VERIFY FAILED:", err.message);
 
       return res.status(401).json({
         success: false,
         message: "Invalid Firebase token",
-        debug: err.message
+        debug: err.message,
       });
     }
 
     /* 🔍 EXTRACT DATA */
     let email = decoded.email || null;
-    let phone =
-      decoded.phone_number ||
-      decoded.phoneNumber ||
-      decoded.firebase?.sign_in_provider === "phone"
-        ? decoded.phone_number
-        : null;
-
+    let phone = decoded.phone_number || null;
     const firebaseId = decoded.uid;
     const avatar = decoded.picture || "";
 
@@ -70,19 +62,17 @@ export const firebaseLogin = async (req, res) => {
     /* 📱 NORMALIZE PHONE */
     if (phone) {
       phone = phone.replace(/\D/g, "").slice(-10);
-      console.log("📱 Normalized Phone:", phone);
     }
 
-    /* 🔍 FIND USER BY FIREBASE ID */
+    /* 🔍 FIND USER */
     let user = await User.findOne({ firebaseId });
-    console.log("🔍 User by firebaseId:", user ? "Found ✅" : "Not Found ❌");
 
-    /* 🔗 LINK EXISTING USER (EMAIL) */
+    /* 🔗 LINK BY EMAIL */
     if (!user && email) {
       const existingUser = await User.findOne({ email });
 
       if (existingUser) {
-        console.log("🔗 Linking with existing EMAIL user");
+        console.log("🔗 Linking EMAIL user");
 
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
@@ -94,12 +84,12 @@ export const firebaseLogin = async (req, res) => {
       }
     }
 
-    /* 🔗 LINK EXISTING USER (PHONE) */
+    /* 🔗 LINK BY PHONE */
     if (!user && phone) {
       const existingUser = await User.findOne({ phone });
 
       if (existingUser) {
-        console.log("🔗 Linking with existing PHONE user");
+        console.log("🔗 Linking PHONE user");
 
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
@@ -110,7 +100,7 @@ export const firebaseLogin = async (req, res) => {
       }
     }
 
-    /* ➕ CREATE NEW USER */
+    /* ➕ CREATE USER */
     if (!user) {
       console.log("🆕 Creating new user");
 
@@ -122,99 +112,81 @@ export const firebaseLogin = async (req, res) => {
         authProvider: "firebase",
         isVerified: true,
         name: "user" + Math.floor(Math.random() * 10000),
-        lastLogin: new Date()
+        lastLogin: new Date(),
       });
 
-      logger.info(`New Firebase user created: ${email || phone}`);
+      logger.info(`New Firebase user: ${email || phone}`);
     }
 
     /* 🚫 BLOCK CHECK */
     if (user.isBlocked) {
-      console.log("⛔ Blocked user");
-
       return res.status(403).json({
         success: false,
-        message: "Account blocked"
+        message: "Account blocked",
       });
     }
 
-    /* 🔄 UPDATE LOGIN TIME */
+    /* 🔄 UPDATE LOGIN */
     user.lastLogin = new Date();
     await user.save();
 
-    console.log("🔄 Updated last login");
-
-    /* 🎟 JWT TOKEN */
+    /* 🎟 JWT */
     const jwtToken = generateToken({
       id: user._id,
-      role: user.role
+      role: user.role,
     });
 
-    console.log("🎟 JWT GENERATED");
+    console.log("✅ LOGIN SUCCESS");
 
     return res.json({
       success: true,
       token: jwtToken,
-      user: safeUser(user)
+      user: safeUser(user),
     });
 
   } catch (error) {
-    console.error("💥 FIREBASE LOGIN FULL ERROR:", error);
+    console.error("💥 FIREBASE LOGIN ERROR:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Firebase login failed",
-      debug: error.message
-    });
+    // ✅ IMPORTANT FIX
+    return next(error);
   }
 };
 
 /* =====================================
    👤 GET CURRENT USER
 ===================================== */
-export const getMe = async (req, res) => {
+export const getMe = async (req, res, next) => {
   try {
-    console.log("👤 GET ME:", req.user?.id);
-
     const user = await User.findById(req.user.id).lean();
 
     if (!user) {
-      console.log("❌ User not found");
-
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     return res.json({
       success: true,
-      user: safeUser(user)
+      user: safeUser(user),
     });
 
   } catch (error) {
-    console.error("💥 GET ME ERROR:", error.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch user"
-    });
+    return next(error);
   }
 };
 
 /* =====================================
    🆕 SET USERNAME
 ===================================== */
-export const setUsername = async (req, res) => {
+export const setUsername = async (req, res, next) => {
   try {
-    console.log("✏️ Set username request:", req.body);
-
     let { name } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Username required"
+        message: "Username required",
       });
     }
 
@@ -223,14 +195,14 @@ export const setUsername = async (req, res) => {
     if (!/^[a-z0-9_]+$/.test(name)) {
       return res.status(400).json({
         success: false,
-        message: "Only lowercase letters, numbers & underscore allowed"
+        message: "Invalid username format",
       });
     }
 
     if (name.length < 3 || name.length > 20) {
       return res.status(400).json({
         success: false,
-        message: "Username must be 3–20 characters"
+        message: "Username must be 3–20 characters",
       });
     }
 
@@ -239,7 +211,7 @@ export const setUsername = async (req, res) => {
     if (existing && existing._id.toString() !== req.user.id) {
       return res.status(400).json({
         success: false,
-        message: "Username already taken"
+        message: "Username already taken",
       });
     }
 
@@ -248,37 +220,28 @@ export const setUsername = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     user.name = name;
     await user.save();
 
-    console.log("✅ Username updated:", name);
-
     return res.json({
       success: true,
-      user: safeUser(user)
+      user: safeUser(user),
     });
 
   } catch (error) {
-    console.error("💥 SET USERNAME ERROR:", error.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update username"
-    });
+    return next(error);
   }
 };
 
 /* =====================================
    🛠 ADMIN LOGIN
 ===================================== */
-export const adminLogin = async (req, res) => {
+export const adminLogin = async (req, res, next) => {
   try {
-    console.log("🔐 Admin login attempt:", req.body.email);
-
     const { email, password } = req.body;
 
     if (
@@ -287,31 +250,22 @@ export const adminLogin = async (req, res) => {
     ) {
       const token = generateToken({
         id: "admin",
-        role: "admin"
+        role: "admin",
       });
-
-      console.log("✅ Admin login success");
 
       return res.json({
         success: true,
         admin: true,
-        token
+        token,
       });
     }
 
-    console.log("❌ Invalid admin credentials");
-
     return res.status(401).json({
       success: false,
-      message: "Invalid admin credentials"
+      message: "Invalid admin credentials",
     });
 
   } catch (error) {
-    console.error("💥 ADMIN LOGIN ERROR:", error.message);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server Error"
-    });
+    return next(error);
   }
 };
