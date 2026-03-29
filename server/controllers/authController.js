@@ -17,13 +17,13 @@ const safeUser = (user) => ({
 });
 
 /* =====================================
-   🔥 FIREBASE LOGIN (FINAL FIXED)
+   🔥 FIREBASE LOGIN (FINAL STABLE)
 ===================================== */
 export const firebaseLogin = async (req, res, next) => {
   try {
     const { token } = req.body;
 
-    console.log("📥 Incoming token:", token ? "Present ✅" : "Missing ❌");
+    console.log("📥 Token:", token ? "YES" : "NO");
 
     if (!token) {
       return res.status(400).json({
@@ -32,34 +32,26 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    console.log("🔥 Admin apps count:", admin.apps.length);
-
-    /* 🔐 VERIFY FIREBASE TOKEN */
+    /* 🔐 VERIFY TOKEN */
     let decoded;
     try {
       decoded = await admin.auth().verifyIdToken(token, true);
-      console.log("✅ TOKEN VERIFIED");
+      console.log("✅ Firebase verified");
     } catch (err) {
-      console.error("❌ TOKEN VERIFY FAILED:", err.message);
+      console.error("❌ Firebase verify failed:", err.message);
 
       return res.status(401).json({
         success: false,
         message: "Invalid Firebase token",
-        debug: err.message,
       });
     }
 
-    /* 🔍 EXTRACT DATA */
+    /* 🔍 DATA */
     let email = decoded.email || null;
     let phone = decoded.phone_number || null;
     const firebaseId = decoded.uid;
     const avatar = decoded.picture || "";
 
-    console.log("👤 UID:", firebaseId);
-    console.log("📧 Email:", email);
-    console.log("📱 Phone:", phone);
-
-    /* 📱 NORMALIZE PHONE */
     if (phone) {
       phone = phone.replace(/\D/g, "").slice(-10);
     }
@@ -67,12 +59,12 @@ export const firebaseLogin = async (req, res, next) => {
     /* 🔍 FIND USER */
     let user = await User.findOne({ firebaseId });
 
-    /* 🔗 LINK BY EMAIL */
+    /* 🔗 LINK EMAIL */
     if (!user && email) {
       const existingUser = await User.findOne({ email });
 
       if (existingUser) {
-        console.log("🔗 Linking EMAIL user");
+        console.log("🔗 Linking EMAIL");
 
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
@@ -80,29 +72,31 @@ export const firebaseLogin = async (req, res, next) => {
         existingUser.isVerified = true;
         existingUser.lastLogin = new Date();
 
-        user = await existingUser.save();
+        await existingUser.save();     // ✅ FIX
+        user = existingUser;
       }
     }
 
-    /* 🔗 LINK BY PHONE */
+    /* 🔗 LINK PHONE */
     if (!user && phone) {
       const existingUser = await User.findOne({ phone });
 
       if (existingUser) {
-        console.log("🔗 Linking PHONE user");
+        console.log("🔗 Linking PHONE");
 
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
         existingUser.isVerified = true;
         existingUser.lastLogin = new Date();
 
-        user = await existingUser.save();
+        await existingUser.save();     // ✅ FIX
+        user = existingUser;
       }
     }
 
     /* ➕ CREATE USER */
     if (!user) {
-      console.log("🆕 Creating new user");
+      console.log("🆕 Creating user");
 
       user = await User.create({
         firebaseId,
@@ -118,7 +112,7 @@ export const firebaseLogin = async (req, res, next) => {
       logger.info(`New Firebase user: ${email || phone}`);
     }
 
-    /* 🚫 BLOCK CHECK */
+    /* 🚫 BLOCK */
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
@@ -126,9 +120,11 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔄 UPDATE LOGIN */
-    user.lastLogin = new Date();
-    await user.save();
+    /* 🔄 UPDATE LOGIN (SAFE WAY) */
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
 
     /* 🎟 JWT */
     const jwtToken = generateToken({
@@ -147,8 +143,7 @@ export const firebaseLogin = async (req, res, next) => {
   } catch (error) {
     console.error("💥 FIREBASE LOGIN ERROR:", error);
 
-    // ✅ IMPORTANT FIX
-    return next(error);
+    return next(error); // ✅ correct error flow
   }
 };
 
