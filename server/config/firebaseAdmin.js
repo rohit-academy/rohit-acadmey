@@ -16,6 +16,10 @@ try {
     );
   }
 
+  /* 🔥 DEBUG */
+  console.log("🔥 NODE_ENV:", process.env.NODE_ENV);
+  console.log("🔥 FIREBASE PROJECT:", serviceAccount.project_id);
+
   if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
