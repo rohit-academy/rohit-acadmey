@@ -4,30 +4,49 @@ import fs from "fs";
 let serviceAccount;
 
 try {
-  if (process.env.NODE_ENV === "production") {
-    // 🔥 Render Secret File
-    serviceAccount = JSON.parse(
-      fs.readFileSync("/etc/secrets/serviceAccount.json", "utf8")
-    );
+  console.log("🔥 NODE_ENV:", process.env.NODE_ENV);
+
+  /* =====================================
+     🔥 LOAD SERVICE ACCOUNT
+  ===================================== */
+
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // ✅ BEST (ENV METHOD)
+    console.log("📦 Using ENV Firebase Config");
+
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
   } else {
-    // 💻 Local Development
-    serviceAccount = JSON.parse(
-      fs.readFileSync("./config/serviceAccount.json", "utf8")
-    );
+    // 📁 FILE METHOD
+    const filePath =
+      process.env.NODE_ENV === "production"
+        ? "/etc/secrets/serviceAccount.json"
+        : "./config/serviceAccount.json";
+
+    console.log("📂 Reading file from:", filePath);
+
+    const fileData = fs.readFileSync(filePath, "utf8");
+    serviceAccount = JSON.parse(fileData);
+
+    console.log("✅ File loaded successfully");
   }
 
-  /* 🔥 DEBUG */
-  console.log("🔥 NODE_ENV:", process.env.NODE_ENV);
   console.log("🔥 FIREBASE PROJECT:", serviceAccount.project_id);
+
+  /* =====================================
+     🚀 INIT FIREBASE ADMIN
+  ===================================== */
 
   if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+
+    console.log("🚀 Firebase Admin Initialized");
   }
 
 } catch (error) {
-  console.error("🔥 Firebase Admin Init Error:", error.message);
+  console.error("🔥 Firebase Admin Init Error FULL:", error);
 }
 
 export default admin;
