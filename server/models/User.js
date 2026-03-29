@@ -5,18 +5,13 @@ const userSchema = new mongoose.Schema(
     /* 🔥 FIREBASE UID */
     firebaseId: {
       type: String,
-      unique: true,
-      sparse: true,
-      index: true,
-      trim: true
+      trim: true,
+      default: undefined
     },
 
-    /* 📱 PHONE (10 DIGITS ONLY) */
+    /* 📱 PHONE */
     phone: {
       type: String,
-      unique: true,
-      sparse: true,
-      index: true,
       match: [/^[6-9]\d{9}$/, "Invalid phone number"],
       default: undefined
     },
@@ -24,19 +19,14 @@ const userSchema = new mongoose.Schema(
     /* 📧 EMAIL */
     email: {
       type: String,
-      unique: true,
-      sparse: true,
       lowercase: true,
       trim: true,
-      index: true,
       default: undefined
     },
 
-    /* 👤 USERNAME (UNIQUE HANDLE) */
+    /* 👤 USERNAME */
     username: {
       type: String,
-      unique: true,
-      sparse: true,
       lowercase: true,
       trim: true,
       minlength: 3,
@@ -69,8 +59,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["user", "admin"],
-      default: "user",
-      index: true
+      default: "user"
     },
 
     /* ✅ VERIFIED */
@@ -82,8 +71,7 @@ const userSchema = new mongoose.Schema(
     /* 🚫 BLOCK */
     isBlocked: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     },
 
     /* 🕒 LAST LOGIN */
@@ -98,7 +86,7 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 SAFE INDEXES
+   🔥 SAFE INDEXES (ONLY HERE)
 ===================================== */
 
 userSchema.index(
@@ -122,9 +110,9 @@ userSchema.index(
 );
 
 /* =====================================
-   🔥 PRE SAVE CLEANUP
+   🔥 PRE SAVE CLEANUP (FIXED)
 ===================================== */
-userSchema.pre("save", function (next) {
+userSchema.pre("save", function () {
 
   /* 🔹 USERNAME CLEAN */
   if (this.username) {
@@ -135,12 +123,11 @@ userSchema.pre("save", function (next) {
       .replace(/[^a-z0-9_]/g, "");
   }
 
-  /* 🔹 PHONE CLEAN (+91 REMOVE) */
+  /* 🔹 PHONE CLEAN */
   if (this.phone) {
     this.phone = this.phone.replace(/\D/g, "").slice(-10);
   }
 
-  next();
 });
 
 /* =====================================
