@@ -21,5 +21,8 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Uploads (agar server me files upload karoge)
+# Uploads
 uploads/
+
+# 🔥 Firebase Admin Secret
+server/config/serviceAccount.json

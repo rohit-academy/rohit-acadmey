@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import { Phone, Chrome, ArrowLeft } from "lucide-react";
+import { Phone, ArrowLeft } from "lucide-react";
 
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import { auth } from "../../config/firebase";
@@ -68,12 +68,10 @@ function Login() {
         appVerifier
       );
 
-      // 🔥 Save globally for VerifyOtp page
       window.confirmationResult = confirmationResult;
 
       setOtpRequests((p) => p + 1);
 
-      /* 🔥 REDIRECT TO VERIFY PAGE */
       navigate("/verify-otp", {
         state: {
           phone: "+91" + cleanPhone,
@@ -86,12 +84,6 @@ function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  /* 🔵 GOOGLE LOGIN */
-  const handleGoogleLogin = () => {
-    const API_URL = import.meta.env.VITE_API_URL;
-    window.location.href = `${API_URL}/auth/google`;
   };
 
   return (
@@ -127,18 +119,10 @@ function Login() {
 
             <button
               onClick={() => setStep("phone")}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl mb-4"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl"
             >
               <Phone size={18} />
               Continue with Phone
-            </button>
-
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl"
-            >
-              <Chrome size={18} />
-              Continue with Google
             </button>
 
           </div>
@@ -174,7 +158,6 @@ function Login() {
 
             </form>
 
-            {/* 🔥 REQUIRED FOR FIREBASE */}
             <div id="recaptcha-container"></div>
 
           </div>
