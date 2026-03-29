@@ -1,22 +1,20 @@
 import rateLimit from "express-rate-limit";
 
 /* =====================================
-   📲 OTP RATE LIMITER (PHONE BASED)
+   📲 OTP RATE LIMITER
 ===================================== */
 export const otpLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 min
-  max: 3, // 🔥 stricter
+  windowMs: 60 * 1000,
+  max: 3,
   standardHeaders: true,
   legacyHeaders: false,
 
-  /* 🔥 KEY: PHONE BASED */
   keyGenerator: (req) => {
-    const phone = req.body.phone || req.ip;
-    return phone;
+    return req.body?.phone || req.ip; // ✅ safe
   },
 
   handler: (req, res) => {
-    res.status(429).json({
+    return res.status(429).json({
       success: false,
       message: "Too many OTP requests. Try again in 1 minute."
     });
@@ -24,7 +22,7 @@ export const otpLimiter = rateLimit({
 });
 
 /* =====================================
-   🔐 AUTH RATE LIMITER (IP + USER)
+   🔐 AUTH RATE LIMITER (FIXED)
 ===================================== */
 export const authLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -33,11 +31,16 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
 
   keyGenerator: (req) => {
-    return req.body.phone || req.body.email || req.ip;
+    return (
+      req.body?.phone ||
+      req.body?.email ||
+      req.ip ||          // ✅ fallback
+      "anonymous"        // ✅ ultimate fallback
+    );
   },
 
   handler: (req, res) => {
-    res.status(429).json({
+    return res.status(429).json({
       success: false,
       message: "Too many requests. Please slow down."
     });
