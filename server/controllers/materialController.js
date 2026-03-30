@@ -43,9 +43,6 @@ export const addMaterial = async (req, res, next) => {
       throw new Error("Required fields missing");
     }
 
-    if (price < 0) throw new Error("Invalid price");
-    if (!pdfFile) throw new Error("PDF required");
-
     const [cls, sub] = await Promise.all([
       Class.findById(classId),
       Subject.findById(subjectId)
@@ -53,13 +50,12 @@ export const addMaterial = async (req, res, next) => {
 
     if (!cls || !sub) throw new Error("Invalid class/subject");
 
-    const tempName = Date.now() + "-" + Math.random();
-    const tempPdfPath = path.join("uploads", `${tempName}.pdf`);
+    const tempPath = path.join("uploads", Date.now() + ".pdf");
 
     await fs.mkdir("uploads", { recursive: true });
-    await fs.writeFile(tempPdfPath, pdfFile.buffer);
+    await fs.writeFile(tempPath, pdfFile.buffer);
 
-    await generatePreview(tempPdfPath, "uploads");
+    await generatePreview(tempPath, "uploads");
 
     const pdf = await uploadPDFToCloudinary(pdfFile.buffer);
 
@@ -67,22 +63,17 @@ export const addMaterial = async (req, res, next) => {
 
     for (let i = 1; i <= 2; i++) {
       const file = `uploads/preview-${i}.jpg`;
-
       try {
         await fs.access(file);
-
-        const resUpload = await cloudinary.uploader.upload(file, {
+        const up = await cloudinary.uploader.upload(file, {
           folder: "materials/previews"
         });
-
-        previews.push(resUpload.secure_url);
+        previews.push(up.secure_url);
         await fs.unlink(file);
-
       } catch {}
     }
 
     let thumb = "";
-
     if (thumbnailFile) {
       const t = await uploadImageToCloudinary(
         thumbnailFile.buffer,
@@ -92,7 +83,7 @@ export const addMaterial = async (req, res, next) => {
     }
 
     const material = await Material.create({
-      title: title.trim(),
+      title,
       classId,
       subjectId,
       type,
@@ -103,27 +94,58 @@ export const addMaterial = async (req, res, next) => {
       previewImages: previews
     });
 
-    await fs.unlink(tempPdfPath);
+    await fs.unlink(tempPath);
 
-    logger.info(`Material added: ${material.title}`);
-
-    res.status(201).json({
-      success: true,
-      data: material
-    });
+    res.status(201).json({ success: true, data: material });
 
   } catch (err) {
-    logger.error(err.message);
     next(err);
   }
 };
 
 /* =====================================
-   📄 GET ALL MATERIALS
+   📄 GET FILTERED MATERIALS (🔥 FIXED)
+===================================== */
+export const getMaterialsByClassSubject = async (req, res, next) => {
+  try {
+    const { classId, subjectId } = req.params;
+
+    console.log("🔥 FILTER:", classId, subjectId);
+
+    if (!classId || !subjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "classId & subjectId required"
+      });
+    }
+
+    const materials = await Material.find({
+      classId,
+      subjectId,
+      isActive: true
+    })
+      .populate("classId", "name")
+      .populate("subjectId", "name")
+      .sort({ createdAt: -1 });
+
+    console.log("📦 FOUND:", materials.length);
+
+    res.json({
+      success: true,
+      data: materials
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
+   📄 GET ALL MATERIALS (ADMIN)
 ===================================== */
 export const getMaterials = async (req, res, next) => {
   try {
-    const materials = await Material.find({ isActive: true })
+    const materials = await Material.find()
       .populate("classId", "name")
       .populate("subjectId", "name")
       .sort({ createdAt: -1 });
@@ -136,7 +158,7 @@ export const getMaterials = async (req, res, next) => {
 };
 
 /* =====================================
-   🔍 GET SINGLE MATERIAL ✅ FIXED
+   🔍 GET SINGLE MATERIAL
 ===================================== */
 export const getMaterialById = async (req, res, next) => {
   try {
@@ -151,108 +173,7 @@ export const getMaterialById = async (req, res, next) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: material
-    });
-
-  } catch (err) {
-    next(err);
-  }
-};
-
-/* =====================================
-   ✏ UPDATE MATERIAL
-===================================== */
-export const updateMaterial = async (req, res, next) => {
-  try {
-    const material = await Material.findById(req.params.id);
-
-    if (!material) throw new Error("Material not found");
-
-    const { title, price, description, isActive } = req.body;
-
-    if (title) material.title = title.trim();
-    if (price !== undefined && price >= 0) material.price = price;
-    if (description !== undefined) material.description = description;
-    if (isActive !== undefined) material.isActive = isActive;
-
-    await material.save();
-
     res.json({ success: true, data: material });
-
-  } catch (err) {
-    next(err);
-  }
-};
-
-/* =====================================
-   ❌ DELETE MATERIAL (FIXED)
-===================================== */
-export const deleteMaterial = async (req, res, next) => {
-  try {
-    const material = await Material.findById(req.params.id);
-
-    if (!material) throw new Error("Material not found");
-
-    if (material.cloudinaryId) {
-      await cloudinary.uploader.destroy(material.cloudinaryId, {
-        resource_type: "raw"
-      });
-    }
-
-    /* ✅ FIXED PREVIEW DELETE */
-    for (const url of material.previewImages || []) {
-      try {
-        const publicId = url
-          .split("/")
-          .slice(-2)
-          .join("/")
-          .split(".")[0];
-
-        await cloudinary.uploader.destroy(publicId);
-
-      } catch {}
-    }
-
-    await material.deleteOne();
-
-    res.json({
-      success: true,
-      message: "Deleted successfully"
-    });
-
-  } catch (err) {
-    next(err);
-  }
-};
-
-/* =====================================
-   🔁 TOGGLE MATERIAL STATUS ✅ FIX
-===================================== */
-export const toggleMaterialStatus = async (req, res, next) => {
-  try {
-    const material = await Material.findById(req.params.id);
-
-    if (!material) {
-      return res.status(404).json({
-        success: false,
-        message: "Material not found"
-      });
-    }
-
-    // 🔁 Toggle active/inactive
-    material.isActive = !material.isActive;
-
-    await material.save();
-
-    res.json({
-      success: true,
-      message: `Material ${
-        material.isActive ? "activated" : "disabled"
-      }`,
-      data: material
-    });
 
   } catch (err) {
     next(err);

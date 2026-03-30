@@ -5,7 +5,8 @@ import {
   getMaterialById,
   updateMaterial,
   deleteMaterial,
-  toggleMaterialStatus // 🔥 move logic to controller
+  toggleMaterialStatus,
+  getMaterialsByClassSubject // 🔥 NEW
 } from "../controllers/materialController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -18,11 +19,15 @@ const router = express.Router();
    🌍 PUBLIC ROUTES
 ===================================== */
 
+/* 🔥 FILTERED MATERIALS (MOST IMPORTANT) */
+router.get("/:classId/:subjectId", getMaterialsByClassSubject);
+
 /* 📄 Get all materials */
 router.get("/", getMaterials);
 
 /* 🔍 Get single material */
 router.get("/:id", getMaterialById);
+
 
 /* =====================================
    🔐 ADMIN ROUTES
