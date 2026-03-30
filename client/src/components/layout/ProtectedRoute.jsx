@@ -1,19 +1,19 @@
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import Loader from "../ui/Loader";
 
-function ProtectedRoute({ children, requiredRole }) {
+function ProtectedRoute({ requiredRole }) {
 
   const { user, loading } = useAuth();
   const location = useLocation();
 
   /* =====================================
-     ⏳ LOADING (CENTERED UI)
+     ⏳ LOADING
   ===================================== */
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
+      <div className="flex justify-center items-center min-h-screen">
         <Loader text="Checking authentication..." />
       </div>
     );
@@ -23,25 +23,19 @@ function ProtectedRoute({ children, requiredRole }) {
      🔒 NOT LOGGED IN
   ===================================== */
   if (!user) {
-
-    // 🔥 prevent loop
-    if (location.pathname === "/login") {
-      return children;
-    }
-
     return (
       <Navigate
         to="/login"
         replace
         state={{
-          from: location.pathname + location.search // ✅ keep query params
+          from: location.pathname + location.search
         }}
       />
     );
   }
 
   /* =====================================
-     🚫 ROLE BASED ACCESS (OPTIONAL)
+     🚫 ROLE CHECK (OPTIONAL)
   ===================================== */
   if (requiredRole && user.role !== requiredRole) {
     return <Navigate to="/" replace />;
@@ -50,7 +44,7 @@ function ProtectedRoute({ children, requiredRole }) {
   /* =====================================
      ✅ AUTHORIZED
   ===================================== */
-  return children || null;
+  return <Outlet />;
 }
 
 export default React.memo(ProtectedRoute);
