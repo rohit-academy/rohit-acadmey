@@ -104,20 +104,11 @@ export const addMaterial = async (req, res, next) => {
 };
 
 /* =====================================
-   📄 GET FILTERED MATERIALS (🔥 FIXED)
+   📄 GET FILTERED MATERIALS
 ===================================== */
 export const getMaterialsByClassSubject = async (req, res, next) => {
   try {
     const { classId, subjectId } = req.params;
-
-    console.log("🔥 FILTER:", classId, subjectId);
-
-    if (!classId || !subjectId) {
-      return res.status(400).json({
-        success: false,
-        message: "classId & subjectId required"
-      });
-    }
 
     const materials = await Material.find({
       classId,
@@ -127,8 +118,6 @@ export const getMaterialsByClassSubject = async (req, res, next) => {
       .populate("classId", "name")
       .populate("subjectId", "name")
       .sort({ createdAt: -1 });
-
-    console.log("📦 FOUND:", materials.length);
 
     res.json({
       success: true,
@@ -141,7 +130,7 @@ export const getMaterialsByClassSubject = async (req, res, next) => {
 };
 
 /* =====================================
-   📄 GET ALL MATERIALS (ADMIN)
+   📄 GET ALL MATERIALS
 ===================================== */
 export const getMaterials = async (req, res, next) => {
   try {
@@ -174,6 +163,81 @@ export const getMaterialById = async (req, res, next) => {
     }
 
     res.json({ success: true, data: material });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
+   ✏ UPDATE MATERIAL
+===================================== */
+export const updateMaterial = async (req, res, next) => {
+  try {
+    const material = await Material.findById(req.params.id);
+
+    if (!material) throw new Error("Material not found");
+
+    const { title, price, description, isActive } = req.body;
+
+    if (title) material.title = title;
+    if (price !== undefined) material.price = price;
+    if (description !== undefined) material.description = description;
+    if (isActive !== undefined) material.isActive = isActive;
+
+    await material.save();
+
+    res.json({ success: true, data: material });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
+   ❌ DELETE MATERIAL
+===================================== */
+export const deleteMaterial = async (req, res, next) => {
+  try {
+    const material = await Material.findById(req.params.id);
+
+    if (!material) throw new Error("Material not found");
+
+    if (material.cloudinaryId) {
+      await cloudinary.uploader.destroy(material.cloudinaryId, {
+        resource_type: "raw"
+      });
+    }
+
+    await material.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Deleted successfully"
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
+   🔁 TOGGLE STATUS
+===================================== */
+export const toggleMaterialStatus = async (req, res, next) => {
+  try {
+    const material = await Material.findById(req.params.id);
+
+    if (!material) throw new Error("Material not found");
+
+    material.isActive = !material.isActive;
+
+    await material.save();
+
+    res.json({
+      success: true,
+      data: material
+    });
 
   } catch (err) {
     next(err);
