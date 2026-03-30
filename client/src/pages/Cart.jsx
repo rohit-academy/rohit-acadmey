@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
@@ -7,22 +7,41 @@ import { useAuth } from "../context/AuthContext";
 function Cart() {
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const {
-    cartItems,
+    cartItems = [],
     removeFromCart,
     clearCart,
-    total
+    total = 0
   } = useCart();
 
-  const formatPrice = (price) =>
-    `₹${(price || 0).toLocaleString("en-IN")}`;
+  const formatPrice = (price = 0) =>
+    `₹${Number(price).toLocaleString("en-IN")}`;
 
-  /* 🔥 SAFE ITEMS */
-  const validItems = cartItems.filter(item => item && (item._id || item.id));
+  /* =====================================
+     🔥 SAFE ITEMS (MEMOIZED)
+  ===================================== */
+  const validItems = useMemo(() => {
+    return cartItems.filter(
+      (item) => item && (item._id || item.id)
+    );
+  }, [cartItems]);
 
-  /* ================= EMPTY ================= */
+  /* =====================================
+     ⏳ LOADING STATE
+  ===================================== */
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  /* =====================================
+     🛒 EMPTY STATE
+  ===================================== */
   if (validItems.length === 0) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4">
@@ -54,24 +73,56 @@ function Cart() {
     );
   }
 
-  /* 🔐 CHECKOUT HANDLER */
+  /* =====================================
+     🔐 CHECKOUT HANDLER
+  ===================================== */
   const handleCheckout = () => {
+
     if (!user) {
       navigate("/login");
       return;
     }
+
+    if (validItems.length === 0) {
+      navigate("/cart");
+      return;
+    }
+
     navigate("/checkout");
   };
 
-  /* ❌ REMOVE WITH CONFIRM */
+  /* =====================================
+     ❌ REMOVE ITEM
+  ===================================== */
   const handleRemove = (id) => {
+
     const confirmDelete = window.confirm("Remove this item?");
-    if (confirmDelete) {
-      removeFromCart(id);
-    }
+    if (!confirmDelete) return;
+
+    removeFromCart(id);
   };
 
-  /* ================= FILLED ================= */
+  /* =====================================
+     🧹 CLEAR CART SAFE
+  ===================================== */
+  const handleClearCart = () => {
+
+    const confirmClear = window.confirm("Clear entire cart?");
+    if (!confirmClear) return;
+
+    clearCart();
+  };
+
+  /* =====================================
+     💰 SAFE TOTAL
+  ===================================== */
+  const safeTotal = useMemo(() => {
+    return validItems.reduce(
+      (sum, item) => sum + (item.price || 0),
+      0
+    );
+  }, [validItems]);
+
   return (
 
     <div className="min-h-screen bg-slate-50 px-4 md:px-6 py-6">
@@ -153,21 +204,21 @@ function Cart() {
           <div className="flex justify-between mb-4 font-semibold text-lg">
             <span>Total</span>
             <span className="text-blue-600">
-              {formatPrice(total)}
+              {formatPrice(safeTotal)}
             </span>
           </div>
 
           {/* 🔥 CTA */}
           <button
             onClick={handleCheckout}
-            className="w-full text-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold mb-3"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold mb-3"
           >
             Proceed to Checkout
           </button>
 
-          {/* 🧹 CLEAR CART */}
+          {/* 🧹 CLEAR */}
           <button
-            onClick={clearCart}
+            onClick={handleClearCart}
             className="w-full text-sm text-red-500 hover:underline"
           >
             Clear Cart
@@ -178,9 +229,7 @@ function Cart() {
       </div>
 
     </div>
-
   );
-
 }
 
 export default Cart;

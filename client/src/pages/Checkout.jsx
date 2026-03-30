@@ -8,52 +8,59 @@ import API from "../services/api";
 function Checkout() {
 
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { cartItems, clearCart, total } = useCart();
+  const { user, loading } = useAuth();
+  const { cartItems = [], clearCart, total = 0 } = useCart();
 
   const [processing, setProcessing] = useState(false);
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
-  const formatPrice = (price) => `₹${price.toLocaleString("en-IN")}`;
+  const formatPrice = (price = 0) =>
+    `₹${Number(price).toLocaleString("en-IN")}`;
 
-  /* 🔄 LOAD RAZORPAY ONCE */
+  /* =====================================
+     🔄 LOAD RAZORPAY
+  ===================================== */
   useEffect(() => {
 
-    const loadScript = () => {
+    if (window.Razorpay) {
+      setSdkLoaded(true);
+      return;
+    }
 
-      if (window.Razorpay) {
-        setSdkLoaded(true);
-        return;
-      }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => setSdkLoaded(true);
+    script.onerror = () => setSdkLoaded(false);
 
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => setSdkLoaded(true);
-      script.onerror = () => setSdkLoaded(false);
-
-      document.body.appendChild(script);
-    };
-
-    loadScript();
+    document.body.appendChild(script);
 
   }, []);
 
-  /* 🔒 REDIRECT FIX */
+  /* =====================================
+     🔐 REDIRECT SAFE (AFTER LOAD)
+  ===================================== */
   useEffect(() => {
 
-    if (!user) navigate("/login");
+    if (loading) return;
+
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
     if (cartItems.length === 0) {
       navigate("/cart");
     }
 
-  }, [user, cartItems, navigate]);
+  }, [user, cartItems, loading, navigate]);
 
-  /* 💳 PAYMENT */
+  /* =====================================
+     💳 PAYMENT
+  ===================================== */
   const handlePayment = async () => {
 
     if (!sdkLoaded) {
-      alert("Payment system loading... try again");
+      alert("Payment system loading...");
       return;
     }
 
@@ -63,7 +70,6 @@ function Checkout() {
 
       setProcessing(true);
 
-      /* 🔥 ONLY SEND IDS (secure) */
       const orderRes = await API.post("/orders/create-order", {
         materials: cartItems.map((i) => i._id),
       });
@@ -79,7 +85,6 @@ function Checkout() {
         order_id: order.orderId,
 
         handler: async (response) => {
-
           try {
 
             await API.post("/orders/verify-payment", {
@@ -94,13 +99,10 @@ function Checkout() {
             console.error(err);
             alert("Payment verification failed");
           }
-
         },
 
         modal: {
-          ondismiss: () => {
-            setProcessing(false);
-          }
+          ondismiss: () => setProcessing(false)
         },
 
         prefill: {
@@ -114,10 +116,9 @@ function Checkout() {
 
       const rzp = new window.Razorpay(options);
 
-      /* ❌ PAYMENT FAILED */
-      rzp.on("payment.failed", function (response) {
-        console.error("Payment Failed:", response.error);
-        alert("Payment failed. Please try again.");
+      rzp.on("payment.failed", (res) => {
+        console.error(res);
+        alert("Payment failed");
         setProcessing(false);
       });
 
@@ -127,16 +128,44 @@ function Checkout() {
 
       console.error(err);
       alert(err.response?.data?.message || "Payment failed");
-
       setProcessing(false);
 
     }
-
   };
 
-  /* ⛔ BLOCK RENDER */
-  if (!user || cartItems.length === 0) return null;
+  /* =====================================
+     ⏳ GLOBAL LOADING
+  ===================================== */
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
+  /* =====================================
+     🛒 EMPTY STATE (SAFE UI)
+  ===================================== */
+  if (!cartItems.length) {
+    return (
+      <div className="text-center py-24">
+        <h2 className="text-xl font-semibold mb-3">
+          Your cart is empty
+        </h2>
+        <button
+          onClick={() => navigate("/classes")}
+          className="px-5 py-2 bg-blue-600 text-white rounded"
+        >
+          Browse Materials
+        </button>
+      </div>
+    );
+  }
+
+  /* =====================================
+     ✅ MAIN UI
+  ===================================== */
   return (
 
     <div className="min-h-screen bg-slate-50 py-8 px-4">
@@ -160,22 +189,19 @@ function Checkout() {
                   src={
                     item.thumbnail ||
                     item.previewImages?.[0] ||
-                    "https://via.placeholder.com/80x100?text=PDF"
+                    "https://via.placeholder.com/80x100"
                   }
                   alt={item.title}
                   className="w-16 h-20 object-cover rounded"
                 />
 
                 <div className="flex-1">
-
-                  <p className="font-medium line-clamp-2">
+                  <p className="font-medium">
                     {item.title}
                   </p>
-
                   <p className="text-sm text-gray-500">
                     {item.type}
                   </p>
-
                 </div>
 
                 <p className="font-semibold text-blue-600">
@@ -226,7 +252,7 @@ function Checkout() {
           <button
             onClick={handlePayment}
             disabled={processing}
-            className={`w-full py-3 rounded-lg text-white font-semibold transition ${
+            className={`w-full py-3 rounded-lg text-white font-semibold ${
               processing
                 ? "bg-gray-400"
                 : "bg-green-600 hover:bg-green-700"
@@ -240,9 +266,7 @@ function Checkout() {
       </div>
 
     </div>
-
   );
-
 }
 
 export default Checkout;

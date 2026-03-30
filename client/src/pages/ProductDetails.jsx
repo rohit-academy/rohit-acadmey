@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ShoppingCart, ArrowLeft, ShieldCheck } from "lucide-react";
 import Loader from "../components/ui/Loader";
@@ -11,20 +11,22 @@ function ProductDetails() {
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, cartItems } = useCart();
+
+  const { addToCart, cartItems = [] } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
-  /* 📦 FETCH PRODUCT */
+  /* =====================================
+     📦 FETCH PRODUCT
+  ===================================== */
   useEffect(() => {
 
     let isMounted = true;
 
     const fetchProduct = async () => {
-
       try {
 
         setLoading(true);
@@ -43,16 +45,12 @@ function ProductDetails() {
         if (!isMounted) return;
 
         console.error("Product fetch error:", err);
-
         setError("Failed to load product");
         setProduct(null);
 
       } finally {
-
         if (isMounted) setLoading(false);
-
       }
-
     };
 
     if (id) fetchProduct();
@@ -63,39 +61,61 @@ function ProductDetails() {
 
   }, [id]);
 
-  /* 🛒 CHECK ALREADY IN CART */
-  const isInCart = cartItems?.some(item => item._id === product?._id);
+  /* =====================================
+     🛒 CHECK IN CART (SAFE)
+  ===================================== */
+  const isInCart = useMemo(() => {
+    return cartItems.some(item => item?._id === product?._id);
+  }, [cartItems, product]);
 
-  /* 🛒 ADD TO CART */
+  /* =====================================
+     🛒 ADD TO CART
+  ===================================== */
   const handleAddToCart = async () => {
 
-    if (!product || adding) return;
+    if (!product) return;
 
-    setAdding(true);
+    /* 👉 already in cart → direct go */
+    if (isInCart) {
+      navigate("/cart");
+      return;
+    }
+
+    if (adding) return;
 
     try {
 
-      if (!isInCart) {
-        addToCart(product);
-      }
+      setAdding(true);
 
-      // 👉 better UX: delay + redirect
+      addToCart({
+        _id: product._id,
+        title: product.title,
+        price: product.price || 0,
+        thumbnail: product.thumbnail || "",
+        previewImages: product.previewImages || [],
+        type: product.type || ""
+      });
+
+      /* 👉 smooth redirect */
       setTimeout(() => {
         navigate("/cart");
-      }, 400);
+      }, 300);
 
     } catch (err) {
       console.error("Cart error:", err);
     } finally {
       setAdding(false);
     }
-
   };
 
-  /* ⏳ LOADING */
+  /* =====================================
+     ⏳ LOADING
+  ===================================== */
   if (loading) return <Loader />;
 
-  /* ❌ ERROR */
+  /* =====================================
+     ❌ ERROR
+  ===================================== */
   if (error) {
     return (
       <div className="text-center py-20">
@@ -113,7 +133,9 @@ function ProductDetails() {
     );
   }
 
-  /* ❌ NOT FOUND */
+  /* =====================================
+     ❌ NOT FOUND
+  ===================================== */
   if (!product) {
     return (
       <div className="text-center py-20">
@@ -132,6 +154,12 @@ function ProductDetails() {
       </div>
     );
   }
+
+  /* =====================================
+     💰 FORMAT PRICE
+  ===================================== */
+  const formatPrice = (price = 0) =>
+    `₹${Number(price).toLocaleString("en-IN")}`;
 
   return (
 
@@ -185,7 +213,7 @@ function ProductDetails() {
         <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6">
           <p className="text-sm text-gray-500">Price</p>
           <p className="text-3xl font-bold text-blue-600">
-            ₹{product.price}
+            {formatPrice(product.price)}
           </p>
         </div>
 
