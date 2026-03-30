@@ -1,11 +1,15 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { BookOpen, Sparkles } from "lucide-react";
 
 function SubjectCard({ subject, streamId, classId }) {
 
+  /* 🔥 FALLBACK (VERY IMPORTANT) */
+  const params = useParams();
+  const safeClassId = classId || params.classId;
+
   /* ❌ Safety */
-  if (!subject || !subject._id) return null;
+  if (!subject || !subject._id || !safeClassId) return null;
 
   /* 🎨 Theme */
   const streamTheme = {
@@ -37,7 +41,7 @@ function SubjectCard({ subject, streamId, classId }) {
   return (
 
     <Link
-      to={`/materials/${classId}/${subject._id}`}
+      to={`/materials/${safeClassId}/${subject._id}`} // ✅ FIXED
       aria-label={`Open ${subject.name} materials`}
       className={`
         group bg-white p-6 rounded-xl shadow-sm

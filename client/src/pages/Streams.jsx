@@ -8,7 +8,7 @@ function Streams() {
 
   /* 🔥 NORMALIZE */
   const validClasses = ["11", "12"];
-  const normalizedClass = String(classId).trim();
+  const normalizedClass = String(classId || "").trim();
 
   /* ❌ INVALID CLASS */
   if (!validClasses.includes(normalizedClass)) {
@@ -67,7 +67,7 @@ function Streams() {
 
           <Link
             key={stream.id}
-            to={`/subjects/${normalizedClass}/${stream.id}`}
+            to={`/subjects/${normalizedClass}/${stream.id}`} // ✅ FIXED (SAFE)
             className={`
               p-6 rounded-xl border ${stream.border}
               shadow-sm flex flex-col items-center text-center gap-3

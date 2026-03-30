@@ -47,11 +47,11 @@ function AppRoutes() {
   const { user, loading } = useAuth();
 
   /* =====================================
-     ⏳ GLOBAL LOADER (VERY IMPORTANT 🔥)
+     ⏳ GLOBAL LOADER
   ===================================== */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full"></div>
       </div>
     );
@@ -74,18 +74,23 @@ function AppRoutes() {
 
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🔥 CALLBACK */}
+      {/* 🔥 PAYMENT / LOGIN CALLBACK */}
       <Route path="/success" element={<Success />} />
 
       {/* ================= USER ================= */}
       <Route element={<UserLayout />}>
 
         <Route index element={<Home />} />
+
         <Route path="/classes" element={<Classes />} />
+
+        {/* 🔥 FLOW: Class → Stream */}
         <Route path="/streams/:classId" element={<Streams />} />
 
+        {/* 🔥 FLOW: Class → Subject */}
         <Route path="/subjects/:classId/:streamId?" element={<Subjects />} />
 
+        {/* 🔥 FINAL FIXED ROUTE */}
         <Route
           path="/materials/:classId/:subjectId"
           element={<StudyMaterials />}
@@ -108,6 +113,7 @@ function AppRoutes() {
 
       {/* ================= ADMIN ================= */}
       <Route path="/admin" element={<AdminRoute />}>
+
         <Route element={<AdminLayout />}>
 
           <Route index element={<AdminDashboard />} />
@@ -126,6 +132,7 @@ function AppRoutes() {
           <Route path="sales-report" element={<SalesReport />} />
 
         </Route>
+
       </Route>
 
       {/* ================= FALLBACK ================= */}

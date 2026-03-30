@@ -22,16 +22,27 @@ function StudyMaterials() {
 
       try {
 
+        /* 🔥 SAFETY */
+        if (!classId || !subjectId) {
+          setError("Invalid route");
+          return;
+        }
+
         setLoading(true);
         setError("");
 
+        console.log("📦 FETCH:", classId, subjectId);
+
+        /* ✅ FINAL FIX */
         const res = await API.get(
-          `/materials?classId=${classId}&subjectId=${subjectId}`
+          `/materials/${classId}/${subjectId}`
         );
 
         if (!isMounted) return;
 
         const list = res.data?.data || [];
+
+        console.log("📦 MATERIALS:", list);
 
         setMaterials(list);
 
@@ -39,7 +50,7 @@ function StudyMaterials() {
 
         if (!isMounted) return;
 
-        console.error("Materials fetch error:", error);
+        console.error("❌ Materials fetch error:", error);
 
         setError("Failed to load materials");
         setMaterials([]);
@@ -52,10 +63,10 @@ function StudyMaterials() {
 
     };
 
-    if (classId && subjectId) fetchMaterials();
+    fetchMaterials();
 
     return () => {
-      isMounted = false; // 🔥 prevent memory leak
+      isMounted = false;
     };
 
   }, [classId, subjectId]);

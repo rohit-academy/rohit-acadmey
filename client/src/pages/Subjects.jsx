@@ -46,9 +46,11 @@ function Subjects() {
 
     const fetchSubjects = async () => {
       try {
-
         setLoading(true);
         setError("");
+
+        /* 🔥 SAFETY CHECK */
+        if (!classId) return;
 
         let url = `/subjects?classId=${classId}`;
 
@@ -79,14 +81,13 @@ function Subjects() {
       }
     };
 
-    if (classId) fetchSubjects();
+    fetchSubjects();
 
     return () => {
-      isMounted = false; // 🔥 prevent memory leak
+      isMounted = false;
     };
 
   }, [classId, normalizedStream]);
-
 
   /* 🎨 STREAM UI */
 
@@ -101,7 +102,6 @@ function Subjects() {
     pcm: "bg-blue-100 text-blue-700",
     arts: "bg-pink-100 text-pink-700"
   };
-
 
   /* ⏳ LOADING */
 
@@ -180,6 +180,7 @@ function Subjects() {
           <SubjectCard
             key={subject._id}
             subject={subject}
+            classId={classId} // ✅ FIXED (IMPORTANT)
             streamId={normalizedStream}
           />
         ))}
