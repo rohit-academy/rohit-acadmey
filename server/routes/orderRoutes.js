@@ -10,24 +10,43 @@ import authMiddleware from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 /* =====================================
-   🔐 PROTECTED ROUTES
+   🔐 PROTECTED ROUTES (USER REQUIRED)
 ===================================== */
-router.use(authMiddleware);
 
-/* 💳 CREATE ORDER (user required) */
-router.post("/create-order", createOrder);
+/* 💳 CREATE ORDER */
+router.post("/create-order", authMiddleware, createOrder);
 
-/* 📥 GET PURCHASES */
-router.get("/my-materials", getMyPurchases);
+/* ✅ VERIFY PAYMENT (SECURED) */
+router.post("/verify-payment", authMiddleware, verifyPayment);
+
+/* 📥 GET MY PURCHASES */
+router.get("/my-materials", authMiddleware, getMyPurchases);
+
 
 /* =====================================
-   🌐 PUBLIC / SPECIAL ROUTES
+   🔔 OPTIONAL WEBHOOK (FUTURE USE)
 ===================================== */
 
-/* ✅ VERIFY PAYMENT (no auth for flexibility) */
-router.post("/verify", verifyPayment);
+/*
+import { razorpayWebhook } from "../controllers/orderController.js";
 
-/* 🔔 OPTIONAL WEBHOOK */
-// router.post("/webhook", razorpayWebhook);
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  razorpayWebhook
+);
+*/
+
+
+/* =====================================
+   🛠 FUTURE ADMIN ROUTES (OPTIONAL)
+===================================== */
+
+/*
+import { adminOnly } from "../middleware/adminMiddleware.js";
+
+router.get("/all-orders", authMiddleware, adminOnly, getAllOrders);
+router.patch("/:id/status", authMiddleware, adminOnly, updateOrderStatus);
+*/
 
 export default router;

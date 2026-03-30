@@ -21,12 +21,17 @@ import adminRoutes from "./routes/adminRoutes.js";
 const app = express();
 
 /* =====================================
+   🔐 TRUST PROXY (RENDER / VERCEL FIX)
+===================================== */
+app.set("trust proxy", 1);
+
+/* =====================================
    🔐 SECURITY
 ===================================== */
 app.use(helmet());
 
 /* =====================================
-   🌍 CORS (FINAL FIX)
+   🌍 CORS (UPGRADED 🔥)
 ===================================== */
 const allowedOrigins = [
   "https://rohitacademy.net",
@@ -39,11 +44,16 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
+      // ✅ Allow Vercel preview URLs
+      if (origin.includes(".vercel.app")) {
+        return callback(null, true);
+      }
+
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      console.log("❌ Blocked by CORS:", origin);
+      console.warn("❌ CORS Blocked:", origin);
       return callback(new Error("CORS blocked"));
     },
     credentials: true,
@@ -51,12 +61,14 @@ app.use(
 );
 
 /* =====================================
-   🚦 GLOBAL RATE LIMIT
+   🚦 RATE LIMIT (SMART)
 ===================================== */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
+  message: "Too many requests, try later",
 });
+
 app.use("/api", limiter);
 
 /* =====================================
@@ -67,21 +79,21 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 /* =====================================
-   ⚠️ WEBHOOK (RAW FIRST)
+   ⚠️ RAZORPAY WEBHOOK (RAW BODY FIRST)
 ===================================== */
 app.post(
   "/api/webhook/razorpay",
   express.raw({ type: "application/json" }),
   (req, res) => {
-    console.log("🔔 Razorpay Webhook Hit");
-    res.status(200).json({ status: "ok" });
+    console.log("🔔 Razorpay Webhook Received");
+    res.status(200).json({ success: true });
   }
 );
 
 /* =====================================
    📦 BODY PARSER
 ===================================== */
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 /* =====================================
@@ -111,6 +123,8 @@ app.use("/api/admin", adminRoutes);
    ❌ 404 HANDLER
 ===================================== */
 app.use((req, res) => {
+  console.warn("❌ 404:", req.originalUrl);
+
   res.status(404).json({
     success: false,
     message: "Route Not Found",
@@ -118,8 +132,15 @@ app.use((req, res) => {
 });
 
 /* =====================================
-   🔥 ERROR HANDLER
+   🔥 GLOBAL ERROR HANDLER
 ===================================== */
-app.use(errorMiddleware);
+app.use((err, req, res, next) => {
+  console.error("💥 ERROR:", err.message);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
 
 export default app;

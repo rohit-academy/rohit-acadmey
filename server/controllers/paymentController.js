@@ -4,8 +4,12 @@ import Order from "../models/Order.js";
 import Material from "../models/Material.js";
 
 /* =====================================
-   🔹 RAZORPAY INSTANCE
+   🔹 RAZORPAY INSTANCE (SAFE)
 ===================================== */
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.warn("⚠️ Razorpay keys missing");
+}
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -16,10 +20,17 @@ const razorpay = new Razorpay({
 ===================================== */
 export const createOrder = async (req, res) => {
   try {
-    const { materials } = req.body;
     const userId = req.user?.id;
+    const { materials } = req.body;
 
-    if (!materials?.length) {
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    if (!Array.isArray(materials) || materials.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Materials required"
@@ -32,83 +43,106 @@ export const createOrder = async (req, res) => {
       isActive: true
     });
 
-    if (!materialDocs.length) {
+    if (materialDocs.length !== materials.length) {
       return res.status(400).json({
         success: false,
         message: "Invalid materials"
       });
     }
 
-    /* ❌ CHECK ALREADY PURCHASED */
-    const existing = await Order.findOne({
+    /* ❌ STRICT DUPLICATE CHECK */
+    const purchased = await Order.find({
       user: userId,
-      materials: { $in: materials },
       status: "paid"
     });
 
-    if (existing) {
+    const purchasedIds = new Set(
+      purchased.flatMap(o => o.materials.map(id => id.toString()))
+    );
+
+    const alreadyOwned = materials.filter(id =>
+      purchasedIds.has(id.toString())
+    );
+
+    if (alreadyOwned.length) {
       return res.status(400).json({
         success: false,
-        message: "You already purchased this material"
+        message: "Some materials already purchased"
       });
     }
 
-    /* 💰 CALCULATE AMOUNT */
+    /* 💰 CALCULATE TOTAL */
     const totalAmount = materialDocs.reduce(
       (sum, m) => sum + (m.price || 0),
       0
     );
 
+    if (totalAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount"
+      });
+    }
+
     /* 🧾 CREATE RAZORPAY ORDER */
     const razorpayOrder = await razorpay.orders.create({
       amount: Math.round(totalAmount * 100),
       currency: "INR",
-      receipt: `rcpt_${Date.now()}`
+      receipt: `rcpt_${Date.now()}`,
     });
 
-    /* 💾 SAVE PENDING ORDER */
-    await Order.create({
+    /* 💾 SAVE ORDER (PENDING) */
+    const order = await Order.create({
       user: userId,
       materials,
       amount: totalAmount,
       razorpay_order_id: razorpayOrder.id,
-      status: "pending"
+      status: "pending",
     });
 
-    res.json({
+    return res.json({
       success: true,
       orderId: razorpayOrder.id,
-      amount: totalAmount,
-      currency: "INR"
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      dbOrderId: order._id
     });
 
   } catch (error) {
-    console.error("Create Order Error:", error.message);
+    console.error("💥 CREATE ORDER ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Order creation failed"
     });
   }
 };
 
+
 /* =====================================
    🔐 VERIFY PAYMENT
 ===================================== */
 export const verifyPayment = async (req, res) => {
   try {
+    const userId = req.user?.id;
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature
     } = req.body;
 
-    const userId = req.user?.id;
-
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized"
+      });
+    }
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment data missing"
       });
     }
 
@@ -140,12 +174,29 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    /* ❌ DUPLICATE PAYMENT CHECK */
-    if (order.razorpay_payment_id) {
+    /* 🔁 ALREADY VERIFIED */
+    if (order.status === "paid") {
       return res.json({
         success: true,
         message: "Already verified",
         order
+      });
+    }
+
+    /* 🔐 EXTRA SAFETY: VERIFY AMOUNT */
+    const materialDocs = await Material.find({
+      _id: { $in: order.materials }
+    });
+
+    const actualAmount = materialDocs.reduce(
+      (sum, m) => sum + (m.price || 0),
+      0
+    );
+
+    if (actualAmount !== order.amount) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount mismatch"
       });
     }
 
@@ -156,16 +207,16 @@ export const verifyPayment = async (req, res) => {
 
     await order.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Payment verified",
       order
     });
 
   } catch (error) {
-    console.error("Verify Payment Error:", error.message);
+    console.error("💥 VERIFY PAYMENT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Payment verification failed"
     });

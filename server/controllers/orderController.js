@@ -1,13 +1,14 @@
 import Order from "../models/Order.js";
 import Material from "../models/Material.js";
+import razorpay from "../config/razorpay.js";
+import crypto from "crypto";
 
 /* =====================================
-   🧾 CREATE ORDER (SAFE MANUAL MODE)
+   🧾 CREATE ORDER
 ===================================== */
 export const createOrder = async (req, res) => {
   try {
-
-    const userId = req.user?.id; // 🔥 FIX
+    const userId = req.user?.id;
     const { materials } = req.body;
 
     if (!userId) {
@@ -24,6 +25,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    /* 📦 FETCH MATERIALS */
     const materialDocs = await Material.find({
       _id: { $in: materials },
       isActive: true
@@ -36,7 +38,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    /* ❌ ALREADY PURCHASED CHECK */
+    /* ❌ DUPLICATE CHECK */
     const existing = await Order.findOne({
       user: userId,
       materials: { $in: materials },
@@ -50,19 +52,43 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    /* 💰 CALCULATE TOTAL */
     const totalAmount = materialDocs.reduce(
       (sum, m) => sum + m.price,
       0
     );
 
-    res.json({
+    /* =====================================
+       💳 RAZORPAY MODE
+    ===================================== */
+    if (razorpay) {
+
+      const order = await razorpay.orders.create({
+        amount: totalAmount * 100, // paise
+        currency: "INR",
+      });
+
+      return res.json({
+        success: true,
+        razorpay: true,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency
+      });
+    }
+
+    /* =====================================
+       🧪 MANUAL MODE (FALLBACK)
+    ===================================== */
+    return res.json({
       success: true,
+      razorpay: false,
       fakeOrder: true,
       amount: totalAmount
     });
 
   } catch (error) {
-    console.error("CREATE ORDER ERROR:", error.message);
+    console.error("CREATE ORDER ERROR:", error);
 
     res.status(500).json({
       success: false,
@@ -73,13 +99,18 @@ export const createOrder = async (req, res) => {
 
 
 /* =====================================
-   ✅ VERIFY PAYMENT (MANUAL SAFE)
+   ✅ VERIFY PAYMENT
 ===================================== */
 export const verifyPayment = async (req, res) => {
   try {
+    const userId = req.user?.id;
 
-    const userId = req.user?.id; // 🔥 FIX
-    const { materials } = req.body;
+    const {
+      materials,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -88,6 +119,7 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
+    /* 📦 FETCH MATERIALS */
     const materialDocs = await Material.find({
       _id: { $in: materials },
       isActive: true
@@ -119,23 +151,46 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    /* ✅ CREATE ORDER */
+    /* =====================================
+       🔐 VERIFY SIGNATURE (ONLY IF RAZORPAY)
+    ===================================== */
+    if (razorpay && razorpay_signature) {
+
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body)
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment signature"
+        });
+      }
+    }
+
+    /* =====================================
+       ✅ CREATE ORDER
+    ===================================== */
     const newOrder = await Order.create({
       user: userId,
       materials,
       amount: totalAmount,
-      status: "paid", // 🔥 FIXED
-      paidAt: new Date()
+      status: "paid",
+      paidAt: new Date(),
+      paymentId: razorpay_payment_id || "manual"
     });
 
     res.json({
       success: true,
-      message: "Order created (manual mode)",
+      message: "Payment verified",
       orderId: newOrder._id
     });
 
   } catch (error) {
-    console.error("VERIFY PAYMENT ERROR:", error.message);
+    console.error("VERIFY PAYMENT ERROR:", error);
 
     res.status(500).json({
       success: false,
@@ -153,12 +208,19 @@ export const getMyPurchases = async (req, res) => {
 
     const userId = req.user?.id;
 
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
     const orders = await Order.find({
       user: userId,
-      status: "paid" // 🔥 FIX
+      status: "paid"
     }).populate("materials");
 
-    const materials = orders.flatMap(o => o.materials);
+    const materials = orders.flatMap(order => order.materials);
 
     res.json({
       success: true,
@@ -166,7 +228,7 @@ export const getMyPurchases = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("GET PURCHASES ERROR:", error.message);
+    console.error("GET PURCHASES ERROR:", error);
 
     res.status(500).json({
       success: false,

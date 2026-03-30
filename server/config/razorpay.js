@@ -1,16 +1,23 @@
-// import Razorpay from "razorpay"; ❌ Disabled for now
+import Razorpay from "razorpay";
 
-/* ⚠️ Razorpay temporarily disabled (no keys yet) */
+/* =====================================
+   🔐 INIT RAZORPAY (SAFE)
+===================================== */
 
-/*
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay = null;
 
-export default razorpay;
-*/
+if (
+  process.env.RAZORPAY_KEY_ID &&
+  process.env.RAZORPAY_KEY_SECRET
+) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
 
-// Temporary placeholder export to prevent import errors
-const razorpay = null;
+  console.log("✅ Razorpay initialized");
+} else {
+  console.warn("⚠️ Razorpay keys missing (disabled)");
+}
+
 export default razorpay;
