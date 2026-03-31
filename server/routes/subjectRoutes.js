@@ -4,7 +4,8 @@ import {
   getSubjects,
   getSubjectById,
   updateSubject,
-  deleteSubject
+  deleteSubject,
+  getSubjectsByClassStream
 } from "../controllers/subjectController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -16,13 +17,14 @@ const router = express.Router();
    📄 PUBLIC ROUTES
 ======================================== */
 
-/* Get all subjects */
+/* 🔥 FILTER (QUERY BASED - OLD) */
 router.get("/", getSubjects);
 
-/* 🔥 IMPORTANT: specific routes first (future safe) */
-// router.get("/popular", getPopularSubjects);
+/* 🔥 NEW ROUTES (VERY IMPORTANT ORDER) */
+router.get("/:classId/:streamId", getSubjectsByClassStream);
+router.get("/:classId", getSubjectsByClassStream);
 
-/* Get single subject */
+/* ❗ ALWAYS LAST */
 router.get("/:id", getSubjectById);
 
 
@@ -30,17 +32,15 @@ router.get("/:id", getSubjectById);
    🔐 ADMIN ROUTES
 ======================================== */
 
-/* 🔒 Apply middleware once (cleaner) */
 router.use(protect, adminOnly);
 
-/* Add subject */
+/* ➕ CREATE */
 router.post("/", addSubject);
 
-/* Update subject */
+/* ✏ UPDATE */
 router.put("/:id", updateSubject);
 
-/* Delete subject */
+/* ❌ DELETE */
 router.delete("/:id", deleteSubject);
-
 
 export default router;
