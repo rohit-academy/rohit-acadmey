@@ -1,53 +1,98 @@
 import React from "react";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function AdminNavbar({ toggleSidebar }) {
 
   const navigate = useNavigate();
 
+  /* =========================
+     🔐 GET ADMIN DATA
+  ========================= */
+  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+
+  /* =========================
+     🚪 LOGOUT (SAFE)
+  ========================= */
   const handleLogout = () => {
 
-    const confirmLogout = window.confirm("Logout from admin panel?");
+    const confirmLogout = window.confirm(
+      "Are you sure you want to logout?"
+    );
 
     if (!confirmLogout) return;
 
-    /* ✅ REMOVE ADMIN SESSION */
-    localStorage.removeItem("admin");
+    try {
 
-    /* 🔥 OPTIONAL CLEANUP */
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+      // 🔥 clear everything safely
+      localStorage.clear();
 
-    /* ✅ SAFE NAVIGATION */
-    navigate("/admin-login", { replace: true });
+      // 🔐 redirect
+      navigate("/admin-login", { replace: true });
 
+    } catch (err) {
+
+      console.error("Logout error:", err);
+
+      // fallback
+      navigate("/admin-login", { replace: true });
+    }
   };
 
   return (
 
-    <header className="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+    <header className="bg-white border-b px-4 md:px-6 py-3 flex items-center justify-between shadow-sm">
 
-      {/* ☰ Mobile Menu */}
-      <button
-        onClick={() => toggleSidebar && toggleSidebar()}
-        className="md:hidden text-gray-700"
-      >
-        <Menu size={24} />
-      </button>
+      {/* ================= LEFT ================= */}
+      <div className="flex items-center gap-3">
 
-      {/* 🧾 Title */}
-      <h1 className="font-semibold text-lg text-blue-600">
-        Admin Panel
-      </h1>
+        {/* ☰ MOBILE MENU */}
+        <button
+          onClick={() => toggleSidebar?.()}
+          className="md:hidden text-gray-700 hover:text-black transition"
+        >
+          <Menu size={24} />
+        </button>
 
-      {/* 🔐 Logout */}
-      <button
-        onClick={handleLogout}
-        className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-      >
-        <LogOut size={18} /> Logout
-      </button>
+        {/* 🛡️ LOGO / TITLE */}
+        <div className="flex items-center gap-2">
+
+          <ShieldCheck className="text-blue-600" size={20} />
+
+          <h1 className="font-semibold text-lg text-blue-600">
+            Admin Panel
+          </h1>
+
+        </div>
+
+      </div>
+
+      {/* ================= RIGHT ================= */}
+      <div className="flex items-center gap-4">
+
+        {/* 👤 ADMIN INFO */}
+        <div className="hidden sm:flex flex-col text-right">
+
+          <span className="text-sm font-medium text-gray-700">
+            {admin?.email || "Admin"}
+          </span>
+
+          <span className="text-xs text-gray-500">
+            {admin?.role || "Administrator"}
+          </span>
+
+        </div>
+
+        {/* 🔐 LOGOUT */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 active:scale-95 transition"
+        >
+          <LogOut size={18} />
+          <span className="hidden sm:inline">Logout</span>
+        </button>
+
+      </div>
 
     </header>
 
@@ -55,4 +100,4 @@ function AdminNavbar({ toggleSidebar }) {
 
 }
 
-export default AdminNavbar;
+export default React.memo(AdminNavbar);

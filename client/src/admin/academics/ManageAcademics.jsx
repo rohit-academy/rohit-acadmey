@@ -1,14 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  Search,
+  Layers
+} from "lucide-react";
 import API from "../../services/api";
 
 function ManageAcademics() {
 
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
+  const [selectedClassObj, setSelectedClassObj] = useState(null);
+
   const [subjects, setSubjects] = useState([]);
+  const [streams, setStreams] = useState([]);
+  const [selectedStream, setSelectedStream] = useState("");
 
   const [newSubject, setNewSubject] = useState("");
+  const [search, setSearch] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
@@ -18,45 +30,51 @@ function ManageAcademics() {
     try {
 
       const res = await API.get("/classes");
-
-      const list = res.data?.data || res.data || [];
+      const list = res.data?.data || [];
 
       setClasses(list);
 
       if (list.length > 0) {
         setSelectedClass(list[0]._id);
+        setSelectedClassObj(list[0]);
       }
 
-    } catch (err) {
-
+    } catch {
       setError("Failed to load classes");
+    }
+  };
 
+  /* ================= STREAMS ================= */
+  const fetchStreams = async (classId) => {
+    try {
+
+      const res = await API.get(`/streams?classId=${classId}`);
+      setStreams(res.data?.data || []);
+
+    } catch {
+      setStreams([]);
     }
   };
 
   /* ================= SUBJECTS ================= */
-  const fetchSubjects = async (classId) => {
-
-    if (!classId) return;
+  const fetchSubjects = async (classId, streamId = "") => {
 
     try {
 
       setLoading(true);
 
-      const res = await API.get(`/subjects?classId=${classId}`);
+      let url = `/subjects?classId=${classId}`;
+      if (streamId) url += `&streamId=${streamId}`;
 
-      const list = res.data?.data || res.data || [];
+      const res = await API.get(url);
 
-      setSubjects(list);
+      setSubjects(res.data?.data || []);
 
-    } catch (err) {
-
+    } catch {
       setError("Failed to load subjects");
-
     } finally {
       setLoading(false);
     }
-
   };
 
   useEffect(() => {
@@ -64,10 +82,39 @@ function ManageAcademics() {
   }, []);
 
   useEffect(() => {
-    if (selectedClass) {
-      fetchSubjects(selectedClass);
+
+    const cls = classes.find(c => c._id === selectedClass);
+    setSelectedClassObj(cls);
+
+    if (!selectedClass) return;
+
+    if (cls?.requiresStream) {
+      fetchStreams(selectedClass);
+    } else {
+      setStreams([]);
+      setSelectedStream("");
     }
-  }, [selectedClass]);
+
+    fetchSubjects(selectedClass);
+
+  }, [selectedClass, classes]);
+
+  useEffect(() => {
+    if (selectedStream) {
+      fetchSubjects(selectedClass, selectedStream);
+    }
+  }, [selectedStream]);
+
+  /* ================= FILTER ================= */
+  const filteredSubjects = useMemo(() => {
+
+    if (!search.trim()) return subjects;
+
+    return subjects.filter(s =>
+      s.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+  }, [subjects, search]);
 
   /* ================= ADD ================= */
   const addSubject = async () => {
@@ -76,9 +123,13 @@ function ManageAcademics() {
 
     if (!name) return;
 
-    // 🔥 duplicate check
+    if (selectedClassObj?.requiresStream && !selectedStream) {
+      setError("Select stream first");
+      return;
+    }
+
     const exists = subjects.find(
-      (s) => s.name.toLowerCase() === name.toLowerCase()
+      s => s.name.toLowerCase() === name.toLowerCase()
     );
 
     if (exists) {
@@ -93,20 +144,15 @@ function ManageAcademics() {
 
       const res = await API.post("/subjects", {
         name,
-        classId: selectedClass
+        classId: selectedClass,
+        streamId: selectedStream || null
       });
 
-      const newItem = res.data?.data || { name, _id: Date.now() };
-
-      // 🔥 optimistic update
-      setSubjects((prev) => [...prev, newItem]);
-
+      setSubjects(prev => [...prev, res.data.data]);
       setNewSubject("");
 
     } catch (err) {
-
       setError(err.response?.data?.message || "Add failed");
-
     } finally {
       setAdding(false);
     }
@@ -121,23 +167,21 @@ function ManageAcademics() {
 
       await API.delete(`/subjects/${id}`);
 
-      // 🔥 instant UI update
-      setSubjects((prev) => prev.filter((s) => s._id !== id));
+      setSubjects(prev => prev.filter(s => s._id !== id));
 
-    } catch (err) {
-
+    } catch {
       setError("Delete failed");
-
     }
-
   };
+
+  /* ================= UI ================= */
 
   return (
 
-    <div>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
 
-      <h1 className="text-3xl font-bold mb-6">
-        Manage Subjects
+      <h1 className="text-2xl md:text-3xl font-bold mb-6">
+        Manage Academics
       </h1>
 
       {/* ERROR */}
@@ -146,7 +190,7 @@ function ManageAcademics() {
       )}
 
       {/* ================= SELECT CLASS ================= */}
-      <div className="mb-6">
+      <div className="mb-4">
 
         <label className="block mb-2 font-semibold">
           Select Class
@@ -155,37 +199,70 @@ function ManageAcademics() {
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="border p-3 rounded-lg"
+          className="border p-3 rounded-lg w-full max-w-xs"
         >
-
-          {classes.map((cls) => (
+          {classes.map(cls => (
             <option key={cls._id} value={cls._id}>
               {cls.name}
             </option>
           ))}
-
         </select>
 
       </div>
 
-      {/* ================= SUBJECT BOX ================= */}
-      <div className="bg-white p-5 rounded-xl shadow">
+      {/* ================= STREAM SELECT ================= */}
+      {selectedClassObj?.requiresStream && (
 
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-6">
 
-          <h2 className="font-bold text-lg">
-            Subjects
-          </h2>
+          <label className="block mb-2 font-semibold">
+            Select Stream
+          </label>
+
+          <select
+            value={selectedStream}
+            onChange={(e) => setSelectedStream(e.target.value)}
+            className="border p-3 rounded-lg w-full max-w-xs"
+          >
+            <option value="">Choose stream</option>
+            {streams.map(s => (
+              <option key={s._id} value={s._id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
 
         </div>
 
-        {/* ➕ ADD INPUT */}
+      )}
+
+      {/* ================= BOX ================= */}
+      <div className="bg-white p-5 rounded-xl shadow">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-4">
+
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            <Layers size={18} /> Subjects
+          </h2>
+
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border px-3 py-1 rounded"
+          />
+
+        </div>
+
+        {/* ADD */}
         <div className="flex gap-2 mb-4">
 
           <input
             value={newSubject}
             onChange={(e) => setNewSubject(e.target.value)}
-            placeholder="Enter subject name"
+            placeholder="Enter subject"
             className="border p-2 rounded flex-1"
             onKeyDown={(e) => e.key === "Enter" && addSubject()}
           />
@@ -193,26 +270,19 @@ function ManageAcademics() {
           <button
             onClick={addSubject}
             disabled={adding}
-            className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-1 disabled:opacity-60"
+            className="bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-1"
           >
-            {adding ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <>
-                <Plus size={16} /> Add
-              </>
-            )}
+            {adding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
           </button>
 
         </div>
 
-        {/* ================= LIST ================= */}
-
+        {/* LIST */}
         {loading ? (
 
           <p className="text-gray-500">Loading...</p>
 
-        ) : subjects.length === 0 ? (
+        ) : filteredSubjects.length === 0 ? (
 
           <p className="text-gray-500">No subjects found</p>
 
@@ -220,14 +290,22 @@ function ManageAcademics() {
 
           <ul className="space-y-2">
 
-            {subjects.map((sub) => (
+            {filteredSubjects.map(sub => (
 
               <li
                 key={sub._id}
-                className="flex justify-between items-center bg-gray-50 p-2 rounded"
+                className="flex justify-between items-center bg-gray-50 p-3 rounded"
               >
 
-                {sub.name}
+                <div>
+                  <span className="font-medium">{sub.name}</span>
+
+                  {sub.streamId && (
+                    <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                      Stream
+                    </span>
+                  )}
+                </div>
 
                 <button
                   onClick={() => deleteSubject(sub._id, sub.name)}

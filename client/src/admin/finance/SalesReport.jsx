@@ -3,61 +3,84 @@ import {
   TrendingUp,
   ShoppingCart,
   IndianRupee,
-  Package
+  Package,
+  RefreshCw
 } from "lucide-react";
 import API from "../../services/api";
 
 function SalesReport() {
 
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    todaySales: 0,
+    monthlySales: 0,
+    totalOrders: 0
+  });
+
   const [topProducts, setTopProducts] = useState([]);
+
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
   /* =========================
-     💰 FORMAT PRICE
+     💰 FORMATTERS
   ========================= */
   const formatPrice = (num = 0) =>
-    `₹${num.toLocaleString("en-IN")}`;
+    `₹${Number(num).toLocaleString("en-IN")}`;
 
   /* =========================
      📦 FETCH DATA
   ========================= */
+  const fetchReport = async (silent = false) => {
+
+    try {
+
+      if (!silent) setLoading(true);
+      setRefreshing(true);
+      setError("");
+
+      const res = await API.get("/admin/sales-report");
+
+      const data = res.data?.data || {};
+
+      setStats({
+        totalSales: data.stats?.totalSales || 0,
+        todaySales: data.stats?.todaySales || 0,
+        monthlySales: data.stats?.monthlySales || 0,
+        totalOrders: data.stats?.totalOrders || 0
+      });
+
+      setTopProducts(data.topProducts || []);
+
+    } catch (err) {
+
+      console.error("❌ Sales report error:", err);
+
+      if (!silent) {
+        setError("Failed to load sales report");
+      }
+
+    } finally {
+
+      setLoading(false);
+      setRefreshing(false);
+
+    }
+  };
+
+  /* =========================
+     🚀 INIT + AUTO REFRESH
+  ========================= */
   useEffect(() => {
 
-    const fetchReport = async () => {
-      try {
-
-        const res = await API.get("/admin/sales-report");
-
-        const data = res.data?.data || {};
-
-        setStats(data.stats || {});
-        setTopProducts(data.topProducts || []);
-
-      } catch (error) {
-
-        console.error("Sales report error:", error);
-
-        // fallback dummy
-        setStats({
-          totalSales: 45890,
-          todaySales: 2890,
-          monthlySales: 15890,
-          totalOrders: 124
-        });
-
-        setTopProducts([
-          { name: "Physics Complete Notes", sales: 54 },
-          { name: "Chemistry Sample Papers", sales: 41 },
-          { name: "Biology PYQ Book", sales: 33 }
-        ]);
-
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReport();
+
+    const interval = setInterval(() => {
+      fetchReport(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
 
   }, []);
 
@@ -66,49 +89,83 @@ function SalesReport() {
   ========================= */
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 p-6">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="bg-white p-5 rounded-xl shadow animate-pulse">
+            <div className="h-5 w-24 bg-gray-200 mb-3 rounded"></div>
+            <div className="h-8 w-32 bg-gray-300 rounded"></div>
+          </div>
+        ))}
       </div>
     );
   }
 
   /* =========================
-     📊 UI
+     ❌ ERROR
   ========================= */
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-4">{error}</p>
+
+        <button
+          onClick={() => fetchReport()}
+          className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-5 py-2 rounded-lg"
+        >
+          <RefreshCw size={16} />
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
 
     <div className="p-4 md:p-6">
 
-      <h1 className="text-2xl md:text-3xl font-bold mb-6">
-        Sales Report
-      </h1>
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+
+        <h1 className="text-2xl md:text-3xl font-bold">
+          Sales Report
+        </h1>
+
+        <button
+          onClick={() => fetchReport()}
+          className="flex items-center gap-2 text-sm bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200"
+        >
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          Refresh
+        </button>
+
+      </div>
 
       {/* ================= STATS ================= */}
       <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5 mb-8">
 
         <StatCard
-          icon={<IndianRupee size={28} />}
+          icon={<IndianRupee size={26} />}
           color="green"
           label="Total Sales"
           value={formatPrice(stats.totalSales)}
         />
 
         <StatCard
-          icon={<TrendingUp size={28} />}
+          icon={<TrendingUp size={26} />}
           color="blue"
           label="Today Sales"
           value={formatPrice(stats.todaySales)}
         />
 
         <StatCard
-          icon={<Package size={28} />}
+          icon={<Package size={26} />}
           color="purple"
           label="Monthly Sales"
           value={formatPrice(stats.monthlySales)}
         />
 
         <StatCard
-          icon={<ShoppingCart size={28} />}
+          icon={<ShoppingCart size={26} />}
           color="orange"
           label="Total Orders"
           value={stats.totalOrders}
@@ -125,20 +182,21 @@ function SalesReport() {
 
         {topProducts.length === 0 ? (
 
-          <p className="text-gray-500 text-center py-6">
-            No data available
-          </p>
+          <div className="text-center py-10 text-gray-500">
+            No sales data available yet
+          </div>
 
         ) : (
 
           <>
-            {/* 💻 DESKTOP */}
-            <table className="w-full text-left hidden md:table">
+            {/* 💻 DESKTOP TABLE */}
+            <table className="w-full hidden md:table">
 
               <thead className="bg-blue-600 text-white">
                 <tr>
-                  <th className="p-3">Material</th>
-                  <th className="p-3">Sales</th>
+                  <th className="p-3 text-left">#</th>
+                  <th className="p-3 text-left">Material</th>
+                  <th className="p-3 text-left">Sales</th>
                 </tr>
               </thead>
 
@@ -148,7 +206,14 @@ function SalesReport() {
                     key={index}
                     className="border-b hover:bg-gray-50"
                   >
-                    <td className="p-3">{item.name}</td>
+                    <td className="p-3 font-semibold">
+                      {index + 1}
+                    </td>
+
+                    <td className="p-3">
+                      {item.name}
+                    </td>
+
                     <td className="p-3 font-semibold text-green-600">
                       {item.sales}
                     </td>
@@ -158,19 +223,28 @@ function SalesReport() {
 
             </table>
 
-            {/* 📱 MOBILE */}
+            {/* 📱 MOBILE CARDS */}
             <div className="md:hidden space-y-3">
+
               {topProducts.map((item, index) => (
                 <div
                   key={index}
-                  className="flex justify-between bg-gray-50 p-3 rounded-lg"
+                  className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
                 >
-                  <span>{item.name}</span>
+
+                  <div>
+                    <p className="font-medium">
+                      #{index + 1} {item.name}
+                    </p>
+                  </div>
+
                   <span className="font-semibold text-green-600">
                     {item.sales}
                   </span>
+
                 </div>
               ))}
+
             </div>
           </>
         )}
@@ -178,12 +252,11 @@ function SalesReport() {
       </div>
 
     </div>
-
   );
 }
 
 /* =========================
-   🔥 STAT CARD COMPONENT
+   🔥 STAT CARD
 ========================= */
 function StatCard({ icon, label, value, color }) {
 
@@ -202,16 +275,12 @@ function StatCard({ icon, label, value, color }) {
       </div>
 
       <div>
-        <p className="text-gray-500 text-sm">
-          {label}
-        </p>
-        <h2 className="text-lg md:text-xl font-bold">
-          {value}
-        </h2>
+        <p className="text-gray-500 text-sm">{label}</p>
+        <h2 className="text-lg md:text-xl font-bold">{value}</h2>
       </div>
 
     </div>
   );
 }
 
-export default SalesReport;
+export default React.memo(SalesReport);

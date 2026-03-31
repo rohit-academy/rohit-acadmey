@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, GraduationCap, Loader2, Check } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  GraduationCap,
+  Loader2,
+  Check
+} from "lucide-react";
 import API from "../../services/api";
 
 function ManageClasses() {
 
   const [classes, setClasses] = useState([]);
   const [newClass, setNewClass] = useState("");
+  const [requiresStream, setRequiresStream] = useState(false); // 🔥 NEW
 
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState("");
@@ -22,20 +30,17 @@ function ManageClasses() {
 
       const res = await API.get("/classes");
 
-      const list = res.data?.data || res.data || [];
+      const list = res.data?.data || [];
 
-      // 🔥 SORT
       const sorted = list.sort((a, b) =>
-        a.name.localeCompare(b.name)
+        Number(a.name) - Number(b.name)
       );
 
       setClasses(sorted);
 
     } catch (err) {
-
       console.error(err);
       setError("Failed to load classes");
-
     } finally {
       setLoading(false);
     }
@@ -45,6 +50,20 @@ function ManageClasses() {
     fetchClasses();
   }, []);
 
+  /* ================= CLASS CHANGE ================= */
+  const handleClassInput = (value) => {
+
+    setNewClass(value);
+
+    const num = parseInt(value);
+
+    if (!isNaN(num) && num >= 11) {
+      setRequiresStream(true);
+    } else {
+      setRequiresStream(false);
+    }
+  };
+
   /* ================= ADD ================= */
   const handleAddClass = async () => {
 
@@ -52,7 +71,6 @@ function ManageClasses() {
 
     if (!name) return;
 
-    // 🔥 duplicate check
     const exists = classes.find(
       (c) => c.name.toLowerCase() === name.toLowerCase()
     );
@@ -67,15 +85,18 @@ function ManageClasses() {
       setAdding(true);
       setError("");
 
-      await API.post("/classes", { name });
+      await API.post("/classes", {
+        name,
+        requiresStream // 🔥 SEND TO BACKEND
+      });
 
       setNewClass("");
+      setRequiresStream(false);
+
       fetchClasses();
 
     } catch (err) {
-
       setError(err.response?.data?.message || "Add failed");
-
     } finally {
       setAdding(false);
     }
@@ -90,14 +111,11 @@ function ManageClasses() {
 
       await API.delete(`/classes/${id}`);
 
-      // 🔥 optimistic update
       setClasses((prev) => prev.filter((c) => c._id !== id));
 
     } catch (err) {
-
       console.error(err);
       setError("Delete failed");
-
     }
   };
 
@@ -113,7 +131,6 @@ function ManageClasses() {
 
     if (!name) return;
 
-    // 🔥 duplicate check
     const exists = classes.find(
       (c) =>
         c.name.toLowerCase() === name.toLowerCase() &&
@@ -125,13 +142,21 @@ function ManageClasses() {
       return;
     }
 
+    const num = parseInt(name);
+    const requiresStreamUpdate = !isNaN(num) && num >= 11;
+
     try {
 
-      await API.put(`/classes/${editingId}`, { name });
+      await API.put(`/classes/${editingId}`, {
+        name,
+        requiresStream: requiresStreamUpdate
+      });
 
       setClasses((prev) =>
         prev.map((c) =>
-          c._id === editingId ? { ...c, name } : c
+          c._id === editingId
+            ? { ...c, name, requiresStream: requiresStreamUpdate }
+            : c
         )
       );
 
@@ -139,10 +164,8 @@ function ManageClasses() {
       setEditingValue("");
 
     } catch (err) {
-
       console.error(err);
       setError("Update failed");
-
     }
   };
 
@@ -151,7 +174,8 @@ function ManageClasses() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6">
 
       <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-2">
-        <GraduationCap className="text-blue-600" /> Manage Classes
+        <GraduationCap className="text-blue-600" />
+        Manage Classes
       </h1>
 
       {/* ERROR */}
@@ -160,30 +184,40 @@ function ManageClasses() {
       )}
 
       {/* ================= ADD ================= */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+      <div className="flex flex-col gap-3 mb-8">
 
-        <input
-          type="text"
-          placeholder="Enter class name (e.g. Class 10)"
-          value={newClass}
-          onChange={(e) => setNewClass(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddClass()}
-          className="border p-3 rounded-lg flex-1"
-        />
+        <div className="flex gap-3">
 
-        <button
-          onClick={handleAddClass}
-          disabled={adding}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-700 disabled:opacity-60"
-        >
-          {adding ? (
-            <Loader2 className="animate-spin" size={18} />
-          ) : (
-            <>
-              <Plus size={18} /> Add Class
-            </>
-          )}
-        </button>
+          <input
+            type="text"
+            placeholder="Enter class (e.g. 10, 11, 12)"
+            value={newClass}
+            onChange={(e) => handleClassInput(e.target.value)}
+            className="border p-3 rounded-lg flex-1"
+          />
+
+          <button
+            onClick={handleAddClass}
+            disabled={adding}
+            className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2"
+          >
+            {adding ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <>
+                <Plus size={18} /> Add
+              </>
+            )}
+          </button>
+
+        </div>
+
+        {/* 🔥 STREAM INFO UI */}
+        {requiresStream && (
+          <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+            ⚠️ This class will require stream selection (11th+ rule)
+          </div>
+        )}
 
       </div>
 
@@ -209,22 +243,33 @@ function ManageClasses() {
               className="bg-white p-4 rounded-xl shadow flex justify-between items-center"
             >
 
-              {editingId === cls._id ? (
+              <div>
+                {editingId === cls._id ? (
 
-                <input
-                  value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
-                  className="border p-2 rounded w-64"
-                  autoFocus
-                />
+                  <input
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    className="border p-2 rounded w-40"
+                    autoFocus
+                  />
 
-              ) : (
+                ) : (
 
-                <span className="font-semibold text-lg">
-                  {cls.name}
-                </span>
+                  <>
+                    <span className="font-semibold text-lg">
+                      Class {cls.name}
+                    </span>
 
-              )}
+                    {cls.requiresStream && (
+                      <span className="ml-3 text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">
+                        Stream Required
+                      </span>
+                    )}
+
+                  </>
+
+                )}
+              </div>
 
               <div className="flex gap-4">
 

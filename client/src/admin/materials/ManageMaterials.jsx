@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Trash2, Pencil, FileText, Plus } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  Trash2,
+  Pencil,
+  FileText,
+  Plus,
+  RefreshCw,
+  Search
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../services/api";
 
@@ -9,24 +16,27 @@ function ManageMaterials() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [search, setSearch] = useState("");
 
   const navigate = useNavigate();
 
   /* ===============================
-     📦 FETCH MATERIALS
+     📦 FETCH
   ============================== */
-  const fetchMaterials = async () => {
+  const fetchMaterials = async (silent = false) => {
 
     try {
 
-      setLoading(true);
+      if (!silent) setLoading(true);
+      setRefreshing(true);
       setError("");
 
       const res = await API.get("/materials?admin=true");
 
-      const data = res.data?.data || res.data || [];
+      const data = res.data?.data || [];
 
-      // ✅ latest first
       const sorted = data.sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
@@ -35,20 +45,43 @@ function ManageMaterials() {
 
     } catch (err) {
 
-      console.error("Fetch error:", err);
-      setError("Failed to load materials");
+      console.error(err);
+
+      if (!silent) {
+        setError("Failed to load materials");
+      }
 
     } finally {
 
       setLoading(false);
+      setRefreshing(false);
 
     }
-
   };
 
   useEffect(() => {
     fetchMaterials();
+
+    const interval = setInterval(() => {
+      fetchMaterials(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+
   }, []);
+
+  /* ===============================
+     🔍 SEARCH FILTER
+  ============================== */
+  const filteredMaterials = useMemo(() => {
+
+    if (!search.trim()) return materials;
+
+    return materials.filter((m) =>
+      m.title.toLowerCase().includes(search.toLowerCase())
+    );
+
+  }, [materials, search]);
 
   /* ===============================
      ❌ DELETE
@@ -67,7 +100,7 @@ function ManageMaterials() {
 
     } catch (err) {
 
-      console.error("Delete error:", err);
+      console.error(err);
       alert(err.response?.data?.message || "Delete failed");
 
     } finally {
@@ -89,8 +122,13 @@ function ManageMaterials() {
   ============================== */
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <div className="grid md:grid-cols-2 gap-4 p-4">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="bg-white p-5 rounded-xl shadow animate-pulse">
+            <div className="h-5 bg-gray-200 mb-2 rounded"></div>
+            <div className="h-4 bg-gray-300 w-2/3 rounded"></div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -99,22 +137,36 @@ function ManageMaterials() {
 
     <div>
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
+      {/* ================= HEADER ================= */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
 
         <h1 className="text-2xl md:text-3xl font-bold">
-          Manage Study Materials
+          Manage Materials
         </h1>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
 
+          {/* 🔍 SEARCH */}
+          <div className="flex items-center border px-3 rounded-lg bg-white">
+            <Search size={16} className="text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search material..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="p-2 outline-none"
+            />
+          </div>
+
+          {/* 🔄 REFRESH */}
           <button
-            onClick={fetchMaterials}
-            className="bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 text-sm"
+            onClick={() => fetchMaterials()}
+            className="flex items-center gap-2 bg-gray-200 px-3 py-2 rounded hover:bg-gray-300"
           >
-            Refresh
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           </button>
 
+          {/* ➕ ADD */}
           <button
             onClick={() => navigate("/admin/materials/upload")}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -134,14 +186,14 @@ function ManageMaterials() {
       )}
 
       {/* EMPTY */}
-      {materials.length === 0 && !error && (
+      {filteredMaterials.length === 0 && !error && (
         <div className="bg-white p-10 rounded-xl shadow text-center text-gray-500">
-          No materials found. Click <b>Upload</b> to add new PDF.
+          No materials found
         </div>
       )}
 
       {/* ================= DESKTOP ================= */}
-      {materials.length > 0 && (
+      {filteredMaterials.length > 0 && (
 
         <div className="hidden md:block bg-white shadow rounded-xl overflow-x-auto">
 
@@ -160,12 +212,12 @@ function ManageMaterials() {
 
             <tbody>
 
-              {materials.map((m) => (
+              {filteredMaterials.map((m) => (
 
                 <tr key={m._id} className="border-b hover:bg-gray-50">
 
-                  <td className="p-3">{m.classId?.name || "-"}</td>
-                  <td className="p-3">{m.subjectId?.name || "-"}</td>
+                  <td className="p-3">{m.classId?.name}</td>
+                  <td className="p-3">{m.subjectId?.name}</td>
                   <td className="p-3">{m.type}</td>
 
                   <td className="p-3 flex items-center gap-2">
@@ -211,28 +263,24 @@ function ManageMaterials() {
       {/* ================= MOBILE ================= */}
       <div className="grid gap-4 md:hidden">
 
-        {materials.map((m) => (
+        {filteredMaterials.map((m) => (
 
-          <div key={m._id} className="bg-white shadow rounded-xl p-4 space-y-2">
+          <div key={m._id} className="bg-white shadow rounded-xl p-4">
 
             <div className="flex items-center gap-2 font-semibold text-blue-600">
               <FileText size={18} />
               {m.title}
             </div>
 
-            <div className="text-sm text-gray-600">
-              Class: <span className="font-medium">{m.classId?.name || "-"}</span>
-            </div>
+            <p className="text-sm text-gray-600">
+              {m.classId?.name} • {m.subjectId?.name}
+            </p>
 
-            <div className="text-sm text-gray-600">
-              Subject: <span className="font-medium">{m.subjectId?.name || "-"}</span>
-            </div>
+            <p className="text-sm text-gray-600">
+              {m.type}
+            </p>
 
-            <div className="text-sm text-gray-600">
-              Type: <span className="font-medium">{m.type}</span>
-            </div>
-
-            <div className="flex justify-between items-center mt-3">
+            <div className="flex justify-between mt-3">
 
               <span className="font-bold text-blue-600">
                 {formatPrice(m.price)}
@@ -266,9 +314,7 @@ function ManageMaterials() {
       </div>
 
     </div>
-
   );
-
 }
 
-export default ManageMaterials;
+export default React.memo(ManageMaterials);

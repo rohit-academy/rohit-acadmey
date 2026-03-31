@@ -6,7 +6,9 @@ import {
   Download,
   ShoppingCart,
   Settings,
-  RefreshCw
+  RefreshCw,
+  IndianRupee,
+  TrendingUp
 } from "lucide-react";
 import API from "../../services/api";
 
@@ -18,7 +20,8 @@ function AdminDashboard() {
     totalMaterials: 0,
     totalUsers: 0,
     totalOrders: 0,
-    totalDownloads: 0
+    totalDownloads: 0,
+    totalRevenue: 0
   });
 
   const [loading, setLoading] = useState(true);
@@ -26,7 +29,7 @@ function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
 
   /* =====================================
-     📦 FETCH STATS
+     📦 FETCH STATS (SMART)
   ===================================== */
   const fetchStats = async (silent = false) => {
 
@@ -34,7 +37,6 @@ function AdminDashboard() {
 
       if (!silent) setLoading(true);
       setRefreshing(true);
-      setError("");
 
       const res = await API.get("/admin/stats");
 
@@ -44,15 +46,18 @@ function AdminDashboard() {
         totalMaterials: data.totalMaterials || 0,
         totalUsers: data.totalUsers || 0,
         totalOrders: data.totalOrders || 0,
-        totalDownloads: data.totalDownloads || 0
+        totalDownloads: data.totalDownloads || 0,
+        totalRevenue: data.totalRevenue || 0
       });
+
+      setError("");
 
     } catch (err) {
 
-      console.error("❌ Stats fetch error:", err);
+      console.error("❌ Stats error:", err);
 
       if (!silent) {
-        setError("Failed to load dashboard");
+        setError("Dashboard load failed");
       }
 
     } finally {
@@ -65,35 +70,38 @@ function AdminDashboard() {
   };
 
   /* =====================================
-     🚀 INITIAL LOAD + AUTO REFRESH
+     🚀 INIT + AUTO REFRESH
   ===================================== */
   useEffect(() => {
 
     fetchStats();
 
     const interval = setInterval(() => {
-      fetchStats(true); // 🔥 silent refresh
-    }, 30000); // every 30s
+      fetchStats(true);
+    }, 30000);
 
     return () => clearInterval(interval);
 
   }, []);
 
   /* =====================================
-     🔢 FORMAT
+     🔢 FORMATTERS
   ===================================== */
   const formatNumber = (num = 0) =>
     Number(num).toLocaleString("en-IN");
 
+  const formatCurrency = (num = 0) =>
+    "₹" + Number(num).toLocaleString("en-IN");
+
   /* =====================================
-     ⏳ LOADING SKELETON
+     ⏳ LOADING UI
   ===================================== */
   if (loading) {
     return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
-        {[1,2,3,4].map((i) => (
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6 p-6">
+        {[1,2,3,4,5].map(i => (
           <div key={i} className="bg-white p-5 rounded-xl shadow animate-pulse">
-            <div className="h-6 w-20 bg-gray-200 mb-4 rounded"></div>
+            <div className="h-5 w-24 bg-gray-200 mb-3 rounded"></div>
             <div className="h-8 w-32 bg-gray-300 rounded"></div>
           </div>
         ))}
@@ -102,24 +110,20 @@ function AdminDashboard() {
   }
 
   /* =====================================
-     ❌ ERROR
+     ❌ ERROR UI
   ===================================== */
   if (error) {
     return (
       <div className="text-center py-20">
-
-        <p className="text-red-500 mb-4">
-          {error}
-        </p>
+        <p className="text-red-500 mb-4">{error}</p>
 
         <button
           onClick={() => fetchStats()}
-          className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-5 py-2 rounded-lg"
         >
           <RefreshCw size={16} />
           Retry
         </button>
-
       </div>
     );
   }
@@ -129,27 +133,33 @@ function AdminDashboard() {
   ===================================== */
   const statsCards = [
     {
-      title: "Total Materials",
-      value: stats.totalMaterials,
-      icon: <FileText size={26} />,
+      title: "Revenue",
+      value: formatCurrency(stats.totalRevenue),
+      icon: <IndianRupee size={24} />,
+      color: "yellow"
+    },
+    {
+      title: "Materials",
+      value: formatNumber(stats.totalMaterials),
+      icon: <FileText size={24} />,
       color: "blue"
     },
     {
-      title: "Total Users",
-      value: stats.totalUsers,
-      icon: <Users size={26} />,
+      title: "Users",
+      value: formatNumber(stats.totalUsers),
+      icon: <Users size={24} />,
       color: "green"
     },
     {
-      title: "Total Orders",
-      value: stats.totalOrders,
-      icon: <ShoppingCart size={26} />,
+      title: "Orders",
+      value: formatNumber(stats.totalOrders),
+      icon: <ShoppingCart size={24} />,
       color: "purple"
     },
     {
-      title: "Total Downloads",
-      value: stats.totalDownloads,
-      icon: <Download size={26} />,
+      title: "Downloads",
+      value: formatNumber(stats.totalDownloads),
+      icon: <Download size={24} />,
       color: "pink"
     }
   ];
@@ -158,15 +168,25 @@ function AdminDashboard() {
     blue: "bg-blue-100 text-blue-600",
     green: "bg-green-100 text-green-600",
     purple: "bg-purple-100 text-purple-600",
-    pink: "bg-pink-100 text-pink-600"
+    pink: "bg-pink-100 text-pink-600",
+    yellow: "bg-yellow-100 text-yellow-600"
   };
 
+  /* =====================================
+     UI
+  ===================================== */
   return (
 
     <div className="p-4 md:p-6">
 
-      {/* 🔄 REFRESH BUTTON */}
-      <div className="flex justify-end mb-4">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <TrendingUp className="text-blue-600" />
+          Dashboard Overview
+        </h1>
+
         <button
           onClick={() => fetchStats()}
           className="flex items-center gap-2 text-sm bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200"
@@ -174,15 +194,16 @@ function AdminDashboard() {
           <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           Refresh
         </button>
+
       </div>
 
       {/* ================= STATS ================= */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
 
-        {statsCards.map((item, index) => (
+        {statsCards.map((item, i) => (
 
           <div
-            key={index}
+            key={i}
             className="bg-white p-5 rounded-xl shadow hover:shadow-md transition flex items-center gap-4"
           >
 
@@ -191,13 +212,8 @@ function AdminDashboard() {
             </div>
 
             <div>
-              <p className="text-gray-500 text-sm">
-                {item.title}
-              </p>
-
-              <p className="text-2xl font-bold">
-                {formatNumber(item.value)}
-              </p>
+              <p className="text-gray-500 text-sm">{item.title}</p>
+              <p className="text-2xl font-bold">{item.value}</p>
             </div>
 
           </div>
@@ -207,29 +223,27 @@ function AdminDashboard() {
       </div>
 
       {/* ================= QUICK ACTIONS ================= */}
-      <h2 className="text-lg md:text-xl font-semibold mb-4">
-        Quick Actions
-      </h2>
+      <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
 
       <div className="grid md:grid-cols-3 gap-6">
 
         <ActionCard
           title="📚 Manage Materials"
-          desc="Add, edit or remove PDFs"
+          desc="Add / edit study content"
           color="blue"
           onClick={() => navigate("/admin/materials")}
         />
 
         <ActionCard
           title="👨‍🎓 Manage Users"
-          desc="View and manage students"
+          desc="Control users & access"
           color="green"
           onClick={() => navigate("/admin/users")}
         />
 
         <ActionCard
           title="💰 Orders & Payments"
-          desc="Track revenue & purchases"
+          desc="Track earnings & orders"
           color="purple"
           onClick={() => navigate("/admin/orders")}
         />
@@ -242,9 +256,9 @@ function AdminDashboard() {
         <Settings className="text-gray-600" />
 
         <p className="text-sm text-gray-600">
-          System running in{" "}
-          <span className="font-semibold text-blue-600">
-            {import.meta.env.MODE || "Production"}
+          Mode:
+          <span className="font-semibold text-blue-600 ml-1">
+            {import.meta.env.MODE || "production"}
           </span>
         </p>
 
@@ -270,13 +284,9 @@ function ActionCard({ title, desc, onClick, color }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
 
-      <h3 className="font-semibold mb-2">
-        {title}
-      </h3>
+      <h3 className="font-semibold mb-2">{title}</h3>
 
-      <p className="text-sm text-gray-600">
-        {desc}
-      </p>
+      <p className="text-sm text-gray-600">{desc}</p>
 
       <button
         onClick={onClick}
