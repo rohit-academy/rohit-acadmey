@@ -23,15 +23,17 @@ function AdminDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-  /* =========================
+  /* =====================================
      📦 FETCH STATS
-  ========================= */
-  const fetchStats = async () => {
+  ===================================== */
+  const fetchStats = async (silent = false) => {
 
     try {
 
-      setLoading(true);
+      if (!silent) setLoading(true);
+      setRefreshing(true);
       setError("");
 
       const res = await API.get("/admin/stats");
@@ -47,36 +49,61 @@ function AdminDashboard() {
 
     } catch (err) {
 
-      console.error("Stats fetch error:", err);
+      console.error("❌ Stats fetch error:", err);
 
-      setError("Failed to load dashboard");
+      if (!silent) {
+        setError("Failed to load dashboard");
+      }
 
     } finally {
 
       setLoading(false);
+      setRefreshing(false);
 
     }
 
   };
 
+  /* =====================================
+     🚀 INITIAL LOAD + AUTO REFRESH
+  ===================================== */
   useEffect(() => {
+
     fetchStats();
+
+    const interval = setInterval(() => {
+      fetchStats(true); // 🔥 silent refresh
+    }, 30000); // every 30s
+
+    return () => clearInterval(interval);
+
   }, []);
 
-  /* =========================
-     ⏳ LOADING
-  ========================= */
+  /* =====================================
+     🔢 FORMAT
+  ===================================== */
+  const formatNumber = (num = 0) =>
+    Number(num).toLocaleString("en-IN");
+
+  /* =====================================
+     ⏳ LOADING SKELETON
+  ===================================== */
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+        {[1,2,3,4].map((i) => (
+          <div key={i} className="bg-white p-5 rounded-xl shadow animate-pulse">
+            <div className="h-6 w-20 bg-gray-200 mb-4 rounded"></div>
+            <div className="h-8 w-32 bg-gray-300 rounded"></div>
+          </div>
+        ))}
       </div>
     );
   }
 
-  /* =========================
-     ❌ ERROR UI
-  ========================= */
+  /* =====================================
+     ❌ ERROR
+  ===================================== */
   if (error) {
     return (
       <div className="text-center py-20">
@@ -86,7 +113,7 @@ function AdminDashboard() {
         </p>
 
         <button
-          onClick={fetchStats}
+          onClick={() => fetchStats()}
           className="flex items-center gap-2 mx-auto bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
         >
           <RefreshCw size={16} />
@@ -97,9 +124,9 @@ function AdminDashboard() {
     );
   }
 
-  /* =========================
-     📊 STATS CARDS
-  ========================= */
+  /* =====================================
+     📊 STATS CONFIG
+  ===================================== */
   const statsCards = [
     {
       title: "Total Materials",
@@ -138,6 +165,17 @@ function AdminDashboard() {
 
     <div className="p-4 md:p-6">
 
+      {/* 🔄 REFRESH BUTTON */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => fetchStats()}
+          className="flex items-center gap-2 text-sm bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200"
+        >
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          Refresh
+        </button>
+      </div>
+
       {/* ================= STATS ================= */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
 
@@ -156,8 +194,9 @@ function AdminDashboard() {
               <p className="text-gray-500 text-sm">
                 {item.title}
               </p>
+
               <p className="text-2xl font-bold">
-                {item.value}
+                {formatNumber(item.value)}
               </p>
             </div>
 
@@ -205,7 +244,7 @@ function AdminDashboard() {
         <p className="text-sm text-gray-600">
           System running in{" "}
           <span className="font-semibold text-blue-600">
-            Development Mode
+            {import.meta.env.MODE || "Production"}
           </span>
         </p>
 
@@ -217,9 +256,9 @@ function AdminDashboard() {
 
 }
 
-/* =========================
+/* =====================================
    🔥 ACTION CARD
-========================= */
+===================================== */
 function ActionCard({ title, desc, onClick, color }) {
 
   const colorMap = {

@@ -8,7 +8,7 @@ function AdminLogin() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    username: "",
+    email: "",
     password: ""
   });
 
@@ -18,30 +18,43 @@ function AdminLogin() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  /* 🔐 AUTO REDIRECT IF ALREADY LOGGED IN */
+  /* =====================================
+     🔐 AUTO REDIRECT IF ALREADY LOGGED IN
+  ===================================== */
   useEffect(() => {
-    const admin = JSON.parse(localStorage.getItem("admin") || "{}");
-    if (admin?.token) {
-      navigate("/admin", { replace: true });
+    try {
+      const adminData = JSON.parse(localStorage.getItem("admin") || "{}");
+
+      if (adminData?.token) {
+        navigate("/admin", { replace: true });
+      }
+    } catch {
+      localStorage.removeItem("admin");
     }
   }, [navigate]);
 
+  /* =====================================
+     ✍️ INPUT CHANGE
+  ===================================== */
   const handleChange = (e) => {
     setError("");
+
     setForm({
       ...form,
       [e.target.name]: e.target.value.trimStart()
     });
   };
 
-  /* LOGIN */
+  /* =====================================
+     🔐 LOGIN
+  ===================================== */
   const handleLogin = async (e) => {
 
     e.preventDefault();
 
     if (loading || success) return;
 
-    if (!form.username.trim() || !form.password.trim()) {
+    if (!form.email.trim() || !form.password.trim()) {
       setError("Please fill all fields");
       return;
     }
@@ -52,30 +65,38 @@ function AdminLogin() {
     try {
 
       const res = await API.post("/admin/login", {
-        username: form.username.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password
       });
 
-      /* 🔥 STORE ONLY TOKEN */
+      const data = res.data;
+
+      /* 🔥 STORE ADMIN DATA */
       localStorage.setItem(
         "admin",
         JSON.stringify({
-          token: res.data.token,
-          role: "admin"
+          token: data.token,
+          email: data.admin?.email,
+          role: data.admin?.role || "admin"
         })
       );
+
+      /* 🔥 ALSO STORE GLOBAL TOKEN (IMPORTANT) */
+      localStorage.setItem("token", data.token);
 
       setSuccess(true);
 
       setTimeout(() => {
         navigate("/admin", { replace: true });
-      }, 1000);
+      }, 800);
 
     } catch (err) {
 
+      console.error("Admin login error:", err);
+
       const msg =
         err.response?.data?.message ||
-        "Invalid username or password";
+        "Invalid email or password";
 
       setError(msg);
 
@@ -85,7 +106,6 @@ function AdminLogin() {
     } finally {
       setLoading(false);
     }
-
   };
 
   return (
@@ -93,7 +113,7 @@ function AdminLogin() {
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden
     bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
 
-      {/* BLOBS */}
+      {/* BACKGROUND BLOBS */}
       <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 top-[-50px] left-[-50px]"></div>
       <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 bottom-[-50px] right-[-50px]"></div>
 
@@ -125,10 +145,11 @@ function AdminLogin() {
 
         <form onSubmit={handleLogin} className="space-y-4">
 
-          {/* USERNAME */}
+          {/* EMAIL */}
           <input
-            name="username"
-            placeholder="Admin Username"
+            name="email"
+            type="email"
+            placeholder="Admin Email"
             required
             disabled={success}
             onChange={handleChange}
@@ -158,6 +179,7 @@ function AdminLogin() {
 
           </div>
 
+          {/* ERROR */}
           {error && (
             <p className="text-red-500 text-sm text-center">
               {error}
@@ -168,7 +190,7 @@ function AdminLogin() {
           <button
             type="submit"
             disabled={loading || success}
-            className={`w-full py-3 rounded-lg text-white font-semibold transition ${
+            className={`w-full py-3 rounded-lg text-white font-semibold transition flex items-center justify-center gap-2 ${
               loading
                 ? "bg-gray-400"
                 : "bg-blue-600 hover:bg-blue-700"
@@ -191,7 +213,7 @@ function AdminLogin() {
 
       </div>
 
-      {/* ANIMATION */}
+      {/* SHAKE ANIMATION */}
       <style>{`
         @keyframes shake {
           0% { transform: translateX(0); }
@@ -203,7 +225,6 @@ function AdminLogin() {
       `}</style>
 
     </div>
-
   );
 
 }

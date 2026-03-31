@@ -13,33 +13,61 @@ function AdminRoute() {
 
       try {
 
-        const adminData = localStorage.getItem("admin");
+        /* =====================================
+           🔐 LOCAL CHECK (FAST)
+        ===================================== */
+        const raw = localStorage.getItem("admin");
 
-        if (!adminData) {
+        if (!raw) {
           setIsValid(false);
           return;
         }
 
-        const admin = JSON.parse(adminData);
+        let admin;
 
-        if (!admin?.token) {
+        try {
+          admin = JSON.parse(raw);
+        } catch {
+          localStorage.removeItem("admin");
           setIsValid(false);
           return;
         }
 
-        /* 🔐 VERIFY WITH SERVER */
-        await API.get("/admin/stats"); // protected route
+        /* ❌ INVALID TOKEN OR ROLE */
+        if (!admin?.token || admin?.role !== "admin") {
+          localStorage.removeItem("admin");
+          setIsValid(false);
+          return;
+        }
 
+        /* =====================================
+           ⚡ INSTANT ALLOW (UX FAST)
+        ===================================== */
         setIsValid(true);
+
+        /* =====================================
+           🔍 BACKGROUND VERIFY (NO BLOCK)
+        ===================================== */
+        try {
+          await API.get("/admin/stats");
+        } catch (err) {
+
+          console.warn("⚠️ Admin token expired");
+
+          localStorage.removeItem("admin");
+          localStorage.removeItem("token");
+
+          setIsValid(false);
+        }
 
       } catch (error) {
 
-        console.error("Admin verification failed");
+        console.error("❌ Admin verification error:", error);
 
         localStorage.removeItem("admin");
+        localStorage.removeItem("token");
 
         setIsValid(false);
-
       }
 
     };
@@ -48,16 +76,20 @@ function AdminRoute() {
 
   }, []);
 
-  /* ⏳ LOADING */
+  /* =====================================
+     ⏳ LOADING
+  ===================================== */
   if (isValid === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  /* ❌ NOT AUTHORIZED */
+  /* =====================================
+     ❌ NOT AUTHORIZED
+  ===================================== */
   if (!isValid) {
     return (
       <Navigate
@@ -68,7 +100,9 @@ function AdminRoute() {
     );
   }
 
-  /* ✅ ALLOWED */
+  /* =====================================
+     ✅ AUTHORIZED
+  ===================================== */
   return <Outlet />;
 }
 
