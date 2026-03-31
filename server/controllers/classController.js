@@ -2,23 +2,45 @@ import Class from "../models/Class.js";
 import logger from "../utils/logger.js";
 
 /* =====================================
+   🔧 HELPER: EXTRACT CLASS NUMBER
+===================================== */
+const extractClassNumber = (name) => {
+  const num = parseInt(name);
+  return isNaN(num) ? null : num;
+};
+
+/* =====================================
    ➕ ADD CLASS
 ===================================== */
 export const addClass = async (req, res) => {
   try {
+
     let { name } = req.body;
 
-    if (!name || name.trim().length < 2) {
+    if (!name || name.trim().length < 1) {
       return res.status(400).json({
         success: false,
         message: "Valid class name required",
       });
     }
 
-    name = name.trim().toLowerCase(); // 🔥 FIX
+    name = name.trim().toLowerCase();
 
-    /* ❌ DUPLICATE SAFE */
-    const existing = await Class.findOne({ name });
+    /* 🔢 EXTRACT NUMBER */
+    const classNumber = extractClassNumber(name);
+
+    if (!classNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Class name must include a number (e.g., 10, 11, 12)",
+      });
+    }
+
+    /* ❌ DUPLICATE CHECK */
+    const existing = await Class.findOne({
+      $or: [{ name }, { classNumber }]
+    });
+
     if (existing) {
       return res.status(400).json({
         success: false,
@@ -26,9 +48,16 @@ export const addClass = async (req, res) => {
       });
     }
 
-    const newClass = await Class.create({ name });
+    /* 🔥 STREAM LOGIC */
+    const hasStreams = classNumber >= 11;
 
-    logger.info(`Class created: ${name}`);
+    const newClass = await Class.create({
+      name,
+      classNumber,
+      hasStreams
+    });
+
+    logger.info(`✅ Class created: ${name} (${classNumber})`);
 
     res.status(201).json({
       success: true,
@@ -36,7 +65,7 @@ export const addClass = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error(`Add class error: ${error.message}`);
+    logger.error(`❌ Add class error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -46,13 +75,13 @@ export const addClass = async (req, res) => {
 };
 
 /* =====================================
-   📄 GET CLASSES (ONLY ACTIVE)
+   📄 GET CLASSES
 ===================================== */
 export const getClasses = async (req, res) => {
   try {
 
-    const classes = await Class.find({ isActive: true }) // 🔥 FIX
-      .sort({ order: 1, createdAt: -1 });
+    const classes = await Class.find({ isActive: true })
+      .sort({ order: 1, classNumber: 1 });
 
     res.json({
       success: true,
@@ -75,9 +104,9 @@ export const getClasses = async (req, res) => {
 export const getClassById = async (req, res) => {
   try {
 
-    const singleClass = await Class.findById(req.params.id);
+    const classDoc = await Class.findById(req.params.id);
 
-    if (!singleClass || !singleClass.isActive) {
+    if (!classDoc || !classDoc.isActive) {
       return res.status(404).json({
         success: false,
         message: "Class not found",
@@ -86,7 +115,7 @@ export const getClassById = async (req, res) => {
 
     res.json({
       success: true,
-      data: singleClass,
+      data: classDoc,
     });
 
   } catch (error) {
@@ -100,7 +129,7 @@ export const getClassById = async (req, res) => {
 };
 
 /* =====================================
-   ✏ UPDATE CLASS (SAFE)
+   ✏ UPDATE CLASS
 ===================================== */
 export const updateClass = async (req, res) => {
   try {
@@ -116,20 +145,33 @@ export const updateClass = async (req, res) => {
       });
     }
 
-    /* 🔥 SAFE UPDATE */
+    /* 🔥 UPDATE NAME */
     if (name) {
-      const newName = name.trim().toLowerCase();
 
-      const exists = await Class.findOne({ name: newName });
+      const newName = name.trim().toLowerCase();
+      const classNumber = extractClassNumber(newName);
+
+      if (!classNumber) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid class number",
+        });
+      }
+
+      const exists = await Class.findOne({
+        $or: [{ name: newName }, { classNumber }]
+      });
 
       if (exists && exists._id.toString() !== req.params.id) {
         return res.status(400).json({
           success: false,
-          message: "Class name already exists",
+          message: "Class already exists",
         });
       }
 
       classDoc.name = newName;
+      classDoc.classNumber = classNumber;
+      classDoc.hasStreams = classNumber >= 11;
     }
 
     if (order !== undefined) classDoc.order = order;
@@ -137,7 +179,7 @@ export const updateClass = async (req, res) => {
 
     await classDoc.save();
 
-    logger.info(`Class updated: ${classDoc.name}`);
+    logger.info(`✏️ Class updated: ${classDoc.name}`);
 
     res.json({
       success: true,
@@ -155,7 +197,7 @@ export const updateClass = async (req, res) => {
 };
 
 /* =====================================
-   ❌ DELETE CLASS (SOFT DELETE)
+   ❌ DELETE CLASS (SOFT)
 ===================================== */
 export const deleteClass = async (req, res) => {
   try {
@@ -169,11 +211,10 @@ export const deleteClass = async (req, res) => {
       });
     }
 
-    /* 🔥 SOFT DELETE */
     classDoc.isActive = false;
     await classDoc.save();
 
-    logger.warn(`Class deactivated: ${classDoc.name}`);
+    logger.warn(`🗑 Class deactivated: ${classDoc.name}`);
 
     res.json({
       success: true,

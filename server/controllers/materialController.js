@@ -30,19 +30,20 @@ const uploadImageToCloudinary = (buffer, folder) =>
   });
 
 /* =====================================
-   ➕ ADD MATERIAL
+   ➕ ADD MATERIAL (🔥 FINAL)
 ===================================== */
 export const addMaterial = async (req, res, next) => {
   try {
-    const { title, classId, subjectId, price, type } = req.body;
+    const { title, classId, subjectId, streamId, price, type } = req.body;
 
     const pdfFile = req.files?.file?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0];
 
-    if (!title || !classId || !subjectId || !price || !type) {
+    if (!title || !classId || !subjectId || !price || !type || !pdfFile) {
       throw new Error("Required fields missing");
     }
 
+    /* 🔍 FETCH DATA */
     const [cls, sub] = await Promise.all([
       Class.findById(classId),
       Subject.findById(subjectId)
@@ -50,15 +51,38 @@ export const addMaterial = async (req, res, next) => {
 
     if (!cls || !sub) throw new Error("Invalid class/subject");
 
+    /* 🔥 STREAM VALIDATION (CRITICAL) */
+    if (cls.hasStreams && !streamId) {
+      throw new Error("Stream required for this class");
+    }
+
+    if (!cls.hasStreams) {
+      // force null for lower classes
+      req.body.streamId = null;
+    }
+
+    /* 🔥 SUBJECT MATCH VALIDATION */
+    if (sub.classId.toString() !== classId) {
+      throw new Error("Subject does not belong to this class");
+    }
+
+    if (cls.hasStreams && sub.streamId?.toString() !== streamId) {
+      throw new Error("Subject does not belong to this stream");
+    }
+
+    /* 📄 TEMP FILE */
     const tempPath = path.join("uploads", Date.now() + ".pdf");
 
     await fs.mkdir("uploads", { recursive: true });
     await fs.writeFile(tempPath, pdfFile.buffer);
 
+    /* 🖼 GENERATE PREVIEW */
     await generatePreview(tempPath, "uploads");
 
+    /* ☁️ UPLOAD PDF */
     const pdf = await uploadPDFToCloudinary(pdfFile.buffer);
 
+    /* 🖼 UPLOAD PREVIEWS */
     let previews = [];
 
     for (let i = 1; i <= 2; i++) {
@@ -73,6 +97,7 @@ export const addMaterial = async (req, res, next) => {
       } catch {}
     }
 
+    /* 🖼 THUMBNAIL */
     let thumb = "";
     if (thumbnailFile) {
       const t = await uploadImageToCloudinary(
@@ -82,10 +107,12 @@ export const addMaterial = async (req, res, next) => {
       thumb = t.secure_url;
     }
 
+    /* 💾 SAVE */
     const material = await Material.create({
       title,
       classId,
       subjectId,
+      streamId: cls.hasStreams ? streamId : null,
       type,
       price,
       fileUrl: pdf.secure_url,
@@ -96,47 +123,36 @@ export const addMaterial = async (req, res, next) => {
 
     await fs.unlink(tempPath);
 
-    res.status(201).json({ success: true, data: material });
+    logger.info(`📦 Material created: ${title}`);
 
-  } catch (err) {
-    next(err);
-  }
-};
-
-/* =====================================
-   📄 GET FILTERED MATERIALS
-===================================== */
-export const getMaterialsByClassSubject = async (req, res, next) => {
-  try {
-    const { classId, subjectId } = req.params;
-
-    const materials = await Material.find({
-      classId,
-      subjectId,
-      isActive: true
-    })
-      .populate("classId", "name")
-      .populate("subjectId", "name")
-      .sort({ createdAt: -1 });
-
-    res.json({
+    res.status(201).json({
       success: true,
-      data: materials
+      data: material
     });
 
   } catch (err) {
+    logger.error(`Add material error: ${err.message}`);
     next(err);
   }
 };
 
 /* =====================================
-   📄 GET ALL MATERIALS
+   📄 GET MATERIALS (FILTERED 🔥)
 ===================================== */
 export const getMaterials = async (req, res, next) => {
   try {
-    const materials = await Material.find()
-      .populate("classId", "name")
+    const { classId, subjectId, streamId } = req.query;
+
+    const filter = { isActive: true };
+
+    if (classId) filter.classId = classId;
+    if (subjectId) filter.subjectId = subjectId;
+    if (streamId) filter.streamId = streamId;
+
+    const materials = await Material.find(filter)
+      .populate("classId", "name classNumber")
       .populate("subjectId", "name")
+      .populate("streamId", "name")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: materials });
@@ -153,7 +169,8 @@ export const getMaterialById = async (req, res, next) => {
   try {
     const material = await Material.findById(req.params.id)
       .populate("classId", "name")
-      .populate("subjectId", "name");
+      .populate("subjectId", "name")
+      .populate("streamId", "name");
 
     if (!material) {
       return res.status(404).json({
@@ -231,7 +248,6 @@ export const toggleMaterialStatus = async (req, res, next) => {
     if (!material) throw new Error("Material not found");
 
     material.isActive = !material.isActive;
-
     await material.save();
 
     res.json({

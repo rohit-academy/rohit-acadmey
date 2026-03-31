@@ -9,6 +9,7 @@ import errorMiddleware from "./middleware/errorMiddleware.js";
 /* 🔹 ROUTES */
 import authRoutes from "./routes/authRoutes.js";
 import classRoutes from "./routes/classRoutes.js";
+import streamRoutes from "./routes/streamRoutes.js"; // 🔥 NEW
 import subjectRoutes from "./routes/subjectRoutes.js";
 import materialRoutes from "./routes/materialRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -26,12 +27,16 @@ const app = express();
 app.set("trust proxy", 1);
 
 /* =====================================
-   🔐 SECURITY
+   🔐 SECURITY (HELMET HARDENED)
 ===================================== */
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false, // 🔥 allow images/pdf
+  })
+);
 
 /* =====================================
-   🌍 CORS (UPGRADED 🔥)
+   🌍 CORS (SMART + SAFE)
 ===================================== */
 const allowedOrigins = [
   "https://rohitacademy.net",
@@ -44,7 +49,6 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      // ✅ Allow Vercel preview URLs
       if (origin.includes(".vercel.app")) {
         return callback(null, true);
       }
@@ -61,12 +65,17 @@ app.use(
 );
 
 /* =====================================
-   🚦 RATE LIMIT (SMART)
+   🚦 RATE LIMIT (GLOBAL)
 ===================================== */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
-  message: "Too many requests, try later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests, try again later",
+  },
 });
 
 app.use("/api", limiter);
@@ -79,13 +88,13 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 /* =====================================
-   ⚠️ RAZORPAY WEBHOOK (RAW BODY FIRST)
+   ⚠️ WEBHOOK (RAW BODY FIRST)
 ===================================== */
 app.post(
   "/api/webhook/razorpay",
   express.raw({ type: "application/json" }),
   (req, res) => {
-    console.log("🔔 Razorpay Webhook Received");
+    console.log("🔔 Razorpay Webhook Hit");
     res.status(200).json({ success: true });
   }
 );
@@ -104,10 +113,11 @@ app.get("/", (req, res) => {
 });
 
 /* =====================================
-   🔹 ROUTES
+   🔹 API ROUTES
 ===================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/classes", classRoutes);
+app.use("/api/streams", streamRoutes); // 🔥 NEW (IMPORTANT)
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/materials", materialRoutes);
 app.use("/api/orders", orderRoutes);
@@ -123,7 +133,7 @@ app.use("/api/admin", adminRoutes);
    ❌ 404 HANDLER
 ===================================== */
 app.use((req, res) => {
-  console.warn("❌ 404:", req.originalUrl);
+  console.warn("❌ 404:", req.method, req.originalUrl);
 
   res.status(404).json({
     success: false,
@@ -132,10 +142,25 @@ app.use((req, res) => {
 });
 
 /* =====================================
-   🔥 GLOBAL ERROR HANDLER
+   🔥 GLOBAL ERROR HANDLER (FINAL)
 ===================================== */
 app.use((err, req, res, next) => {
-  console.error("💥 ERROR:", err.message);
+  console.error("💥 ERROR:", err.stack || err.message);
+
+  /* 🔥 MONGOOSE ERRORS */
+  if (err.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID format",
+    });
+  }
+
+  if (err.code === 11000) {
+    return res.status(400).json({
+      success: false,
+      message: "Duplicate field value",
+    });
+  }
 
   res.status(err.status || 500).json({
     success: false,
