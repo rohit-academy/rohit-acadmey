@@ -32,7 +32,6 @@ function ManageSubjects() {
       }
 
     } catch (err) {
-      console.error(err);
       setError("Failed to load classes");
     }
   };
@@ -60,23 +59,22 @@ function ManageSubjects() {
   };
 
   /* =========================
-     📄 LOAD SUBJECTS
+     📄 LOAD SUBJECTS (🔥 NEW ROUTE)
   ========================= */
-  const fetchSubjects = async (classId, streamId) => {
+  const fetchSubjects = async (classId, streamId = null) => {
     try {
 
       setLoading(true);
 
-      let url = `/subjects?classId=${classId}`;
+      let url = `/subjects/${classId}`;
 
       if (streamId) {
-        url += `&streamId=${streamId}`;
+        url = `/subjects/${classId}/${streamId}`;
       }
 
       const res = await API.get(url);
-      const list = res.data?.data || [];
 
-      const sorted = list.sort((a, b) =>
+      const sorted = (res.data?.data || []).sort((a, b) =>
         a.name.localeCompare(b.name)
       );
 
@@ -91,6 +89,38 @@ function ManageSubjects() {
   };
 
   /* =========================
+     🔥 CLASS CHANGE HANDLER
+  ========================= */
+  const handleClassChange = (classId) => {
+
+    setSelectedClass(classId);
+    setSubjects([]);
+    setError("");
+
+    const cls = classes.find(c => c._id === classId);
+
+    if (cls?.hasStreams) {
+      fetchStreams(classId);
+    } else {
+      setStreams([]);
+      setSelectedStream("");
+      fetchSubjects(classId); // direct load
+    }
+  };
+
+  /* =========================
+     🔥 STREAM CHANGE
+  ========================= */
+  const handleStreamChange = (streamId) => {
+
+    setSelectedStream(streamId);
+
+    if (selectedClass) {
+      fetchSubjects(selectedClass, streamId);
+    }
+  };
+
+  /* =========================
      EFFECTS
   ========================= */
   useEffect(() => {
@@ -98,25 +128,10 @@ function ManageSubjects() {
   }, []);
 
   useEffect(() => {
-
-    if (!selectedClass) return;
-
-    const cls = classes.find(c => c._id === selectedClass);
-
-    if (cls?.requiresStream) {
-      fetchStreams(selectedClass);
-    } else {
-      setStreams([]);
-      setSelectedStream("");
-    }
-
-  }, [selectedClass]);
-
-  useEffect(() => {
     if (selectedClass) {
-      fetchSubjects(selectedClass, selectedStream);
+      handleClassChange(selectedClass);
     }
-  }, [selectedClass, selectedStream]);
+  }, [selectedClass]);
 
   /* =========================
      ➕ ADD SUBJECT
@@ -129,19 +144,16 @@ function ManageSubjects() {
 
     const cls = classes.find(c => c._id === selectedClass);
 
-    /* 🔥 STREAM REQUIRED CHECK */
-    if (cls?.requiresStream && !selectedStream) {
-      setError("Stream required for this class");
-      return;
+    if (cls?.hasStreams && !selectedStream) {
+      return setError("Stream required for this class");
     }
 
     const exists = subjects.find(
-      (s) => s.name.toLowerCase() === name.toLowerCase()
+      s => s.name.toLowerCase() === name.toLowerCase()
     );
 
     if (exists) {
-      setError("Subject already exists");
-      return;
+      return setError("Subject already exists");
     }
 
     try {
@@ -152,7 +164,7 @@ function ManageSubjects() {
       await API.post("/subjects", {
         name,
         classId: selectedClass,
-        streamId: cls?.requiresStream ? selectedStream : null
+        streamId: cls?.hasStreams ? selectedStream : null
       });
 
       setNewSubject("");
@@ -160,7 +172,6 @@ function ManageSubjects() {
       fetchSubjects(selectedClass, selectedStream);
 
     } catch (err) {
-      console.error(err);
       setError(err.response?.data?.message || "Add failed");
     } finally {
       setAdding(false);
@@ -178,21 +189,18 @@ function ManageSubjects() {
 
       await API.delete(`/subjects/${id}`);
 
-      setSubjects((prev) =>
-        prev.filter((s) => s._id !== id)
-      );
+      setSubjects(prev => prev.filter(s => s._id !== id));
 
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Delete failed");
     }
   };
 
+  const selectedClassObj = classes.find(c => c._id === selectedClass);
+
   /* =========================
      UI
   ========================= */
-  const selectedClassObj = classes.find(c => c._id === selectedClass);
-
   return (
 
     <div className="p-4 md:p-6">
@@ -201,137 +209,84 @@ function ManageSubjects() {
         <BookOpen className="text-blue-600" /> Manage Subjects
       </h1>
 
-      {error && (
-        <p className="text-red-500 mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      {/* ================= CLASS SELECT ================= */}
-      <div className="mb-4">
+      {/* CLASS */}
+      <select
+        value={selectedClass}
+        onChange={(e) => handleClassChange(e.target.value)}
+        className="border p-3 rounded-lg mb-4"
+      >
+        {classes.map(cls => (
+          <option key={cls._id} value={cls._id}>
+            Class {cls.name}
+          </option>
+        ))}
+      </select>
 
-        <label className="block mb-2 font-semibold">
-          Select Class
-        </label>
-
+      {/* STREAM */}
+      {selectedClassObj?.hasStreams && (
         <select
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-          className="border p-3 rounded-lg w-full max-w-xs"
+          value={selectedStream}
+          onChange={(e) => handleStreamChange(e.target.value)}
+          className="border p-3 rounded-lg mb-6"
         >
-          {classes.map((cls) => (
-            <option key={cls._id} value={cls._id}>
-              Class {cls.name}
+          <option value="">Select Stream</option>
+          {streams.map(s => (
+            <option key={s._id} value={s._id}>
+              {s.name}
             </option>
           ))}
         </select>
-
-      </div>
-
-      {/* ================= STREAM SELECT ================= */}
-      {selectedClassObj?.requiresStream && (
-
-        <div className="mb-6">
-
-          <label className="block mb-2 font-semibold">
-            Select Stream
-          </label>
-
-          <select
-            value={selectedStream}
-            onChange={(e) => setSelectedStream(e.target.value)}
-            className="border p-3 rounded-lg w-full max-w-xs"
-          >
-            <option value="">Select Stream</option>
-
-            {streams.map((s) => (
-              <option key={s._id} value={s._id}>
-                {s.name}
-              </option>
-            ))}
-
-          </select>
-
-        </div>
-
       )}
 
-      {/* ================= ADD ================= */}
-      <div className="flex gap-3 mb-8 max-w-xl">
+      {/* ADD */}
+      <div className="flex gap-3 mb-6">
 
         <input
-          type="text"
-          placeholder="Enter subject name"
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
-          className="border p-3 rounded-lg flex-1"
+          placeholder="Enter subject"
+          className="border p-3 rounded flex-1"
         />
 
         <button
           onClick={handleAddSubject}
           disabled={adding}
-          className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2"
+          className="bg-blue-600 text-white px-4 rounded"
         >
-          {adding ? (
-            <Loader2 className="animate-spin" size={18} />
-          ) : (
-            <>
-              <Plus size={18} /> Add
-            </>
-          )}
+          {adding ? <Loader2 className="animate-spin" /> : <Plus />}
         </button>
 
       </div>
 
-      {/* ================= SUBJECT LIST ================= */}
+      {/* LIST */}
       {loading ? (
-
-        <div className="text-center py-10 text-gray-500">
-          Loading subjects...
-        </div>
-
+        <p>Loading...</p>
+      ) : subjects.length === 0 ? (
+        <p>No subjects</p>
       ) : (
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {subjects.length === 0 ? (
-            <p className="text-gray-500">
-              No subjects found
-            </p>
-          ) : (
+          {subjects.map(s => (
+            <div key={s._id} className="bg-white p-4 rounded shadow flex justify-between">
 
-            subjects.map((subject) => (
+              <span>{s.name}</span>
 
-              <div
-                key={subject._id}
-                className="bg-white p-5 rounded-xl shadow flex justify-between items-center"
-              >
+              <button onClick={() => handleDelete(s._id, s.name)}>
+                <Trash2 className="text-red-500" />
+              </button>
 
-                <span className="font-semibold text-lg">
-                  {subject.name}
-                </span>
-
-                <button
-                  onClick={() =>
-                    handleDelete(subject._id, subject.name)
-                  }
-                  className="text-red-500"
-                >
-                  <Trash2 size={18} />
-                </button>
-
-              </div>
-
-            ))
-
-          )}
+            </div>
+          ))}
 
         </div>
 
       )}
 
     </div>
-
   );
-
 }
 
 export default ManageSubjects;

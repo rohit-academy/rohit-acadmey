@@ -22,7 +22,7 @@ function UploadMaterial() {
 
   const [formData, setFormData] = useState({
     classId: "",
-    streamId: "", // 🔥 NEW
+    streamId: "",
     subjectId: "",
     type: "",
     title: "",
@@ -33,17 +33,13 @@ function UploadMaterial() {
     thumbnail: null
   });
 
-  /* ===============================
-     🔐 ADMIN CHECK
-  ============================== */
+  /* ================= ADMIN CHECK ================= */
   useEffect(() => {
     const admin = JSON.parse(localStorage.getItem("admin") || "{}");
     if (!admin?.token) navigate("/admin-login");
-  }, [navigate]);
+  }, []);
 
-  /* ===============================
-     📚 FETCH CLASSES
-  ============================== */
+  /* ================= FETCH CLASSES ================= */
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -56,18 +52,16 @@ function UploadMaterial() {
     fetchClasses();
   }, []);
 
-  /* ===============================
-     🌿 FETCH STREAMS
-  ============================== */
+  /* ================= FETCH STREAMS ================= */
   useEffect(() => {
 
     if (!formData.classId) return;
 
     const cls = classes.find(c => c._id === formData.classId);
 
-    if (!cls?.requiresStream) {
+    if (!cls?.hasStreams) {
       setStreams([]);
-      setFormData(prev => ({ ...prev, streamId: "" }));
+      setFormData(prev => ({ ...prev, streamId: "", subjectId: "" }));
       return;
     }
 
@@ -84,25 +78,32 @@ function UploadMaterial() {
 
   }, [formData.classId]);
 
-  /* ===============================
-     📄 FETCH SUBJECTS
-  ============================== */
+  /* ================= FETCH SUBJECTS (🔥 NEW ROUTE) ================= */
   useEffect(() => {
 
     if (!formData.classId) return;
 
     const cls = classes.find(c => c._id === formData.classId);
 
-    let url = `/subjects?classId=${formData.classId}`;
-
-    if (cls?.requiresStream && formData.streamId) {
-      url += `&streamId=${formData.streamId}`;
-    }
-
     const fetchSubjects = async () => {
       try {
+
+        let url = `/subjects/${formData.classId}`;
+
+        if (cls?.hasStreams) {
+
+          if (!formData.streamId) {
+            setSubjects([]);
+            return;
+          }
+
+          url = `/subjects/${formData.classId}/${formData.streamId}`;
+        }
+
         const res = await API.get(url);
+
         setSubjects(res.data?.data || []);
+
       } catch {
         setError("Failed to load subjects");
       }
@@ -112,9 +113,7 @@ function UploadMaterial() {
 
   }, [formData.classId, formData.streamId]);
 
-  /* ===============================
-     INPUT HANDLER
-  ============================== */
+  /* ================= HANDLE CHANGE ================= */
   const handleChange = (e) => {
 
     const { name, value, files } = e.target;
@@ -124,13 +123,11 @@ function UploadMaterial() {
       const file = files[0];
 
       if (name === "file" && file.size > 10 * 1024 * 1024) {
-        setError("PDF must be under 10MB");
-        return;
+        return setError("PDF must be under 10MB");
       }
 
       if (name === "thumbnail" && file.size > 2 * 1024 * 1024) {
-        setError("Thumbnail must be under 2MB");
-        return;
+        return setError("Thumbnail must be under 2MB");
       }
 
       if (name === "thumbnail") {
@@ -142,15 +139,30 @@ function UploadMaterial() {
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    // 🔥 RESET DEPENDENCIES
+    if (name === "classId") {
+      setFormData(prev => ({
+        ...prev,
+        classId: value,
+        streamId: "",
+        subjectId: ""
+      }));
+      return;
+    }
+
+    if (name === "streamId") {
+      setFormData(prev => ({
+        ...prev,
+        streamId: value,
+        subjectId: ""
+      }));
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  /* ===============================
-     🚀 SUBMIT
-  ============================== */
+  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
 
     e.preventDefault();
@@ -158,19 +170,15 @@ function UploadMaterial() {
     const cls = classes.find(c => c._id === formData.classId);
 
     if (!formData.title || !formData.price || !formData.type) {
-      setError("Fill all required fields");
-      return;
+      return setError("Fill all required fields");
     }
 
     if (!formData.file) {
-      setError("PDF required");
-      return;
+      return setError("PDF required");
     }
 
-    /* 🔥 STREAM VALIDATION */
-    if (cls?.requiresStream && !formData.streamId) {
-      setError("Stream required for this class");
-      return;
+    if (cls?.hasStreams && !formData.streamId) {
+      return setError("Stream required for this class");
     }
 
     try {
@@ -182,22 +190,20 @@ function UploadMaterial() {
 
       const data = new FormData();
 
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== "") {
-          data.append(key, value);
-        }
+      Object.entries(formData).forEach(([k, v]) => {
+        if (v !== null && v !== "") data.append(k, v);
       });
 
       await API.post("/materials", data, {
         onUploadProgress: (e) => {
           if (!e.total) return;
-          const percent = Math.round((e.loaded * 100) / e.total);
-          setProgress(percent);
+          setProgress(Math.round((e.loaded * 100) / e.total));
         }
       });
 
       setSuccess(true);
 
+      // RESET
       setFormData({
         classId: "",
         streamId: "",
@@ -216,12 +222,10 @@ function UploadMaterial() {
         setThumbnailPreview(null);
       }
 
-      if (fileRef.current) fileRef.current.value = "";
-      if (thumbRef.current) thumbRef.current.value = "";
+      fileRef.current.value = "";
+      thumbRef.current.value = "";
 
-      setTimeout(() => {
-        navigate("/admin/materials");
-      }, 1200);
+      setTimeout(() => navigate("/admin/materials"), 1200);
 
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed");
@@ -230,122 +234,77 @@ function UploadMaterial() {
     }
   };
 
-  const selectedClassObj = classes.find(c => c._id === formData.classId);
+  const selectedClass = classes.find(c => c._id === formData.classId);
 
-  /* =============================== UI =============================== */
+  /* ================= UI ================= */
 
   return (
-
-    <div className="px-4 sm:px-6 py-6 max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto p-6">
 
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <UploadCloud className="text-blue-600" />
-        Upload Study Material
+        Upload Material
       </h1>
 
-      {success && (
-        <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4 flex gap-2">
-          <CheckCircle size={18} /> Uploaded successfully
-        </div>
-      )}
+      {success && <p className="text-green-600 mb-3">Uploaded successfully</p>}
+      {error && <p className="text-red-500 mb-3">{error}</p>}
 
-      {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
-          {error}
-        </div>
-      )}
-
-      {loading && (
-        <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
-          <div
-            className="bg-blue-600 h-2 rounded-full"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="bg-white p-5 rounded-2xl shadow space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* CLASS */}
-        <select name="classId" value={formData.classId} onChange={handleChange} className="input" required>
+        <select name="classId" value={formData.classId} onChange={handleChange} className="input">
           <option value="">Select Class</option>
           {classes.map(c => (
             <option key={c._id} value={c._id}>
-              Class {c.name}
+              {c.name}
             </option>
           ))}
         </select>
 
-        {/* 🔥 STREAM */}
-        {selectedClassObj?.requiresStream && (
-          <select name="streamId" value={formData.streamId} onChange={handleChange} className="input" required>
+        {/* STREAM */}
+        {selectedClass?.hasStreams && (
+          <select name="streamId" value={formData.streamId} onChange={handleChange} className="input">
             <option value="">Select Stream</option>
             {streams.map(s => (
-              <option key={s._id} value={s._id}>
-                {s.name}
-              </option>
+              <option key={s._id} value={s._id}>{s.name}</option>
             ))}
           </select>
         )}
 
         {/* SUBJECT */}
-        <select name="subjectId" value={formData.subjectId} onChange={handleChange} className="input" required>
+        <select name="subjectId" value={formData.subjectId} onChange={handleChange} className="input">
           <option value="">Select Subject</option>
           {subjects.map(s => (
-            <option key={s._id} value={s._id}>
-              {s.name}
-            </option>
+            <option key={s._id} value={s._id}>{s.name}</option>
           ))}
         </select>
 
-        <select name="type" value={formData.type} onChange={handleChange} className="input" required>
+        {/* TYPE */}
+        <select name="type" value={formData.type} onChange={handleChange} className="input">
           <option value="">Type</option>
           <option value="Notes">Notes</option>
           <option value="PYQ">PYQ</option>
         </select>
 
-        <input name="title" value={formData.title} placeholder="Title" onChange={handleChange} className="input" required />
-        <input name="price" value={formData.price} type="number" placeholder="Price" onChange={handleChange} className="input" required />
+        <input name="title" value={formData.title} onChange={handleChange} placeholder="Title" className="input" />
+        <input name="price" value={formData.price} onChange={handleChange} type="number" placeholder="Price" className="input" />
 
-        {/* FILES */}
-        <div className="grid sm:grid-cols-2 gap-4">
+        {/* FILE */}
+        <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} />
 
-          <label className="upload-box">
-            <FileText />
-            Upload PDF
-            <input ref={fileRef} type="file" name="file" accept=".pdf" onChange={handleChange} hidden />
-          </label>
+        {/* THUMB */}
+        <input ref={thumbRef} type="file" name="thumbnail" accept="image/*" onChange={handleChange} />
 
-          <label className="upload-box">
-            <Image />
-            Thumbnail
-            <input ref={thumbRef} type="file" name="thumbnail" accept="image/*" onChange={handleChange} hidden />
-          </label>
+        {thumbnailPreview && <img src={thumbnailPreview} className="h-40 rounded" />}
 
-        </div>
-
-        {formData.file && (
-          <p className="text-green-600 text-sm">{formData.file.name}</p>
-        )}
-
-        {thumbnailPreview && (
-          <img src={thumbnailPreview} className="w-full h-40 object-cover rounded-lg" />
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white w-full py-3 rounded-xl font-semibold"
-        >
-          {loading ? `Uploading ${progress}%` : "Upload Material"}
+        <button className="bg-blue-600 text-white w-full py-3 rounded">
+          {loading ? `Uploading ${progress}%` : "Upload"}
         </button>
 
       </form>
 
     </div>
-
   );
-
 }
 
 export default UploadMaterial;
