@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
   {
@@ -22,6 +23,13 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       default: undefined
+    },
+
+    /* 🔐 PASSWORD */
+    password: {
+      type: String,
+      minlength: 6,
+      select: false
     },
 
     /* 👤 USERNAME */
@@ -51,14 +59,14 @@ const userSchema = new mongoose.Schema(
     /* 🔐 AUTH PROVIDER */
     authProvider: {
       type: String,
-      enum: ["firebase", "google", "phone"],
+      enum: ["firebase", "google", "phone", "email"],
       default: "firebase"
     },
 
-    /* 👑 ROLE (SCALABLE) */
+    /* 👑 ROLE */
     role: {
       type: String,
-      enum: ["user", "admin", "teacher"], // 🔥 future ready
+      enum: ["user", "admin", "teacher"],
       default: "user",
       index: true
     },
@@ -82,7 +90,7 @@ const userSchema = new mongoose.Schema(
       default: Date.now
     },
 
-    /* 🔐 SECURITY TRACKING */
+    /* 🔐 SECURITY */
     loginAttempts: {
       type: Number,
       default: 0
@@ -98,33 +106,17 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 INDEXES (OPTIMIZED)
+   🔥 INDEXES
 ===================================== */
-
-userSchema.index(
-  { firebaseId: 1 },
-  { unique: true, sparse: true }
-);
-
-userSchema.index(
-  { phone: 1 },
-  { unique: true, sparse: true }
-);
-
-userSchema.index(
-  { email: 1 },
-  { unique: true, sparse: true }
-);
-
-userSchema.index(
-  { username: 1 },
-  { unique: true, sparse: true }
-);
+userSchema.index({ firebaseId: 1 }, { unique: true, sparse: true });
+userSchema.index({ phone: 1 }, { unique: true, sparse: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ username: 1 }, { unique: true, sparse: true });
 
 /* =====================================
-   🔥 PRE SAVE CLEANUP
+   🔥 PRE SAVE (NO NEXT - CLEAN)
 ===================================== */
-userSchema.pre("save", function (next) {
+userSchema.pre("save", async function () {
 
   /* 🔹 USERNAME CLEAN */
   if (this.username) {
@@ -145,14 +137,23 @@ userSchema.pre("save", function (next) {
     this.email = this.email.toLowerCase().trim();
   }
 
-  next();
+  /* 🔐 PASSWORD HASH */
+  if (this.isModified("password") && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+
 });
 
 /* =====================================
-   🔹 METHODS
+   🔐 METHODS
 ===================================== */
 
-/* 🔥 UPDATE LOGIN TIME */
+/* 🔑 COMPARE PASSWORD */
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
+};
+
+/* 🔥 UPDATE LOGIN */
 userSchema.methods.updateLoginTime = function () {
   this.lastLogin = new Date();
   this.loginAttempts = 0;
@@ -160,7 +161,7 @@ userSchema.methods.updateLoginTime = function () {
   return this.save();
 };
 
-/* 🔐 LOGIN ATTEMPTS (SECURITY) */
+/* 🔐 LOGIN ATTEMPTS */
 userSchema.methods.incrementLoginAttempts = function () {
 
   if (this.lockUntil && this.lockUntil > Date.now()) {
@@ -170,22 +171,23 @@ userSchema.methods.incrementLoginAttempts = function () {
   this.loginAttempts += 1;
 
   if (this.loginAttempts >= 5) {
-    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 min lock
+    this.lockUntil = Date.now() + 15 * 60 * 1000;
   }
 
   return this.save();
 };
 
-/* 🔥 CHECK LOCK */
+/* 🔒 CHECK LOCK */
 userSchema.methods.isLocked = function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
-/* 🔥 CLEAN RESPONSE */
+/* 🔥 SAFE RESPONSE */
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
 
   delete obj.__v;
+  delete obj.password;
   delete obj.loginAttempts;
   delete obj.lockUntil;
 

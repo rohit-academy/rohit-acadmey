@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Class from "../models/Class.js";
 import Subject from "../models/Subject.js";
@@ -9,13 +8,14 @@ import logger from "../utils/logger.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
-   🔐 ADMIN LOGIN (DB BASED)
+   🔐 ADMIN LOGIN (FINAL SECURE VERSION)
 ===================================== */
 export const adminLogin = async (req, res) => {
   try {
 
     const { email, password } = req.body;
 
+    /* ❌ VALIDATION */
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -23,24 +23,52 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    const admin = await User.findOne({ email });
+    /* 🔍 FIND ADMIN + PASSWORD */
+    const admin = await User.findOne({
+      email: email.toLowerCase().trim(),
+      role: "admin"
+    }).select("+password");
 
-    if (!admin || admin.role !== "admin") {
+    if (!admin) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized"
+        message: "Admin not found"
       });
     }
 
-    const isMatch = await bcrypt.compare(password, admin.password);
+    /* ⛔ BLOCK CHECK */
+    if (admin.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: "Account blocked"
+      });
+    }
+
+    /* 🔒 LOCK CHECK */
+    if (admin.isLocked()) {
+      return res.status(403).json({
+        success: false,
+        message: "Too many attempts. Try after some time"
+      });
+    }
+
+    /* 🔐 PASSWORD MATCH */
+    const isMatch = await admin.comparePassword(password);
 
     if (!isMatch) {
+
+      await admin.incrementLoginAttempts();
+
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
       });
     }
 
+    /* ✅ SUCCESS RESET */
+    await admin.updateLoginTime();
+
+    /* 🎟 TOKEN */
     const token = generateToken({
       id: admin._id,
       role: admin.role
@@ -57,6 +85,7 @@ export const adminLogin = async (req, res) => {
     });
 
   } catch (error) {
+
     logger.error(`Admin login error: ${error.message}`);
 
     res.status(500).json({
@@ -68,7 +97,7 @@ export const adminLogin = async (req, res) => {
 
 
 /* =====================================
-   📊 DASHBOARD STATS (IMPROVED)
+   📊 DASHBOARD STATS
 ===================================== */
 export const getAdminStats = async (req, res) => {
   try {
@@ -128,7 +157,7 @@ export const getAdminStats = async (req, res) => {
 
 
 /* =====================================
-   👥 GET ALL USERS (PAGINATION)
+   👥 GET USERS (PAGINATION)
 ===================================== */
 export const getAllUsers = async (req, res) => {
   try {
@@ -170,7 +199,7 @@ export const getAllUsers = async (req, res) => {
 
 
 /* =====================================
-   🚫 BLOCK / UNBLOCK USER
+   🔁 BLOCK / UNBLOCK USER (SMART)
 ===================================== */
 export const toggleUserBlock = async (req, res) => {
   try {
