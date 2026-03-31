@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Class from "../models/Class.js";
 import Subject from "../models/Subject.js";
@@ -8,42 +9,51 @@ import logger from "../utils/logger.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
-   🔐 ADMIN LOGIN
+   🔐 ADMIN LOGIN (DB BASED)
 ===================================== */
 export const adminLogin = async (req, res) => {
   try {
-    const { username, password } = req.body;
 
-    if (
-      username !== process.env.ADMIN_USERNAME ||
-      password !== process.env.ADMIN_PASSWORD
-    ) {
-      return res.status(401).json({
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
         success: false,
-        message: "Invalid admin credentials",
+        message: "Email & password required"
       });
     }
 
-    let admin = await User.findOne({ role: "admin" });
+    const admin = await User.findOne({ email });
 
-    if (!admin) {
-      admin = await User.create({
-        name: "admin",
-        role: "admin",
-        isVerified: true
+    if (!admin || admin.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized"
       });
+    }
 
-      logger.info("Admin created");
+    const isMatch = await bcrypt.compare(password, admin.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
     }
 
     const token = generateToken({
       id: admin._id,
-      role: "admin"
+      role: admin.role
     });
 
     res.json({
       success: true,
-      token
+      token,
+      admin: {
+        id: admin._id,
+        email: admin.email,
+        role: admin.role
+      }
     });
 
   } catch (error) {
@@ -56,8 +66,9 @@ export const adminLogin = async (req, res) => {
   }
 };
 
+
 /* =====================================
-   📊 DASHBOARD STATS
+   📊 DASHBOARD STATS (IMPROVED)
 ===================================== */
 export const getAdminStats = async (req, res) => {
   try {
@@ -68,8 +79,8 @@ export const getAdminStats = async (req, res) => {
       totalSubjects,
       totalMaterials,
       totalOrders,
-      revenueData,
-      downloadsData
+      revenue,
+      downloads
     ] = await Promise.all([
 
       User.countDocuments({ isBlocked: false }),
@@ -94,13 +105,15 @@ export const getAdminStats = async (req, res) => {
 
     res.json({
       success: true,
-      totalUsers,
-      totalClasses,
-      totalSubjects,
-      totalMaterials,
-      totalOrders,
-      totalRevenue: revenueData[0]?.total || 0,
-      totalDownloads: downloadsData[0]?.total || 0
+      data: {
+        totalUsers,
+        totalClasses,
+        totalSubjects,
+        totalMaterials,
+        totalOrders,
+        totalRevenue: revenue[0]?.total || 0,
+        totalDownloads: downloads[0]?.total || 0
+      }
     });
 
   } catch (error) {
@@ -113,23 +126,25 @@ export const getAdminStats = async (req, res) => {
   }
 };
 
+
 /* =====================================
-   👥 GET ALL USERS
+   👥 GET ALL USERS (PAGINATION)
 ===================================== */
 export const getAllUsers = async (req, res) => {
   try {
 
     const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.max(1, Number(req.query.limit) || 20);
+    const limit = Math.min(50, Number(req.query.limit) || 20);
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
       User.find()
-        .select("-__v")
+        .select("-password -__v")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
+
       User.countDocuments()
     ]);
 
@@ -153,35 +168,48 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+
 /* =====================================
-   🚫 BLOCK USER
+   🚫 BLOCK / UNBLOCK USER
 ===================================== */
-export const blockUser = async (req, res) => {
+export const toggleUserBlock = async (req, res) => {
   try {
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID"
       });
     }
 
-    if (req.user.id === req.params.id) {
+    if (req.user.id === id) {
       return res.status(400).json({
         success: false,
-        message: "You cannot block yourself"
+        message: "You cannot modify yourself"
       });
     }
 
-    await User.findByIdAndUpdate(req.params.id, { isBlocked: true });
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
 
     res.json({
       success: true,
-      message: "User blocked"
+      message: `User ${user.isBlocked ? "blocked" : "unblocked"}`
     });
 
   } catch (error) {
-    logger.error(`Block user error: ${error.message}`);
+    logger.error(`Toggle user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -190,57 +218,30 @@ export const blockUser = async (req, res) => {
   }
 };
 
-/* =====================================
-   ✅ UNBLOCK USER
-===================================== */
-export const unblockUser = async (req, res) => {
-  try {
-
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
-    await User.findByIdAndUpdate(req.params.id, { isBlocked: false });
-
-    res.json({
-      success: true,
-      message: "User unblocked"
-    });
-
-  } catch (error) {
-    logger.error(`Unblock user error: ${error.message}`);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error"
-    });
-  }
-};
 
 /* =====================================
-   ❌ DELETE USER (SOFT DELETE)
+   ❌ DELETE USER (SOFT)
 ===================================== */
 export const deleteUser = async (req, res) => {
   try {
 
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid user ID"
       });
     }
 
-    if (req.user.id === req.params.id) {
+    if (req.user.id === id) {
       return res.status(400).json({
         success: false,
         message: "Cannot delete yourself"
       });
     }
 
-    await User.findByIdAndUpdate(req.params.id, {
+    await User.findByIdAndUpdate(id, {
       isBlocked: true
     });
 
@@ -259,8 +260,9 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+
 /* =====================================
-   📄 GET ALL MATERIALS (ADMIN)
+   📄 GET MATERIALS (ADMIN)
 ===================================== */
 export const getAllMaterials = async (req, res) => {
   try {
@@ -269,16 +271,25 @@ export const getAllMaterials = async (req, res) => {
     const limit = 20;
     const skip = (page - 1) * limit;
 
-    const materials = await Material.find()
-      .populate("classId", "name")
-      .populate("subjectId", "name")
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const [materials, total] = await Promise.all([
+      Material.find()
+        .populate("classId", "name")
+        .populate("subjectId", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      Material.countDocuments()
+    ]);
 
     res.json({
       success: true,
-      data: materials
+      data: materials,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
     });
 
   } catch (error) {
@@ -291,6 +302,7 @@ export const getAllMaterials = async (req, res) => {
   }
 };
 
+
 /* =====================================
    📦 GET ALL ORDERS
 ===================================== */
@@ -298,7 +310,7 @@ export const getAllOrders = async (req, res) => {
   try {
 
     const orders = await Order.find()
-      .populate("user", "name phone")
+      .populate("user", "name phone email")
       .populate("materials", "title price")
       .sort({ createdAt: -1 });
 

@@ -1,53 +1,78 @@
 import User from "../models/User.js";
+import logger from "../utils/logger.js";
 
 /* =====================================
-   🔐 ADMIN ONLY MIDDLEWARE
+   🔐 ADMIN ONLY MIDDLEWARE (PRO VERSION)
 ===================================== */
 const adminOnly = async (req, res, next) => {
   try {
 
-    /* ❌ USER MISSING */
-    if (!req.user || !req.user.id) {
+    /* =====================================
+       🔍 BASIC AUTH CHECK
+    ===================================== */
+    if (!req.user?.id) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Unauthorized access"
       });
     }
 
-    /* 🔍 VERIFY USER FROM DB */
-    const user = await User.findById(req.user.id).select("role isBlocked");
+    /* =====================================
+       ⚡ FAST PATH (TOKEN ROLE)
+       👉 agar already admin hai token me
+    ===================================== */
+    if (req.user.role === "admin") {
+      return next();
+    }
+
+    /* =====================================
+       🔍 DB VERIFY (FALLBACK)
+    ===================================== */
+    const user = await User.findById(req.user.id)
+      .select("role isBlocked")
+      .lean();
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "User not found"
       });
     }
 
-    /* ⛔ BLOCK CHECK */
+    /* =====================================
+       ⛔ BLOCK CHECK
+    ===================================== */
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
-        message: "Account blocked",
+        message: "Your account is blocked"
       });
     }
 
-    /* 🔐 ROLE CHECK */
+    /* =====================================
+       🔐 ROLE CHECK
+    ===================================== */
     if (user.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Access denied: Admins only",
+        message: "Access denied (admin only)"
       });
     }
+
+    /* =====================================
+       🔥 ATTACH CLEAN USER
+    ===================================== */
+    req.user.role = user.role;
 
     next();
 
   } catch (error) {
-    console.error("🔥 Admin middleware error:", error.message);
+
+    logger.error(`Admin middleware error: ${error.message}`);
 
     return res.status(500).json({
       success: false,
-      message: "Admin authorization failed",
+      message: "Admin authorization failed"
     });
   }
 };

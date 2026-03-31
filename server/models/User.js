@@ -55,11 +55,12 @@ const userSchema = new mongoose.Schema(
       default: "firebase"
     },
 
-    /* 👑 ROLE */
+    /* 👑 ROLE (SCALABLE) */
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user"
+      enum: ["user", "admin", "teacher"], // 🔥 future ready
+      default: "user",
+      index: true
     },
 
     /* ✅ VERIFIED */
@@ -71,13 +72,24 @@ const userSchema = new mongoose.Schema(
     /* 🚫 BLOCK */
     isBlocked: {
       type: Boolean,
-      default: false
+      default: false,
+      index: true
     },
 
     /* 🕒 LAST LOGIN */
     lastLogin: {
       type: Date,
       default: Date.now
+    },
+
+    /* 🔐 SECURITY TRACKING */
+    loginAttempts: {
+      type: Number,
+      default: 0
+    },
+
+    lockUntil: {
+      type: Date
     }
   },
   {
@@ -86,33 +98,33 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 SAFE INDEXES (ONLY HERE)
+   🔥 INDEXES (OPTIMIZED)
 ===================================== */
 
 userSchema.index(
   { firebaseId: 1 },
-  { unique: true, partialFilterExpression: { firebaseId: { $exists: true } } }
+  { unique: true, sparse: true }
 );
 
 userSchema.index(
   { phone: 1 },
-  { unique: true, partialFilterExpression: { phone: { $exists: true } } }
+  { unique: true, sparse: true }
 );
 
 userSchema.index(
   { email: 1 },
-  { unique: true, partialFilterExpression: { email: { $exists: true } } }
+  { unique: true, sparse: true }
 );
 
 userSchema.index(
   { username: 1 },
-  { unique: true, partialFilterExpression: { username: { $exists: true } } }
+  { unique: true, sparse: true }
 );
 
 /* =====================================
-   🔥 PRE SAVE CLEANUP (FIXED)
+   🔥 PRE SAVE CLEANUP
 ===================================== */
-userSchema.pre("save", function () {
+userSchema.pre("save", function (next) {
 
   /* 🔹 USERNAME CLEAN */
   if (this.username) {
@@ -128,6 +140,12 @@ userSchema.pre("save", function () {
     this.phone = this.phone.replace(/\D/g, "").slice(-10);
   }
 
+  /* 🔹 EMAIL CLEAN */
+  if (this.email) {
+    this.email = this.email.toLowerCase().trim();
+  }
+
+  next();
 });
 
 /* =====================================
@@ -137,13 +155,40 @@ userSchema.pre("save", function () {
 /* 🔥 UPDATE LOGIN TIME */
 userSchema.methods.updateLoginTime = function () {
   this.lastLogin = new Date();
+  this.loginAttempts = 0;
+  this.lockUntil = undefined;
   return this.save();
+};
+
+/* 🔐 LOGIN ATTEMPTS (SECURITY) */
+userSchema.methods.incrementLoginAttempts = function () {
+
+  if (this.lockUntil && this.lockUntil > Date.now()) {
+    return Promise.resolve(this);
+  }
+
+  this.loginAttempts += 1;
+
+  if (this.loginAttempts >= 5) {
+    this.lockUntil = Date.now() + 15 * 60 * 1000; // 15 min lock
+  }
+
+  return this.save();
+};
+
+/* 🔥 CHECK LOCK */
+userSchema.methods.isLocked = function () {
+  return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
 /* 🔥 CLEAN RESPONSE */
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
+
   delete obj.__v;
+  delete obj.loginAttempts;
+  delete obj.lockUntil;
+
   return obj;
 };
 
