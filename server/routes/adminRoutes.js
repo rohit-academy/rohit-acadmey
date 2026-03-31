@@ -7,8 +7,7 @@ import {
   deleteUser,
   getAllOrders,
   getAllMaterials,
-  blockUser,
-  unblockUser
+  toggleUserBlock // 🔥 NEW (single handler)
 } from "../controllers/adminController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -21,7 +20,6 @@ const router = express.Router();
 ===================================== */
 const validateId = (req, res, next) => {
   try {
-
     const { id } = req.params;
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -48,15 +46,13 @@ const validateId = (req, res, next) => {
 ===================================== */
 const validatePagination = (req, res, next) => {
 
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 20;
+  let page = Number(req.query.page) || 1;
+  let limit = Number(req.query.limit) || 20;
 
-  if (page < 1 || limit < 1 || limit > 100) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid pagination values"
-    });
-  }
+  /* 🔥 SAFE LIMITS */
+  if (page < 1) page = 1;
+  if (limit < 1) limit = 20;
+  if (limit > 100) limit = 100;
 
   req.query.page = page;
   req.query.limit = limit;
@@ -78,17 +74,21 @@ router.get("/stats", getAdminStats);
    👨‍🎓 USERS
 ===================================== */
 
-/* 📄 GET USERS (with pagination) */
+/* 📄 GET USERS */
 router.get("/users", validatePagination, getAllUsers);
 
 /* ❌ DELETE USER */
 router.delete("/users/:id", validateId, deleteUser);
 
-/* 🚫 BLOCK USER */
-router.patch("/users/:id/block", validateId, blockUser);
+/* 🔁 BLOCK / UNBLOCK (SMART API) */
+router.patch("/users/:id/toggle-block", validateId, toggleUserBlock);
 
-/* ✅ UNBLOCK USER */
-router.patch("/users/:id/unblock", validateId, unblockUser);
+/*
+  🔥 REQUEST BODY:
+  {
+    action: "block" | "unblock"
+  }
+*/
 
 /* =====================================
    📦 ORDERS
