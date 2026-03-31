@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Material from "../models/Material.js";
 import Class from "../models/Class.js";
 import Subject from "../models/Subject.js";
@@ -9,7 +10,7 @@ import path from "path";
 import { generatePreview } from "../utils/pdfPreview.js";
 
 /* =====================================
-   ☁️ UPLOAD HELPERS
+   ☁️ HELPERS
 ===================================== */
 const uploadPDFToCloudinary = (buffer) =>
   new Promise((resolve, reject) => {
@@ -30,9 +31,24 @@ const uploadImageToCloudinary = (buffer, folder) =>
   });
 
 /* =====================================
-   ➕ ADD MATERIAL (🔥 FINAL)
+   🧠 FILTER BUILDER
+===================================== */
+const buildFilter = ({ classId, subjectId, streamId }) => {
+  const filter = { isActive: true };
+
+  if (classId) filter.classId = classId;
+  if (subjectId) filter.subjectId = subjectId;
+  if (streamId) filter.streamId = streamId;
+
+  return filter;
+};
+
+/* =====================================
+   ➕ ADD MATERIAL
 ===================================== */
 export const addMaterial = async (req, res, next) => {
+  let tempPath = null;
+
   try {
     const { title, classId, subjectId, streamId, price, type } = req.body;
 
@@ -43,7 +59,13 @@ export const addMaterial = async (req, res, next) => {
       throw new Error("Required fields missing");
     }
 
-    /* 🔍 FETCH DATA */
+    if (
+      !mongoose.Types.ObjectId.isValid(classId) ||
+      !mongoose.Types.ObjectId.isValid(subjectId)
+    ) {
+      throw new Error("Invalid class/subject ID");
+    }
+
     const [cls, sub] = await Promise.all([
       Class.findById(classId),
       Subject.findById(subjectId)
@@ -51,38 +73,31 @@ export const addMaterial = async (req, res, next) => {
 
     if (!cls || !sub) throw new Error("Invalid class/subject");
 
-    /* 🔥 STREAM VALIDATION (CRITICAL) */
+    /* 🔥 STREAM VALIDATION */
     if (cls.hasStreams && !streamId) {
       throw new Error("Stream required for this class");
     }
 
-    if (!cls.hasStreams) {
-      // force null for lower classes
-      req.body.streamId = null;
-    }
-
-    /* 🔥 SUBJECT MATCH VALIDATION */
+    /* 🔥 SUBJECT VALIDATION */
     if (sub.classId.toString() !== classId) {
-      throw new Error("Subject does not belong to this class");
+      throw new Error("Subject does not belong to class");
     }
 
     if (cls.hasStreams && sub.streamId?.toString() !== streamId) {
-      throw new Error("Subject does not belong to this stream");
+      throw new Error("Subject does not belong to stream");
     }
 
     /* 📄 TEMP FILE */
-    const tempPath = path.join("uploads", Date.now() + ".pdf");
+    tempPath = path.join("uploads", Date.now() + ".pdf");
 
     await fs.mkdir("uploads", { recursive: true });
     await fs.writeFile(tempPath, pdfFile.buffer);
 
-    /* 🖼 GENERATE PREVIEW */
     await generatePreview(tempPath, "uploads");
 
-    /* ☁️ UPLOAD PDF */
+    /* ☁️ UPLOAD */
     const pdf = await uploadPDFToCloudinary(pdfFile.buffer);
 
-    /* 🖼 UPLOAD PREVIEWS */
     let previews = [];
 
     for (let i = 1; i <= 2; i++) {
@@ -97,7 +112,6 @@ export const addMaterial = async (req, res, next) => {
       } catch {}
     }
 
-    /* 🖼 THUMBNAIL */
     let thumb = "";
     if (thumbnailFile) {
       const t = await uploadImageToCloudinary(
@@ -107,7 +121,6 @@ export const addMaterial = async (req, res, next) => {
       thumb = t.secure_url;
     }
 
-    /* 💾 SAVE */
     const material = await Material.create({
       title,
       classId,
@@ -121,8 +134,6 @@ export const addMaterial = async (req, res, next) => {
       previewImages: previews
     });
 
-    await fs.unlink(tempPath);
-
     logger.info(`📦 Material created: ${title}`);
 
     res.status(201).json({
@@ -133,24 +144,24 @@ export const addMaterial = async (req, res, next) => {
   } catch (err) {
     logger.error(`Add material error: ${err.message}`);
     next(err);
+  } finally {
+    if (tempPath) {
+      try {
+        await fs.unlink(tempPath);
+      } catch {}
+    }
   }
 };
 
 /* =====================================
-   📄 GET MATERIALS (FILTERED 🔥)
+   📄 GET MATERIALS (QUERY)
 ===================================== */
 export const getMaterials = async (req, res, next) => {
   try {
-    const { classId, subjectId, streamId } = req.query;
-
-    const filter = { isActive: true };
-
-    if (classId) filter.classId = classId;
-    if (subjectId) filter.subjectId = subjectId;
-    if (streamId) filter.streamId = streamId;
+    const filter = buildFilter(req.query);
 
     const materials = await Material.find(filter)
-      .populate("classId", "name classNumber")
+      .populate("classId", "name")
       .populate("subjectId", "name")
       .populate("streamId", "name")
       .sort({ createdAt: -1 });
@@ -163,10 +174,57 @@ export const getMaterials = async (req, res, next) => {
 };
 
 /* =====================================
+   📄 GET MATERIALS BY CLASS + SUBJECT
+   🔥 THIS FIXES YOUR ERROR
+===================================== */
+export const getMaterialsByClassSubject = async (req, res, next) => {
+  try {
+
+    const { classId, subjectId } = req.params;
+
+    if (
+      !mongoose.Types.ObjectId.isValid(classId) ||
+      !mongoose.Types.ObjectId.isValid(subjectId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid IDs"
+      });
+    }
+
+    const materials = await Material.find({
+      classId,
+      subjectId,
+      isActive: true
+    })
+      .populate("classId", "name")
+      .populate("subjectId", "name")
+      .populate("streamId", "name")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: materials
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/* =====================================
    🔍 GET SINGLE MATERIAL
 ===================================== */
 export const getMaterialById = async (req, res, next) => {
   try {
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID"
+      });
+    }
+
     const material = await Material.findById(req.params.id)
       .populate("classId", "name")
       .populate("subjectId", "name")
@@ -191,6 +249,7 @@ export const getMaterialById = async (req, res, next) => {
 ===================================== */
 export const updateMaterial = async (req, res, next) => {
   try {
+
     const material = await Material.findById(req.params.id);
 
     if (!material) throw new Error("Material not found");
@@ -216,6 +275,7 @@ export const updateMaterial = async (req, res, next) => {
 ===================================== */
 export const deleteMaterial = async (req, res, next) => {
   try {
+
     const material = await Material.findById(req.params.id);
 
     if (!material) throw new Error("Material not found");
@@ -243,6 +303,7 @@ export const deleteMaterial = async (req, res, next) => {
 ===================================== */
 export const toggleMaterialStatus = async (req, res, next) => {
   try {
+
     const material = await Material.findById(req.params.id);
 
     if (!material) throw new Error("Material not found");
