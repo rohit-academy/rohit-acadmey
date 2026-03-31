@@ -74,7 +74,7 @@ function AppRoutes() {
 
       <Route path="/admin-login" element={<AdminLogin />} />
 
-      {/* 🔥 PAYMENT / LOGIN CALLBACK */}
+      {/* ✅ PAYMENT SUCCESS */}
       <Route path="/success" element={<Success />} />
 
       {/* ================= USER ================= */}
@@ -84,22 +84,26 @@ function AppRoutes() {
 
         <Route path="/classes" element={<Classes />} />
 
-        {/* 🔥 FLOW: Class → Stream */}
+        {/* 🔥 CLASS → STREAM */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 🔥 FLOW: Class → Subject */}
-        <Route path="/subjects/:classId/:streamId?" element={<Subjects />} />
+        {/* 🔥 STREAM MANDATORY (FIXED 💥) */}
+        <Route
+          path="/subjects/:classId/:streamId"
+          element={<Subjects />}
+        />
 
-        {/* 🔥 FINAL FIXED ROUTE */}
+        {/* 🔥 MATERIALS */}
         <Route
           path="/materials/:classId/:subjectId"
           element={<StudyMaterials />}
         />
 
+        {/* 🛒 PRODUCT FLOW */}
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 🔐 PROTECTED */}
+        {/* 🔐 PROTECTED USER ROUTES */}
         <Route element={<ProtectedRoute />}>
 
           <Route path="/account" element={<Account />} />
@@ -134,6 +138,14 @@ function AppRoutes() {
         </Route>
 
       </Route>
+
+      {/* ================= SAFETY REDIRECTS ================= */}
+
+      {/* ❌ Prevent direct access without stream */}
+      <Route
+        path="/subjects/:classId"
+        element={<Navigate to="/classes" replace />}
+      />
 
       {/* ================= FALLBACK ================= */}
       <Route path="*" element={<NotFound />} />

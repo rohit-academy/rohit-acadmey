@@ -27,12 +27,15 @@ function Classes() {
         const list = res.data?.data || [];
 
         if (!Array.isArray(list)) {
+          console.warn("⚠️ Invalid classes response");
           setClasses([]);
           return;
         }
 
-        // 🔥 SORT by order
-        const sorted = list.sort((a, b) => (a.order || 0) - (b.order || 0));
+        /* 🔥 SAFE SORT (no mutation) */
+        const sorted = [...list].sort(
+          (a, b) => (a.order || 0) - (b.order || 0)
+        );
 
         setClasses(sorted);
 
@@ -40,7 +43,7 @@ function Classes() {
 
         if (!isMounted) return;
 
-        console.error("Classes fetch error:", err);
+        console.error("❌ Classes fetch error:", err);
         setError("Failed to load classes");
 
       } finally {
@@ -102,21 +105,28 @@ function Classes() {
 
         {classes.map((cls) => {
 
-          if (!cls?._id) return null;
+          if (!cls?._id || !cls?.name) return null;
 
-          /* 🔥 SAFE CLASS LOGIC */
-          const isSenior = ["11", "12"].includes(cls.name);
+          /* 🔥 NORMALIZE CLASS NAME */
+          const className = String(cls.name).trim();
 
+          /* 🔥 STREAM REQUIRED FOR 11 & 12 */
+          const isSenior = ["11", "12"].includes(className);
+
+          /* 🔥 FINAL ROUTE LOGIC */
           const route = isSenior
-            ? `/streams/${cls.name}`   // ✅ FIXED
-            : `/subjects/${cls._id}`;
+            ? `/streams/${className}`          // ✅ stream flow
+            : `/subjects/${cls._id}/general`; // ✅ force stream param
+
+          console.log("📦 Class:", className, "→", route);
 
           return (
             <ClassCard
               key={cls._id}
               id={cls._id}
-              name={cls.name}
+              name={className}
               route={route}
+              showStream={isSenior} // 🔥 UI control
             />
           );
         })}
@@ -126,7 +136,6 @@ function Classes() {
     </div>
 
   );
-
 }
 
 export default Classes;
