@@ -9,7 +9,7 @@ import errorMiddleware from "./middleware/errorMiddleware.js";
 /* 🔹 ROUTES */
 import authRoutes from "./routes/authRoutes.js";
 import classRoutes from "./routes/classRoutes.js";
-import streamRoutes from "./routes/streamRoutes.js"; // 🔥 NEW
+import streamRoutes from "./routes/streamRoutes.js"; // 🔥 STREAM
 import subjectRoutes from "./routes/subjectRoutes.js";
 import materialRoutes from "./routes/materialRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -22,21 +22,21 @@ import adminRoutes from "./routes/adminRoutes.js";
 const app = express();
 
 /* =====================================
-   🔐 TRUST PROXY (RENDER / VERCEL FIX)
+   🔐 TRUST PROXY
 ===================================== */
 app.set("trust proxy", 1);
 
 /* =====================================
-   🔐 SECURITY (HELMET HARDENED)
+   🔐 SECURITY
 ===================================== */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // 🔥 allow images/pdf
+    crossOriginResourcePolicy: false, // 🔥 allow pdf/images
   })
 );
 
 /* =====================================
-   🌍 CORS (SMART + SAFE)
+   🌍 CORS
 ===================================== */
 const allowedOrigins = [
   "https://rohitacademy.net",
@@ -65,7 +65,7 @@ app.use(
 );
 
 /* =====================================
-   🚦 RATE LIMIT (GLOBAL)
+   🚦 RATE LIMIT
 ===================================== */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -88,7 +88,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 /* =====================================
-   ⚠️ WEBHOOK (RAW BODY FIRST)
+   ⚠️ WEBHOOK (RAW BODY)
 ===================================== */
 app.post(
   "/api/webhook/razorpay",
@@ -117,7 +117,7 @@ app.get("/", (req, res) => {
 ===================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/classes", classRoutes);
-app.use("/api/streams", streamRoutes); // 🔥 NEW (IMPORTANT)
+app.use("/api/streams", streamRoutes); // 🔥 VERY IMPORTANT
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/materials", materialRoutes);
 app.use("/api/orders", orderRoutes);
@@ -142,7 +142,7 @@ app.use((req, res) => {
 });
 
 /* =====================================
-   🔥 GLOBAL ERROR HANDLER (FINAL)
+   🔥 GLOBAL ERROR HANDLER
 ===================================== */
 app.use((err, req, res, next) => {
   console.error("💥 ERROR:", err.stack || err.message);

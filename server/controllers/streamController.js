@@ -9,7 +9,7 @@ import logger from "../utils/logger.js";
 export const createStream = async (req, res) => {
   try {
 
-    const { name, classId, order } = req.body;
+    let { name, classId, order } = req.body;
 
     /* ❌ VALIDATION */
     if (!name || !classId) {
@@ -25,6 +25,8 @@ export const createStream = async (req, res) => {
         message: "Invalid classId"
       });
     }
+
+    name = name.trim().toLowerCase(); // 🔥 normalize
 
     /* 🔍 CHECK CLASS */
     const cls = await Class.findById(classId);
@@ -83,6 +85,33 @@ export const createStream = async (req, res) => {
 
 
 /* =====================================
+   📄 GET ALL STREAMS (🔥 NEW)
+===================================== */
+export const getAllStreams = async (req, res) => {
+  try {
+
+    const streams = await Stream.find({ isActive: true })
+      .populate("classId", "name classNumber")
+      .sort({ order: 1, createdAt: 1 });
+
+    res.json({
+      success: true,
+      data: streams
+    });
+
+  } catch (error) {
+
+    logger.error(`Get all streams error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch streams"
+    });
+  }
+};
+
+
+/* =====================================
    📄 GET STREAMS BY CLASS
 ===================================== */
 export const getStreamsByClass = async (req, res) => {
@@ -100,7 +129,8 @@ export const getStreamsByClass = async (req, res) => {
     const streams = await Stream.find({
       classId,
       isActive: true
-    }).sort({ order: 1, createdAt: 1 });
+    })
+      .sort({ order: 1, createdAt: 1 });
 
     res.json({
       success: true,
@@ -126,7 +156,7 @@ export const updateStream = async (req, res) => {
   try {
 
     const { id } = req.params;
-    const { name, order, isActive } = req.body;
+    let { name, order, isActive } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -144,11 +174,14 @@ export const updateStream = async (req, res) => {
       });
     }
 
-    if (name) stream.name = name;
+    /* 🔥 SAFE UPDATE */
+    if (name) stream.name = name.trim().toLowerCase();
     if (order !== undefined) stream.order = order;
     if (isActive !== undefined) stream.isActive = isActive;
 
     await stream.save();
+
+    logger.info(`Stream updated: ${stream.name}`);
 
     res.json({
       success: true,
@@ -168,7 +201,7 @@ export const updateStream = async (req, res) => {
 
 
 /* =====================================
-   ❌ DELETE STREAM
+   ❌ DELETE STREAM (SOFT DELETE 🔥)
 ===================================== */
 export const deleteStream = async (req, res) => {
   try {
@@ -191,7 +224,11 @@ export const deleteStream = async (req, res) => {
       });
     }
 
-    await stream.deleteOne();
+    /* 🔥 SOFT DELETE */
+    stream.isActive = false;
+    await stream.save();
+
+    logger.warn(`Stream deactivated: ${stream.name}`);
 
     res.json({
       success: true,
