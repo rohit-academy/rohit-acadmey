@@ -35,6 +35,7 @@ import AdminDashboard from "../admin/dashboard/AdminDashboard";
 import ManageAcademics from "../admin/academics/ManageAcademics";
 import ManageClasses from "../admin/academics/ManageClasses";
 import ManageSubjects from "../admin/academics/ManageSubjects";
+import ManageStreams from "../admin/academics/ManageStreams"; // ✅ NEW ADD
 import ManageMaterials from "../admin/materials/ManageMaterials";
 import UploadMaterial from "../admin/materials/UploadMaterial";
 import ManageUsers from "../admin/users/ManageUsers";
@@ -87,7 +88,7 @@ function AppRoutes() {
         {/* 🔥 CLASS → STREAM */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 🔥 STREAM MANDATORY (FIXED 💥) */}
+        {/* 🔥 STREAM MANDATORY */}
         <Route
           path="/subjects/:classId/:streamId"
           element={<Subjects />}
@@ -124,6 +125,7 @@ function AppRoutes() {
 
           <Route path="academics" element={<ManageAcademics />} />
           <Route path="academics/classes" element={<ManageClasses />} />
+          <Route path="academics/streams" element={<ManageStreams />} /> {/* ✅ FIXED */}
           <Route path="academics/subjects" element={<ManageSubjects />} />
 
           <Route path="materials" element={<ManageMaterials />} />

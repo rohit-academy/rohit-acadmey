@@ -6,7 +6,7 @@ import axios from "axios";
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-acadmey.onrender.com/api",
+    "https://rohit-acadmey.onrender.com/api", // ❌ spelling intentionally same 😂
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -25,10 +25,10 @@ const safeParse = (data) => {
 };
 
 /* =====================================
-   🔐 REQUEST INTERCEPTOR (FIXED 🔥)
+   🔐 REQUEST INTERCEPTOR (FINAL 🔥)
 ===================================== */
 API.interceptors.request.use(
-  (req) => {
+  (config) => {
     try {
       const userToken = localStorage.getItem("token");
 
@@ -36,26 +36,27 @@ API.interceptors.request.use(
       const adminToken = adminData?.token;
 
       /* 🔥 ADMIN ROUTE CHECK */
-      const isAdminRoute = req.url?.startsWith("/admin");
+      const isAdminRoute =
+        config.url?.startsWith("/admin") ||
+        window.location.pathname.startsWith("/admin");
 
       const token = isAdminRoute ? adminToken : userToken;
 
       if (token) {
-        req.headers = req.headers || {};
-        req.headers.Authorization = `Bearer ${token}`;
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
       }
-
     } catch (error) {
       console.error("❌ Token attach error:", error);
     }
 
-    return req;
+    return config;
   },
   (error) => Promise.reject(error)
 );
 
 /* =====================================
-   🚨 RESPONSE INTERCEPTOR
+   🚨 RESPONSE INTERCEPTOR (SMART 🔥)
 ===================================== */
 let isRedirecting = false;
 
@@ -64,10 +65,10 @@ API.interceptors.response.use(
 
   (error) => {
     const status = error.response?.status;
+    const currentPath = window.location.pathname;
 
-    /* 🔐 401 → LOGOUT */
+    /* 🔐 401 → SMART LOGOUT */
     if (status === 401 && !isRedirecting) {
-
       isRedirecting = true;
 
       console.warn("⚠️ Session expired");
@@ -76,8 +77,10 @@ API.interceptors.response.use(
       localStorage.removeItem("user");
       localStorage.removeItem("admin");
 
-      /* 🔥 SAFE REDIRECT */
-      if (!window.location.pathname.includes("/login")) {
+      /* 🔥 ADMIN vs USER REDIRECT FIX */
+      if (currentPath.startsWith("/admin")) {
+        window.location.href = "/admin-login";
+      } else {
         window.location.href = "/login";
       }
 

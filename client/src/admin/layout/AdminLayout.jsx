@@ -8,9 +8,7 @@ import {
   LogOut,
   Menu,
   X,
-  BookOpen,
-  UploadCloud,
-  Layers
+  BookOpen
 } from "lucide-react";
 
 function AdminLayout() {
@@ -21,12 +19,17 @@ function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* =========================
-     🔐 AUTH CHECK (SAFE FIX)
+     🔐 AUTH CHECK (FINAL FIX 🔥)
   ========================= */
   useEffect(() => {
-    const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+    try {
+      const admin = JSON.parse(localStorage.getItem("admin") || "{}");
 
-    if (!admin?.token) {
+      if (!admin?.token) {
+        navigate("/admin-login", { replace: true });
+      }
+    } catch (err) {
+      console.error("Admin auth error:", err);
       navigate("/admin-login", { replace: true });
     }
   }, [navigate]);
@@ -38,7 +41,7 @@ function AdminLayout() {
 
     if (!window.confirm("Logout from admin panel?")) return;
 
-    localStorage.clear(); // 🔥 clean all
+    localStorage.clear();
 
     navigate("/admin-login", { replace: true });
   };
@@ -55,8 +58,8 @@ function AdminLayout() {
     if (path.includes("/users")) return "Users";
     if (path.includes("/orders")) return "Orders";
     if (path.includes("/academics/classes")) return "Manage Classes";
+    if (path.includes("/academics/streams")) return "Manage Streams"; // ✅ added
     if (path.includes("/academics/subjects")) return "Manage Subjects";
-    if (path.includes("/academics/streams")) return "Manage Streams";
     if (path.includes("/academics")) return "Academics";
 
     return "Dashboard";
@@ -65,7 +68,7 @@ function AdminLayout() {
   const pageTitle = getPageTitle();
 
   /* =========================
-     🔗 NAV CONFIG (SCALABLE)
+     🔗 NAV CONFIG (CLEAN 🔥)
   ========================= */
   const navLinks = [
     {
@@ -83,8 +86,8 @@ function AdminLayout() {
           path: "/admin/academics/classes"
         },
         {
-          title: "Manage Streams",
-          path: "/admin/academics/streams" // 🔥 NEW
+          title: "🌿 Manage Streams", // ✅ visible highlight
+          path: "/admin/academics/streams"
         },
         {
           title: "Manage Subjects",
@@ -204,7 +207,7 @@ function AdminLayout() {
                               : "hover:bg-gray-100"
                           } ${
                             child.highlight
-                              ? "text-green-600"
+                              ? "text-green-600 font-semibold"
                               : ""
                           }`}
                         >

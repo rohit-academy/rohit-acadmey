@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, CheckCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import API from "../services/api";
 
 function AdminLogin() {
@@ -23,9 +23,9 @@ function AdminLogin() {
   ===================================== */
   useEffect(() => {
     try {
-      const adminData = JSON.parse(localStorage.getItem("admin") || "{}");
+      const admin = JSON.parse(localStorage.getItem("admin") || "{}");
 
-      if (adminData?.token) {
+      if (admin?.token) {
         navigate("/admin", { replace: true });
       }
     } catch {
@@ -46,7 +46,7 @@ function AdminLogin() {
   };
 
   /* =====================================
-     🔐 LOGIN
+     🔐 LOGIN (FINAL FIX 🔥)
   ===================================== */
   const handleLogin = async (e) => {
 
@@ -55,7 +55,7 @@ function AdminLogin() {
     if (loading || success) return;
 
     if (!form.email.trim() || !form.password.trim()) {
-      setError("Please fill all fields");
+      setError("⚠️ Please fill all fields");
       return;
     }
 
@@ -71,18 +71,13 @@ function AdminLogin() {
 
       const data = res.data;
 
-      /* 🔥 STORE ADMIN DATA */
-      localStorage.setItem(
-        "admin",
-        JSON.stringify({
-          token: data.token,
-          email: data.admin?.email,
-          role: data.admin?.role || "admin"
-        })
-      );
+      /* 🔥 IMPORTANT: FULL RESPONSE STORE */
+      localStorage.setItem("admin", JSON.stringify(data));
 
-      /* 🔥 ALSO STORE GLOBAL TOKEN (IMPORTANT) */
-      localStorage.setItem("token", data.token);
+      /* 🔥 BACKUP TOKEN STORE (for safety) */
+      if (data?.token) {
+        localStorage.setItem("token", data.token);
+      }
 
       setSuccess(true);
 
@@ -96,7 +91,7 @@ function AdminLogin() {
 
       const msg =
         err.response?.data?.message ||
-        "Invalid email or password";
+        "❌ Invalid email or password";
 
       setError(msg);
 
@@ -202,7 +197,10 @@ function AdminLogin() {
                 <CheckCircle size={18} /> Success
               </>
             ) : loading ? (
-              "Logging in..."
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Logging in...
+              </>
             ) : (
               "Login as Admin"
             )}
