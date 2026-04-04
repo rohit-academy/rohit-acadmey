@@ -5,6 +5,7 @@ import {
   getClassById,
   updateClass,
   deleteClass,
+  getStreamClasses // ✅ NEW
 } from "../controllers/classController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -15,11 +16,14 @@ const router = express.Router();
 /* =====================================
    🌍 PUBLIC ROUTES
 ===================================== */
+
+/* 🔥 MUST BE BEFORE :id */
+router.get("/streams", getStreamClasses);
+
+/* 📄 ALL CLASSES */
 router.get("/", getClasses);
 
-// future safe (if you add /popular etc)
-// router.get("/popular", getPopularClasses);
-
+/* 🔍 SINGLE CLASS */
 router.get("/:id", getClassById);
 
 /* =====================================
@@ -27,8 +31,13 @@ router.get("/:id", getClassById);
 ===================================== */
 router.use(protect, adminOnly);
 
+/* ➕ CREATE */
 router.post("/", addClass);
+
+/* ✏ UPDATE */
 router.put("/:id", updateClass);
+
+/* ❌ DELETE */
 router.delete("/:id", deleteClass);
 
 export default router;

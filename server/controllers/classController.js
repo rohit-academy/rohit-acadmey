@@ -99,6 +99,32 @@ export const getClasses = async (req, res) => {
 };
 
 /* =====================================
+   🔥 GET STREAM CLASSES (11 & 12 ONLY)
+===================================== */
+export const getStreamClasses = async (req, res) => {
+  try {
+
+    const classes = await Class.find({
+      hasStreams: true,   // ✅ FIXED
+      isActive: true
+    }).sort({ classNumber: 1 });
+
+    res.json({
+      success: true,
+      data: classes
+    });
+
+  } catch (error) {
+    logger.error(`Get stream classes error: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch stream classes"
+    });
+  }
+};
+
+/* =====================================
    🔍 GET CLASS BY ID
 ===================================== */
 export const getClassById = async (req, res) => {
