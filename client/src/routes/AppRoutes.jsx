@@ -21,11 +21,10 @@ import MyDownloads from "../pages/MyDownloads";
 import Account from "../pages/Account";
 import SetupUsername from "../pages/SetupUsername";
 import Terms from "../pages/Terms";
-import Privacy from "../pages/Privacy"; // 🔥 NEW ADD
+import Privacy from "../pages/Privacy";
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
-import VerifyOtp from "../pages/auth/VerifyOtp";
 import AdminLogin from "../pages/AdminLogin";
 
 /* ❌ COMMON */
@@ -70,11 +69,6 @@ function AppRoutes() {
         element={user ? <Navigate to="/account" replace /> : <Login />}
       />
 
-      <Route
-        path="/verify-otp"
-        element={user ? <Navigate to="/account" replace /> : <VerifyOtp />}
-      />
-
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* ✅ PAYMENT SUCCESS */}
@@ -106,7 +100,7 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 🔥 LEGAL PAGES */}
+        {/* 📄 LEGAL PAGES */}
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 

@@ -9,45 +9,40 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /* =====================================
-     🔄 LOAD USER
+     🔄 LOAD USER (AUTO LOGIN)
   ===================================== */
   const loadUser = async () => {
     try {
-      const token = localStorage.getItem("token");
 
-      console.log("🔐 TOKEN:", token);
+      const token = localStorage.getItem("token");
 
       if (!token) {
         setUser(null);
+        setLoading(false);
         return;
       }
 
-      /* ⚡ FAST CACHE LOAD */
+      /* ⚡ INSTANT UI LOAD (CACHE) */
       const cachedUser = localStorage.getItem("user");
       if (cachedUser) {
-        console.log("⚡ Using cached user");
         setUser(JSON.parse(cachedUser));
       }
 
       /* 🔥 VERIFY FROM SERVER */
-      console.log("📡 Calling /auth/me...");
-
       const res = await API.get("/auth/me");
-
-      console.log("✅ /auth/me RESPONSE:", res.data);
 
       const userData = res.data?.user;
 
-      if (!userData) {
-        throw new Error("No user data");
-      }
+      if (!userData) throw new Error("Invalid user");
 
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
 
     } catch (err) {
-      console.error("❌ AUTH LOAD ERROR:", err.response?.data || err.message);
 
+      console.error("❌ AUTH ERROR:", err.response?.data || err.message);
+
+      /* 🔥 AUTO LOGOUT */
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
@@ -58,13 +53,19 @@ export function AuthProvider({ children }) {
   };
 
   /* =====================================
-     🚀 AUTO LOAD
+     🚀 INITIAL LOAD + SYNC
   ===================================== */
   useEffect(() => {
 
+    /* ✅ INSTANT LOAD FROM LOCAL (FAST UX) */
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+
     loadUser();
 
-    /* 🔥 MULTI TAB SYNC */
+    /* 🔥 MULTI TAB LOGOUT SYNC */
     const syncLogout = (e) => {
       if (e.key === "token" && !e.newValue) {
         setUser(null);
@@ -72,49 +73,27 @@ export function AuthProvider({ children }) {
     };
 
     window.addEventListener("storage", syncLogout);
-    return () => window.removeEventListener("storage", syncLogout);
+
+    return () => {
+      window.removeEventListener("storage", syncLogout);
+    };
 
   }, []);
 
   /* =====================================
-     🔐 LOGIN
+     🔐 LOGIN (SIMPLIFIED 🔥)
   ===================================== */
-  const login = async (data) => {
-    try {
+  const login = (data) => {
 
-      console.log("🔐 LOGIN DATA:", data);
-
-      /* ✅ CASE 1: token + user */
-      if (data?.token && data?.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        setUser(data.user);
-        return;
-      }
-
-      /* ✅ CASE 2: only token */
-      if (typeof data === "string") {
-        localStorage.setItem("token", data);
-
-        await loadUser(); // 🔥 IMPORTANT FIX
-        return;
-      }
-
-      /* ✅ CASE 3: only user */
-      if (typeof data === "object") {
-        localStorage.setItem("user", JSON.stringify(data));
-        setUser(data);
-        return;
-      }
-
-    } catch (err) {
-      console.error("❌ LOGIN ERROR:", err);
-
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      setUser(null);
+    if (!data?.token || !data?.user) {
+      console.error("❌ Invalid login data");
+      return;
     }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    setUser(data.user);
   };
 
   /* =====================================
@@ -124,6 +103,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+
+    /* 🔥 OPTIONAL REDIRECT */
+    window.location.href = "/";
   };
 
   return (

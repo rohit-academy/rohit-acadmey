@@ -8,6 +8,8 @@ function ProtectedRoute({ requiredRole }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  const token = localStorage.getItem("token");
+
   /* =====================================
      ⏳ LOADING
   ===================================== */
@@ -20,9 +22,9 @@ function ProtectedRoute({ requiredRole }) {
   }
 
   /* =====================================
-     🔒 NOT LOGGED IN
+     🔒 NOT LOGGED IN (TOKEN + USER CHECK)
   ===================================== */
-  if (!user) {
+  if (!token || !user) {
     return (
       <Navigate
         to="/login"
