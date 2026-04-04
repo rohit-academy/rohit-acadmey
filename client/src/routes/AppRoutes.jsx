@@ -20,7 +20,8 @@ import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
 import Account from "../pages/Account";
 import SetupUsername from "../pages/SetupUsername";
-import Terms from "../pages/Terms"; // 🔥 NEW ADD
+import Terms from "../pages/Terms";
+import Privacy from "../pages/Privacy"; // 🔥 NEW ADD
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
@@ -105,8 +106,9 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 🔥 TERMS PAGE (IMPORTANT) */}
+        {/* 🔥 LEGAL PAGES */}
         <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* 🔐 PROTECTED USER ROUTES */}
         <Route element={<ProtectedRoute />}>
