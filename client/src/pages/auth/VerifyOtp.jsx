@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { signInWithPhoneNumber } from "firebase/auth";
 import { auth } from "../../config/firebase";
+import API from "../../services/api";
 
 function VerifyOtp() {
 
@@ -20,111 +21,132 @@ function VerifyOtp() {
   const phone = location.state?.phone;
   const redirectPath = location.state?.from || "/account";
 
-  /* ❌ NO PHONE */
+  /* ===============================
+     ❌ NO PHONE
+  ============================== */
   useEffect(() => {
     if (!phone) {
       navigate("/login");
     }
   }, [phone, navigate]);
 
-  /* ⏱ TIMER */
+  /* ===============================
+     ⏱ TIMER
+  ============================== */
   useEffect(() => {
     if (timer <= 0) return;
-    const interval = setInterval(() => setTimer((t) => t - 1), 1000);
+
+    const interval = setInterval(() => {
+      setTimer((t) => t - 1);
+    }, 1000);
+
     return () => clearInterval(interval);
   }, [timer]);
 
-  /* 🔥 VERIFY OTP */
+  /* ===============================
+     🔥 VERIFY OTP (FINAL)
+  ============================== */
   const handleVerifyOtp = async (e) => {
+
     e.preventDefault();
+
     if (loading) return;
 
+    if (otp.length !== 6) {
+      setError("Enter valid 6 digit OTP");
+      return;
+    }
+
     try {
+
       setLoading(true);
       setError("");
 
-      console.log("🚀 START OTP VERIFY");
-
       if (!window.confirmationResult) {
-        throw new Error("OTP expired. Try again.");
+        throw new Error("OTP expired. Please try again.");
       }
 
-      /* 🔥 VERIFY WITH FIREBASE */
+      /* 🔥 FIREBASE VERIFY */
       const result = await window.confirmationResult.confirm(otp);
       const firebaseUser = result.user;
 
-      console.log("✅ Firebase User:", firebaseUser);
-
-      /* 🔥 GET FRESH TOKEN */
+      /* 🔥 GET TOKEN */
       const idToken = await firebaseUser.getIdToken(true);
 
-      console.log("🔥 TOKEN LENGTH:", idToken?.length);
-      console.log("🌐 API URL:", import.meta.env.VITE_API_URL);
+      /* 🔥 BACKEND LOGIN */
+      const res = await API.post("/auth/firebase-login", {
+        token: idToken
+      });
 
-      /* ✅ CORRECT API CALL (NO DOUBLE /api) */
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/firebase-login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            token: idToken
-          })
-        }
-      );
-
-      console.log("📡 STATUS:", res.status);
-
-      const data = await res.json();
-      console.log("📦 RESPONSE:", data);
+      const data = res.data;
 
       if (!data?.token || !data?.user) {
-        throw new Error(data?.message || "Login failed");
+        throw new Error("Login failed");
       }
 
-      /* 🔥 LOGIN */
+      /* 🔥 SAVE LOGIN */
       login(data);
 
-      console.log("✅ LOGIN SUCCESS");
+      /* 🔥 CLEAN GLOBAL */
+      window.confirmationResult = null;
 
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
-      console.error("❌ ERROR:", err);
-      setError(err.message || "Invalid OTP");
+
+      console.error("OTP VERIFY ERROR:", err);
+
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        "Invalid OTP"
+      );
+
     } finally {
       setLoading(false);
     }
   };
 
-  /* 🔁 RESEND OTP */
+  /* ===============================
+     🔁 RESEND OTP
+  ============================== */
   const handleResend = async () => {
+
     if (timer > 0 || loading) return;
 
     try {
+
       setError("");
       setTimer(60);
 
       if (!window.recaptchaVerifier) {
-        throw new Error("Session expired. Go back.");
+        throw new Error("Session expired. Please go back.");
       }
 
-      const confirmationResult = await signInWithPhoneNumber(
+      const confirmation = await signInWithPhoneNumber(
         auth,
         phone,
         window.recaptchaVerifier
       );
 
-      window.confirmationResult = confirmationResult;
+      window.confirmationResult = confirmation;
 
     } catch (err) {
-      setError(err.message || "Resend failed");
+
+      console.error("RESEND ERROR:", err);
+
+      setError(
+        err.message ||
+        "Failed to resend OTP"
+      );
     }
   };
 
+  /* ===============================
+     UI
+  ============================== */
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
 
       <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
@@ -151,7 +173,9 @@ function VerifyOtp() {
             type="tel"
             value={otp}
             onChange={(e) =>
-              setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+              setOtp(
+                e.target.value.replace(/\D/g, "").slice(0, 6)
+              )
             }
             placeholder="Enter OTP"
             className="w-full border p-4 rounded-xl text-center text-xl tracking-widest"
@@ -179,9 +203,15 @@ function VerifyOtp() {
               type="button"
               disabled={timer > 0}
               onClick={handleResend}
-              className={timer > 0 ? "text-gray-400" : "text-blue-600"}
+              className={
+                timer > 0
+                  ? "text-gray-400"
+                  : "text-blue-600"
+              }
             >
-              {timer > 0 ? `Resend in ${timer}s` : "Resend OTP"}
+              {timer > 0
+                ? `Resend in ${timer}s`
+                : "Resend OTP"}
             </button>
 
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -12,8 +12,6 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const recaptchaRef = useRef(null);
-
   const [step, setStep] = useState("choose");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,26 +20,36 @@ function Login() {
 
   const redirectPath = location.state?.from || "/account";
 
+  /* =====================================
+     📱 CLEAN PHONE
+  ===================================== */
   const getCleanPhone = () => {
     const digits = phone.replace(/\D/g, "");
     return digits.slice(-10);
   };
 
-  /* 🔥 INIT RECAPTCHA */
-  const setupRecaptcha = () => {
-    if (!recaptchaRef.current) {
-      recaptchaRef.current = new RecaptchaVerifier(
+  /* =====================================
+     🔥 INIT RECAPTCHA (GLOBAL SAFE)
+  ===================================== */
+  useEffect(() => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(
         auth,
         "recaptcha-container",
-        { size: "invisible" }
+        {
+          size: "invisible"
+        }
       );
     }
-    return recaptchaRef.current;
-  };
+  }, []);
 
-  /* 🔥 SEND OTP */
+  /* =====================================
+     🔥 SEND OTP (FINAL)
+  ===================================== */
   const handleSendOtp = async (e) => {
+
     e.preventDefault();
+
     if (loading) return;
 
     const cleanPhone = getCleanPhone();
@@ -57,40 +65,56 @@ function Login() {
     }
 
     try {
+
       setLoading(true);
       setError("");
 
-      const appVerifier = setupRecaptcha();
+      const appVerifier = window.recaptchaVerifier;
 
-      const confirmationResult = await signInWithPhoneNumber(
+      const fullPhone = "+91" + cleanPhone;
+
+      const confirmation = await signInWithPhoneNumber(
         auth,
-        "+91" + cleanPhone,
+        fullPhone,
         appVerifier
       );
 
-      window.confirmationResult = confirmationResult;
+      /* 🔥 SAVE FOR VERIFY PAGE */
+      window.confirmationResult = confirmation;
 
-      setOtpRequests((p) => p + 1);
+      setOtpRequests((prev) => prev + 1);
 
       navigate("/verify-otp", {
         state: {
-          phone: "+91" + cleanPhone,
+          phone: fullPhone,
           from: redirectPath
         }
       });
 
     } catch (err) {
-      setError(err.message || "OTP failed");
+
+      console.error("OTP Error:", err);
+
+      setError(
+        err.message ||
+        "Failed to send OTP. Try again."
+      );
+
     } finally {
       setLoading(false);
     }
   };
 
+  /* =====================================
+     UI
+  ===================================== */
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200 px-4">
 
       <div className="bg-white w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl">
 
+        {/* BACK BUTTON */}
         {step !== "choose" && (
           <button
             onClick={() => {
@@ -104,12 +128,14 @@ function Login() {
           </button>
         )}
 
+        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
             {error}
           </div>
         )}
 
+        {/* STEP 1 */}
         {step === "choose" && (
           <div className="text-center">
 
@@ -128,6 +154,7 @@ function Login() {
           </div>
         )}
 
+        {/* STEP 2 */}
         {step === "phone" && (
           <div>
 
@@ -158,6 +185,7 @@ function Login() {
 
             </form>
 
+            {/* 🔥 MUST REQUIRED */}
             <div id="recaptcha-container"></div>
 
           </div>
@@ -166,6 +194,7 @@ function Login() {
       </div>
 
     </div>
+
   );
 }
 
