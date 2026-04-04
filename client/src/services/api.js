@@ -1,13 +1,13 @@
 import axios from "axios";
 
 /* =====================================
-   🌐 BASE CONFIG
+   🌐 BASE CONFIG (FIXED 🔥)
 ===================================== */
 const API = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://rohit-acadmey.onrender.com/api", // ❌ spelling intentionally same 😂
-  timeout: 15000,
+    "https://rohit-acadmey.onrender.com/api", // ✅ FIXED spelling
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -25,7 +25,7 @@ const safeParse = (data) => {
 };
 
 /* =====================================
-   🔐 REQUEST INTERCEPTOR (FINAL 🔥)
+   🔐 REQUEST INTERCEPTOR (SMART 🔥)
 ===================================== */
 API.interceptors.request.use(
   (config) => {
@@ -56,7 +56,7 @@ API.interceptors.request.use(
 );
 
 /* =====================================
-   🚨 RESPONSE INTERCEPTOR (SMART 🔥)
+   🚨 RESPONSE INTERCEPTOR (FINAL 🔥)
 ===================================== */
 let isRedirecting = false;
 
@@ -67,7 +67,7 @@ API.interceptors.response.use(
     const status = error.response?.status;
     const currentPath = window.location.pathname;
 
-    /* 🔐 401 → SMART LOGOUT */
+    /* 🔐 401 → AUTO LOGOUT */
     if (status === 401 && !isRedirecting) {
       isRedirecting = true;
 
@@ -77,7 +77,7 @@ API.interceptors.response.use(
       localStorage.removeItem("user");
       localStorage.removeItem("admin");
 
-      /* 🔥 ADMIN vs USER REDIRECT FIX */
+      /* 🔥 SMART REDIRECT */
       if (currentPath.startsWith("/admin")) {
         window.location.href = "/admin-login";
       } else {

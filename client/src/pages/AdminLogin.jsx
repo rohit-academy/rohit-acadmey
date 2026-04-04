@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CheckCircle, Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  ShieldCheck,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Loader2
+} from "lucide-react";
 import API from "../services/api";
 
 function AdminLogin() {
@@ -19,7 +25,7 @@ function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
 
   /* =====================================
-     🔐 AUTO REDIRECT IF ALREADY LOGGED IN
+     🔐 AUTO REDIRECT IF LOGGED IN
   ===================================== */
   useEffect(() => {
     try {
@@ -39,14 +45,14 @@ function AdminLogin() {
   const handleChange = (e) => {
     setError("");
 
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value.trimStart()
-    });
+    }));
   };
 
   /* =====================================
-     🔐 LOGIN (FINAL FIX 🔥)
+     🔐 LOGIN (FINAL PRO 🔥)
   ===================================== */
   const handleLogin = async (e) => {
 
@@ -71,23 +77,28 @@ function AdminLogin() {
 
       const data = res.data;
 
-      /* 🔥 IMPORTANT: FULL RESPONSE STORE */
+      /* 🔥 CLEAN OLD DATA FIRST */
+      localStorage.removeItem("admin");
+      localStorage.removeItem("token");
+
+      /* 🔥 SAVE ADMIN (IMPORTANT) */
       localStorage.setItem("admin", JSON.stringify(data));
 
-      /* 🔥 BACKUP TOKEN STORE (for safety) */
+      /* 🔥 EXTRA SAFETY TOKEN STORE */
       if (data?.token) {
         localStorage.setItem("token", data.token);
       }
 
       setSuccess(true);
 
+      /* 🔥 SMALL DELAY FOR UX */
       setTimeout(() => {
         navigate("/admin", { replace: true });
       }, 800);
 
     } catch (err) {
 
-      console.error("Admin login error:", err);
+      console.error("❌ Admin login error:", err);
 
       const msg =
         err.response?.data?.message ||
@@ -108,9 +119,9 @@ function AdminLogin() {
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden
     bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
 
-      {/* BACKGROUND BLOBS */}
-      <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 top-[-50px] left-[-50px]"></div>
-      <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 bottom-[-50px] right-[-50px]"></div>
+      {/* BACKGROUND */}
+      <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 top-[-50px] left-[-50px]" />
+      <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 bottom-[-50px] right-[-50px]" />
 
       {/* CARD */}
       <div
@@ -128,9 +139,7 @@ function AdminLogin() {
             <ShieldCheck size={42} className="text-blue-600 mb-2" />
           )}
 
-          <h1 className="text-3xl font-bold">
-            Admin Login
-          </h1>
+          <h1 className="text-3xl font-bold">Admin Login</h1>
 
           <p className="text-sm text-gray-500 mt-1">
             Authorized access only
@@ -224,7 +233,6 @@ function AdminLogin() {
 
     </div>
   );
-
 }
 
 export default AdminLogin;
