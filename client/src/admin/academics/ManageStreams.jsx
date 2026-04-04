@@ -22,10 +22,11 @@ function ManageStreams() {
     try {
 
       setLoading(true);
+      setError("");
 
       const [streamRes, classRes] = await Promise.all([
         API.get("/streams"),
-        API.get("/classes")
+        API.get("/classes/streams") // 🔥 FIXED
       ]);
 
       setStreams(streamRes.data?.data || []);
@@ -49,15 +50,20 @@ function ManageStreams() {
   const handleAdd = async (e) => {
     e.preventDefault();
 
-    if (!form.name || !form.classId) {
-      return alert("All fields required");
+    if (!form.name.trim() || !form.classId) {
+      setError("All fields required");
+      return;
     }
 
     try {
 
       setAdding(true);
+      setError("");
 
-      await API.post("/streams", form);
+      await API.post("/streams", {
+        name: form.name.trim(),
+        classId: form.classId
+      });
 
       setForm({ name: "", classId: "" });
 
@@ -65,7 +71,7 @@ function ManageStreams() {
 
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Failed to add stream");
+      setError(err.response?.data?.message || "Failed to add stream");
     } finally {
       setAdding(false);
     }
@@ -75,17 +81,20 @@ function ManageStreams() {
      ❌ DELETE STREAM
   ========================= */
   const handleDelete = async (id) => {
-    if (!confirm("Delete this stream?")) return;
+
+    if (!window.confirm("Delete this stream?")) return;
 
     try {
 
       await API.delete(`/streams/${id}`);
 
-      setStreams((prev) => prev.filter((s) => s._id !== id));
+      setStreams((prev) =>
+        prev.filter((s) => s._id !== id)
+      );
 
     } catch (err) {
       console.error(err);
-      alert("Delete failed");
+      setError("Delete failed");
     }
   };
 
@@ -94,7 +103,7 @@ function ManageStreams() {
   ========================= */
   if (loading) {
     return (
-      <div className="text-center py-20">
+      <div className="text-center py-20 text-gray-500">
         Loading Streams...
       </div>
     );
@@ -104,10 +113,15 @@ function ManageStreams() {
 
     <div className="p-4 md:p-6">
 
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <h1 className="text-2xl font-bold mb-6">
         Manage Streams
       </h1>
+
+      {/* ERROR */}
+      {error && (
+        <p className="text-red-500 mb-4">{error}</p>
+      )}
 
       {/* ================= ADD FORM ================= */}
       <form
@@ -126,7 +140,7 @@ function ManageStreams() {
           className="border p-3 rounded-lg flex-1"
         />
 
-        {/* CLASS SELECT */}
+        {/* CLASS SELECT (ONLY 11 & 12 🔥) */}
         <select
           value={form.classId}
           onChange={(e) =>
@@ -136,20 +150,19 @@ function ManageStreams() {
         >
           <option value="">Select Class</option>
 
-          {classes
-            .filter(c => Number(c.name) >= 11) // 🔥 ONLY 11+
-            .map((cls) => (
-              <option key={cls._id} value={cls._id}>
-                Class {cls.name}
-              </option>
-            ))}
+          {classes.map((cls) => (
+            <option key={cls._id} value={cls._id}>
+              Class {cls.name}
+            </option>
+          ))}
+
         </select>
 
         {/* BUTTON */}
         <button
           type="submit"
           disabled={adding}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60"
         >
           <Plus size={18} />
           {adding ? "Adding..." : "Add"}
@@ -187,7 +200,7 @@ function ManageStreams() {
                   </td>
 
                   <td className="p-3">
-                    Class {stream.classId?.name}
+                    Class {stream.classId?.name || "-"}
                   </td>
 
                   <td className="p-3 text-right">

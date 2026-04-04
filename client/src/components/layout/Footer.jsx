@@ -40,28 +40,46 @@ function Footer() {
 
           <div className="flex flex-col gap-3 text-gray-600">
 
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/">
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/"
+            >
               <ArrowRight size={14} /> Home
             </Link>
 
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/classes">
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/classes"
+            >
               <ArrowRight size={14} /> Browse Classes
             </Link>
 
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/downloads">
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/downloads"
+            >
               <ArrowRight size={14} /> My Downloads
             </Link>
 
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/login">
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/login"
+            >
               <ArrowRight size={14} /> Student Login
             </Link>
 
-            {/* 🔥 IMPORTANT */}
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/privacy">
+            {/* 🔥 LEGAL LINKS */}
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/privacy"
+            >
               <ArrowRight size={14} /> Privacy Policy
             </Link>
 
-            <Link className="flex items-center gap-2 hover:text-blue-600" to="/terms">
+            <Link
+              className="flex items-center gap-2 hover:text-blue-600 transition"
+              to="/terms"
+            >
               <ArrowRight size={14} /> Terms & Conditions
             </Link>
 
@@ -131,7 +149,22 @@ function Footer() {
       {/* 🔻 BOTTOM */}
       <div className="border-t bg-white/60 backdrop-blur-sm">
         <div className="container py-5 text-center text-gray-500 text-xs">
+
           © {year} Rohit Academy. All rights reserved.
+
+          {/* 🔥 EXTRA LEGAL (PRO LEVEL) */}
+          <div className="mt-2 flex justify-center gap-4">
+
+            <Link to="/privacy" className="hover:text-blue-600">
+              Privacy
+            </Link>
+
+            <Link to="/terms" className="hover:text-blue-600">
+              Terms
+            </Link>
+
+          </div>
+
         </div>
       </div>
 

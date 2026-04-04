@@ -20,6 +20,7 @@ import Success from "../pages/Success";
 import MyDownloads from "../pages/MyDownloads";
 import Account from "../pages/Account";
 import SetupUsername from "../pages/SetupUsername";
+import Terms from "../pages/Terms"; // 🔥 NEW ADD
 
 /* 🔐 AUTH */
 import Login from "../pages/auth/Login";
@@ -35,7 +36,7 @@ import AdminDashboard from "../admin/dashboard/AdminDashboard";
 import ManageAcademics from "../admin/academics/ManageAcademics";
 import ManageClasses from "../admin/academics/ManageClasses";
 import ManageSubjects from "../admin/academics/ManageSubjects";
-import ManageStreams from "../admin/academics/ManageStreams"; // ✅ NEW ADD
+import ManageStreams from "../admin/academics/ManageStreams";
 import ManageMaterials from "../admin/materials/ManageMaterials";
 import UploadMaterial from "../admin/materials/UploadMaterial";
 import ManageUsers from "../admin/users/ManageUsers";
@@ -88,7 +89,7 @@ function AppRoutes() {
         {/* 🔥 CLASS → STREAM */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 🔥 STREAM MANDATORY */}
+        {/* 🔥 STREAM REQUIRED */}
         <Route
           path="/subjects/:classId/:streamId"
           element={<Subjects />}
@@ -103,6 +104,9 @@ function AppRoutes() {
         {/* 🛒 PRODUCT FLOW */}
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
+
+        {/* 🔥 TERMS PAGE (IMPORTANT) */}
+        <Route path="/terms" element={<Terms />} />
 
         {/* 🔐 PROTECTED USER ROUTES */}
         <Route element={<ProtectedRoute />}>
@@ -125,7 +129,7 @@ function AppRoutes() {
 
           <Route path="academics" element={<ManageAcademics />} />
           <Route path="academics/classes" element={<ManageClasses />} />
-          <Route path="academics/streams" element={<ManageStreams />} /> {/* ✅ FIXED */}
+          <Route path="academics/streams" element={<ManageStreams />} />
           <Route path="academics/subjects" element={<ManageSubjects />} />
 
           <Route path="materials" element={<ManageMaterials />} />
@@ -141,7 +145,7 @@ function AppRoutes() {
 
       </Route>
 
-      {/* ================= SAFETY REDIRECTS ================= */}
+      {/* ================= SAFETY ================= */}
 
       {/* ❌ Prevent direct access without stream */}
       <Route
