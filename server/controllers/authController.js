@@ -17,13 +17,11 @@ const safeUser = (user) => ({
 });
 
 /* =====================================
-   🔥 FIREBASE LOGIN (FINAL STABLE)
+   🔥 FIREBASE LOGIN (FINAL PRODUCTION)
 ===================================== */
 export const firebaseLogin = async (req, res, next) => {
   try {
     const { token } = req.body;
-
-    console.log("📥 Token:", token ? "YES" : "NO");
 
     if (!token) {
       return res.status(400).json({
@@ -32,11 +30,10 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔐 VERIFY TOKEN */
+    /* 🔐 VERIFY FIREBASE TOKEN */
     let decoded;
     try {
-      decoded = await admin.auth().verifyIdToken(token, true);
-      console.log("✅ Firebase verified");
+      decoded = await admin.auth().verifyIdToken(token);
     } catch (err) {
       console.error("❌ Firebase verify failed:", err.message);
 
@@ -46,58 +43,59 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔍 DATA */
-    let email = decoded.email || null;
-    let phone = decoded.phone_number || null;
+    const email = decoded.email || null;
+    const phone = decoded.phone_number
+      ? decoded.phone_number.replace(/\D/g, "").slice(-10)
+      : null;
+
     const firebaseId = decoded.uid;
     const avatar = decoded.picture || "";
 
-    if (phone) {
-      phone = phone.replace(/\D/g, "").slice(-10);
+    if (!email && !phone) {
+      return res.status(400).json({
+        success: false,
+        message: "No email or phone found in token",
+      });
     }
 
-    /* 🔍 FIND USER */
+    /* =====================================
+       🔍 FIND USER
+    ===================================== */
     let user = await User.findOne({ firebaseId });
 
-    /* 🔗 LINK EMAIL */
+    /* 🔗 LINK WITH EMAIL */
     if (!user && email) {
       const existingUser = await User.findOne({ email });
 
       if (existingUser) {
-        console.log("🔗 Linking EMAIL");
-
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
         existingUser.avatar = avatar || existingUser.avatar;
         existingUser.isVerified = true;
         existingUser.lastLogin = new Date();
 
-        await existingUser.save();     // ✅ FIX
+        await existingUser.save();
         user = existingUser;
       }
     }
 
-    /* 🔗 LINK PHONE */
+    /* 🔗 LINK WITH PHONE */
     if (!user && phone) {
       const existingUser = await User.findOne({ phone });
 
       if (existingUser) {
-        console.log("🔗 Linking PHONE");
-
         existingUser.firebaseId = firebaseId;
         existingUser.authProvider = "firebase";
         existingUser.isVerified = true;
         existingUser.lastLogin = new Date();
 
-        await existingUser.save();     // ✅ FIX
+        await existingUser.save();
         user = existingUser;
       }
     }
 
     /* ➕ CREATE USER */
     if (!user) {
-      console.log("🆕 Creating user");
-
       user = await User.create({
         firebaseId,
         email,
@@ -112,7 +110,7 @@ export const firebaseLogin = async (req, res, next) => {
       logger.info(`New Firebase user: ${email || phone}`);
     }
 
-    /* 🚫 BLOCK */
+    /* 🚫 BLOCK CHECK */
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
@@ -120,30 +118,29 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔄 UPDATE LOGIN (SAFE WAY) */
+    /* 🔄 UPDATE LOGIN */
     await User.updateOne(
       { _id: user._id },
       { $set: { lastLogin: new Date() } }
     );
 
-    /* 🎟 JWT */
+    /* 🎟 JWT TOKEN (IMPORTANT FIX) */
     const jwtToken = generateToken({
-      id: user._id,
+      id: user._id.toString(), // 🔥 STRING FIX
       role: user.role,
     });
 
-    console.log("✅ LOGIN SUCCESS");
+    console.log("✅ LOGIN SUCCESS:", user._id);
 
     return res.json({
       success: true,
       token: jwtToken,
-      user: safeUser(user),
+      user: safeUser(user), // 🔥 includes _id
     });
 
   } catch (error) {
     console.error("💥 FIREBASE LOGIN ERROR:", error);
-
-    return next(error); // ✅ correct error flow
+    return next(error);
   }
 };
 
@@ -152,7 +149,7 @@ export const firebaseLogin = async (req, res, next) => {
 ===================================== */
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).lean();
+    const user = await User.findById(req.user._id).lean(); // 🔥 FIXED
 
     if (!user) {
       return res.status(404).json({
@@ -203,14 +200,14 @@ export const setUsername = async (req, res, next) => {
 
     const existing = await User.findOne({ name });
 
-    if (existing && existing._id.toString() !== req.user.id) {
+    if (existing && existing._id.toString() !== req.user._id.toString()) {
       return res.status(400).json({
         success: false,
         message: "Username already taken",
       });
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return res.status(404).json({
