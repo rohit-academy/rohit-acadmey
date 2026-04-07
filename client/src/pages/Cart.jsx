@@ -10,26 +10,28 @@ function Cart() {
   const { user, loading } = useAuth();
 
   const {
-    cartItems = [],
+    cartItems,
     removeFromCart,
-    clearCart,
-    total = 0
+    clearCart
   } = useCart();
+
+  /* 🔥 SAFE FALLBACK */
+  const safeCart = Array.isArray(cartItems) ? cartItems : [];
 
   const formatPrice = (price = 0) =>
     `₹${Number(price).toLocaleString("en-IN")}`;
 
   /* =====================================
-     🔥 SAFE ITEMS (MEMOIZED)
+     🔥 SAFE ITEMS
   ===================================== */
   const validItems = useMemo(() => {
-    return cartItems.filter(
+    return safeCart.filter(
       (item) => item && (item._id || item.id)
     );
-  }, [cartItems]);
+  }, [safeCart]);
 
   /* =====================================
-     ⏳ LOADING STATE
+     ⏳ LOADING
   ===================================== */
   if (loading) {
     return (
@@ -42,7 +44,7 @@ function Cart() {
   /* =====================================
      🛒 EMPTY STATE
   ===================================== */
-  if (validItems.length === 0) {
+  if (!Array.isArray(validItems) || validItems.length === 0) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-b from-slate-50 to-white px-4">
 
@@ -74,7 +76,7 @@ function Cart() {
   }
 
   /* =====================================
-     🔐 CHECKOUT HANDLER
+     🔐 CHECKOUT
   ===================================== */
   const handleCheckout = () => {
 
@@ -83,42 +85,47 @@ function Cart() {
       return;
     }
 
-    if (validItems.length === 0) {
-      navigate("/cart");
-      return;
-    }
-
     navigate("/checkout");
   };
 
   /* =====================================
-     ❌ REMOVE ITEM
+     ❌ REMOVE (SAFE)
   ===================================== */
   const handleRemove = (id) => {
+
+    if (!id) return;
 
     const confirmDelete = window.confirm("Remove this item?");
     if (!confirmDelete) return;
 
-    removeFromCart(id);
+    try {
+      removeFromCart(id);
+    } catch (err) {
+      console.error("Remove error:", err);
+    }
   };
 
   /* =====================================
-     🧹 CLEAR CART SAFE
+     🧹 CLEAR CART
   ===================================== */
   const handleClearCart = () => {
 
     const confirmClear = window.confirm("Clear entire cart?");
     if (!confirmClear) return;
 
-    clearCart();
+    try {
+      clearCart();
+    } catch (err) {
+      console.error("Clear error:", err);
+    }
   };
 
   /* =====================================
-     💰 SAFE TOTAL
+     💰 TOTAL
   ===================================== */
   const safeTotal = useMemo(() => {
     return validItems.reduce(
-      (sum, item) => sum + (item.price || 0),
+      (sum, item) => sum + (Number(item.price) || 0),
       0
     );
   }, [validItems]);
@@ -136,9 +143,9 @@ function Cart() {
         {/* 🛒 ITEMS */}
         <div className="lg:col-span-2 space-y-4">
 
-          {validItems.map((item) => {
+          {validItems.map((item, index) => {
 
-            const id = item._id || item.id;
+            const id = item?._id || item?.id || index;
 
             return (
               <div
@@ -146,36 +153,33 @@ function Cart() {
                 className="bg-white p-4 md:p-5 rounded-xl shadow-sm flex gap-4 items-start hover:shadow-md transition"
               >
 
-                {/* IMAGE */}
                 <img
                   src={
-                    item.thumbnail ||
-                    item.previewImages?.[0] ||
+                    item?.thumbnail ||
+                    item?.previewImages?.[0] ||
                     "https://via.placeholder.com/100x120?text=PDF"
                   }
-                  alt={item.title}
+                  alt={item?.title || "item"}
                   className="w-20 h-24 object-cover rounded-lg border"
                 />
 
-                {/* INFO */}
                 <div className="flex-1">
 
                   <h2 className="font-semibold text-lg line-clamp-2">
-                    {item.title || "Untitled"}
+                    {item?.title || "Untitled"}
                   </h2>
 
                   <div className="text-sm text-gray-500 mt-1 space-y-1">
-                    {item.type && <p>📘 {item.type}</p>}
-                    {item.pages && <p>📄 {item.pages} pages</p>}
+                    {item?.type && <p>📘 {item.type}</p>}
+                    {item?.pages && <p>📄 {item.pages} pages</p>}
                   </div>
 
                   <p className="text-blue-600 font-bold mt-2">
-                    {formatPrice(item.price)}
+                    {formatPrice(item?.price)}
                   </p>
 
                 </div>
 
-                {/* REMOVE */}
                 <button
                   onClick={() => handleRemove(id)}
                   className="text-red-500 hover:text-red-700 transition"
@@ -208,7 +212,6 @@ function Cart() {
             </span>
           </div>
 
-          {/* 🔥 CTA */}
           <button
             onClick={handleCheckout}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold mb-3"
@@ -216,7 +219,6 @@ function Cart() {
             Proceed to Checkout
           </button>
 
-          {/* 🧹 CLEAR */}
           <button
             onClick={handleClearCart}
             className="w-full text-sm text-red-500 hover:underline"

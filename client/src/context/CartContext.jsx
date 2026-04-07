@@ -7,73 +7,140 @@ export function CartProvider({ children }) {
 
   const { user } = useAuth();
 
+  /* =====================================
+     🧠 STATE (SAFE INIT)
+  ===================================== */
   const [cartItems, setCartItems] = useState([]);
 
-  /* 🔑 UNIQUE STORAGE KEY */
+  /* =====================================
+     🔑 STORAGE KEY
+  ===================================== */
   const getStorageKey = () =>
-    user ? `cart_${user._id}` : "cart_guest";
+    user?._id ? `cart_${user._id}` : "cart_guest";
 
-  /* 📦 LOAD FROM STORAGE */
+  /* =====================================
+     🔐 SAFE PARSE
+  ===================================== */
+  const safeParse = (data) => {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  };
+
+  /* =====================================
+     📦 LOAD CART (USER CHANGE SAFE)
+  ===================================== */
   useEffect(() => {
-    const saved = localStorage.getItem(getStorageKey());
+
+    const key = getStorageKey();
+
+    const saved = localStorage.getItem(key);
+
     if (saved) {
-      setCartItems(JSON.parse(saved));
+      const parsed = safeParse(saved);
+
+      if (Array.isArray(parsed)) {
+        setCartItems(parsed);
+      } else {
+        setCartItems([]);
+      }
+
     } else {
       setCartItems([]);
     }
+
   }, [user]);
 
-  /* 💾 SAVE TO STORAGE */
+  /* =====================================
+     💾 SAVE (CENTRALIZED)
+  ===================================== */
   const saveCart = (items) => {
-    localStorage.setItem(getStorageKey(), JSON.stringify(items));
-    setCartItems(items);
+
+    const safeItems = Array.isArray(items) ? items : [];
+
+    setCartItems(safeItems);
+
+    localStorage.setItem(
+      getStorageKey(),
+      JSON.stringify(safeItems)
+    );
   };
 
-  /* ➕ ADD TO CART (NO DUPLICATE) */
+  /* =====================================
+     ➕ ADD (NO DUPLICATE + SAFE)
+  ===================================== */
   const addToCart = (product) => {
 
-    if (!product || !product._id) return;
+    if (!product || (!product._id && !product.id)) return;
 
     setCartItems((prev) => {
 
-      const exists = prev.find((item) => item._id === product._id);
+      const safePrev = Array.isArray(prev) ? prev : [];
 
-      if (exists) {
-        return prev; // ❌ duplicate block
-      }
+      const id = product._id || product.id;
 
-      const updated = [...prev, product];
+      const exists = safePrev.find(
+        (item) => (item._id || item.id) === id
+      );
 
-      localStorage.setItem(getStorageKey(), JSON.stringify(updated));
+      if (exists) return safePrev;
+
+      const updated = [...safePrev, product];
+
+      localStorage.setItem(
+        getStorageKey(),
+        JSON.stringify(updated)
+      );
 
       return updated;
     });
   };
 
-  /* ❌ REMOVE */
+  /* =====================================
+     ❌ REMOVE (🔥 FINAL FIX)
+  ===================================== */
   const removeFromCart = (id) => {
 
+    if (!id) return;
+
     setCartItems((prev) => {
 
-      const updated = prev.filter((item) => item._id !== id);
+      const safePrev = Array.isArray(prev) ? prev : [];
 
-      localStorage.setItem(getStorageKey(), JSON.stringify(updated));
+      const updated = safePrev.filter(
+        (item) => (item._id || item.id) !== id
+      );
+
+      localStorage.setItem(
+        getStorageKey(),
+        JSON.stringify(updated)
+      );
 
       return updated;
     });
   };
 
-  /* 🧹 CLEAR CART */
+  /* =====================================
+     🧹 CLEAR
+  ===================================== */
   const clearCart = () => {
+
     setCartItems([]);
+
     localStorage.removeItem(getStorageKey());
   };
 
-  /* 💰 TOTAL */
-  const total = cartItems.reduce(
-    (sum, item) => sum + (item.price || 0),
-    0
-  );
+  /* =====================================
+     💰 TOTAL (SAFE)
+  ===================================== */
+  const total = Array.isArray(cartItems)
+    ? cartItems.reduce(
+        (sum, item) => sum + (Number(item?.price) || 0),
+        0
+      )
+    : 0;
 
   return (
     <CartContext.Provider
@@ -90,8 +157,11 @@ export function CartProvider({ children }) {
   );
 }
 
-/* 🔥 SAFE HOOK */
+/* =====================================
+   🔥 HOOK
+===================================== */
 export const useCart = () => {
+
   const context = useContext(CartContext);
 
   if (!context) {
