@@ -48,6 +48,9 @@ function AppRoutes() {
 
   const { user, loading } = useAuth();
 
+  /* 🔥 ADMIN DETECT (IMPORTANT) */
+  const admin = JSON.parse(localStorage.getItem("admin") || "null");
+
   /* =====================================
      ⏳ GLOBAL LOADER
   ===================================== */
@@ -70,8 +73,15 @@ function AppRoutes() {
         element={user ? <Navigate to="/account" replace /> : <Login />}
       />
 
-      {/* 🔐 ADMIN LOGIN (🔥 NEVER PROTECTED) */}
-      <Route path="/admin-login" element={<AdminLogin />} />
+      {/* 🔐 ADMIN LOGIN (🔥 FIXED REDIRECT) */}
+      <Route
+        path="/admin-login"
+        element={
+          admin?.token
+            ? <Navigate to="/admin" replace />
+            : <AdminLogin />
+        }
+      />
 
       {/* ✅ PAYMENT SUCCESS */}
       <Route path="/success" element={<Success />} />
@@ -83,26 +93,21 @@ function AppRoutes() {
 
         <Route path="/classes" element={<Classes />} />
 
-        {/* 🔥 CLASS → STREAM */}
         <Route path="/streams/:classId" element={<Streams />} />
 
-        {/* 🔥 STREAM REQUIRED */}
         <Route
           path="/subjects/:classId/:streamId"
           element={<Subjects />}
         />
 
-        {/* 🔥 MATERIALS */}
         <Route
           path="/materials/:classId/:subjectId"
           element={<StudyMaterials />}
         />
 
-        {/* 🛒 PRODUCT FLOW */}
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 📄 LEGAL */}
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 
@@ -120,7 +125,6 @@ function AppRoutes() {
 
       {/* ================= ADMIN ================= */}
 
-      {/* 🔥 ADMIN ROUTE (PROTECTED) */}
       <Route path="/admin" element={<AdminRoute />}>
 
         <Route element={<AdminLayout />}>
@@ -147,13 +151,11 @@ function AppRoutes() {
 
       {/* ================= SAFETY ================= */}
 
-      {/* ❌ Prevent direct access without stream */}
       <Route
         path="/subjects/:classId"
         element={<Navigate to="/classes" replace />}
       />
 
-      {/* ❌ FALLBACK */}
       <Route path="*" element={<NotFound />} />
 
     </Routes>

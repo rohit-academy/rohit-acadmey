@@ -22,9 +22,21 @@ function ProtectedRoute({ requiredRole }) {
   }
 
   /* =====================================
-     🔒 NOT LOGGED IN (TOKEN + USER CHECK)
+     🔒 NOT LOGGED IN (FINAL FIX)
   ===================================== */
   if (!token || !user) {
+
+    // 🔥 ADMIN ROUTE KO USER LOGIN PE MAT BHEJ
+    if (location.pathname.startsWith("/admin")) {
+      return (
+        <Navigate
+          to="/admin-login"
+          replace
+          state={{ from: location.pathname }}
+        />
+      );
+    }
+
     return (
       <Navigate
         to="/login"
