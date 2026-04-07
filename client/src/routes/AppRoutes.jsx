@@ -64,11 +64,13 @@ function AppRoutes() {
 
       {/* ================= AUTH ================= */}
 
+      {/* 🔐 USER LOGIN */}
       <Route
         path="/login"
         element={user ? <Navigate to="/account" replace /> : <Login />}
       />
 
+      {/* 🔐 ADMIN LOGIN (🔥 NEVER PROTECTED) */}
       <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* ✅ PAYMENT SUCCESS */}
@@ -100,11 +102,11 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
 
-        {/* 📄 LEGAL PAGES */}
+        {/* 📄 LEGAL */}
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 
-        {/* 🔐 PROTECTED USER ROUTES */}
+        {/* 🔐 PROTECTED USER */}
         <Route element={<ProtectedRoute />}>
 
           <Route path="/account" element={<Account />} />
@@ -117,6 +119,8 @@ function AppRoutes() {
       </Route>
 
       {/* ================= ADMIN ================= */}
+
+      {/* 🔥 ADMIN ROUTE (PROTECTED) */}
       <Route path="/admin" element={<AdminRoute />}>
 
         <Route element={<AdminLayout />}>
@@ -149,7 +153,7 @@ function AppRoutes() {
         element={<Navigate to="/classes" replace />}
       />
 
-      {/* ================= FALLBACK ================= */}
+      {/* ❌ FALLBACK */}
       <Route path="*" element={<NotFound />} />
 
     </Routes>
