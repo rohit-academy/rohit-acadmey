@@ -8,15 +8,17 @@ import crypto from "crypto";
 ===================================== */
 export const createOrder = async (req, res) => {
   try {
-    const userId = req.user?.id;
-    const { materials } = req.body;
 
-    if (!userId) {
+    /* 🔐 AUTH CHECK (FINAL FIX) */
+    if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized"
+        message: "User not authenticated"
       });
     }
+
+    const userId = req.user._id;
+    const { materials } = req.body;
 
     if (!materials?.length) {
       return res.status(400).json({
@@ -64,7 +66,7 @@ export const createOrder = async (req, res) => {
     if (razorpay) {
 
       const order = await razorpay.orders.create({
-        amount: totalAmount * 100, // paise
+        amount: totalAmount * 100,
         currency: "INR",
       });
 
@@ -78,7 +80,7 @@ export const createOrder = async (req, res) => {
     }
 
     /* =====================================
-       🧪 MANUAL MODE (FALLBACK)
+       🧪 FALLBACK MODE
     ===================================== */
     return res.json({
       success: true,
@@ -103,7 +105,16 @@ export const createOrder = async (req, res) => {
 ===================================== */
 export const verifyPayment = async (req, res) => {
   try {
-    const userId = req.user?.id;
+
+    /* 🔐 AUTH CHECK */
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated"
+      });
+    }
+
+    const userId = req.user._id;
 
     const {
       materials,
@@ -111,13 +122,6 @@ export const verifyPayment = async (req, res) => {
       razorpay_payment_id,
       razorpay_signature
     } = req.body;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized"
-      });
-    }
 
     /* 📦 FETCH MATERIALS */
     const materialDocs = await Material.find({
@@ -152,7 +156,7 @@ export const verifyPayment = async (req, res) => {
     }
 
     /* =====================================
-       🔐 VERIFY SIGNATURE (ONLY IF RAZORPAY)
+       🔐 VERIFY SIGNATURE
     ===================================== */
     if (razorpay && razorpay_signature) {
 
@@ -206,14 +210,15 @@ export const verifyPayment = async (req, res) => {
 export const getMyPurchases = async (req, res) => {
   try {
 
-    const userId = req.user?.id;
-
-    if (!userId) {
+    /* 🔐 AUTH CHECK */
+    if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized"
+        message: "User not authenticated"
       });
     }
+
+    const userId = req.user._id;
 
     const orders = await Order.find({
       user: userId,
