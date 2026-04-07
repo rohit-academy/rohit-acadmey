@@ -1,22 +1,27 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-const authMiddleware = async (req, res, next) => {
+/* =====================================
+   🔐 PROTECT MIDDLEWARE (FINAL)
+===================================== */
+export const protect = async (req, res, next) => {
   try {
 
     /* =====================================
-       🔐 EXTRACT TOKEN
+       🔐 GET TOKEN
     ===================================== */
-    const authHeader = req.headers.authorization;
+    let token;
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization token missing"
-      });
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
     }
 
-    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, no token"
+      });
+    }
 
     /* =====================================
        🧬 VERIFY TOKEN
@@ -49,11 +54,11 @@ const authMiddleware = async (req, res, next) => {
     }
 
     /* =====================================
-       🛠 ADMIN SHORT-CIRCUIT
+       🛠 ADMIN SHORTCUT
     ===================================== */
     if (decoded.role === "admin") {
       req.user = {
-        id: "admin",
+        _id: "admin",
         role: "admin"
       };
       return next();
@@ -84,11 +89,11 @@ const authMiddleware = async (req, res, next) => {
     }
 
     /* =====================================
-       📌 ATTACH USER
+       📌 ATTACH USER (FINAL FIX)
     ===================================== */
     req.user = {
-      id: user._id,
-      _id: user._id,
+      _id: user._id,   // 🔥 MAIN FIX
+      id: user._id,    // backward compatibility
       name: user.name,
       phone: user.phone,
       email: user.email,
@@ -102,7 +107,7 @@ const authMiddleware = async (req, res, next) => {
 
   } catch (error) {
 
-    console.error("🔥 Auth middleware error:", error.message);
+    console.error("🔥 Auth middleware error:", error);
 
     return res.status(500).json({
       success: false,
@@ -113,7 +118,6 @@ const authMiddleware = async (req, res, next) => {
 };
 
 /* =====================================
-   🔁 EXPORTS
+   🔁 EXPORT DEFAULT (OPTIONAL)
 ===================================== */
-export const protect = authMiddleware;
-export default authMiddleware;
+export default protect;
