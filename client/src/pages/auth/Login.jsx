@@ -3,11 +3,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import API from "../../services/api";
+import { useAuth } from "../../context/AuthContext"; // 🔥 IMPORTANT
 
 function Login() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth(); // 🔥 IMPORTANT
 
   const redirectPath = location.state?.from || "/account";
 
@@ -17,7 +19,7 @@ function Login() {
   const [error, setError] = useState("");
 
   /* ===============================
-     🔥 GOOGLE LOGIN (FINAL DEBUG VERSION)
+     🔥 GOOGLE LOGIN (FINAL)
   ============================== */
   const handleGoogleLogin = async () => {
     try {
@@ -34,13 +36,9 @@ function Login() {
 
       console.log("✅ Google User:", user);
 
-      /* 🔥 GET TOKEN */
       const idToken = await user.getIdToken();
 
       console.log("🔥 Firebase Token:", idToken);
-
-      /* 🔥 BACKEND LOGIN */
-      console.log("📡 Calling backend...");
 
       const res = await API.post("/auth/firebase-login", {
         token: idToken
@@ -48,14 +46,12 @@ function Login() {
 
       console.log("📦 Backend Response:", res.data);
 
-      /* ❌ SAFETY CHECK */
       if (!res.data?.token) {
         throw new Error("Token not received from backend");
       }
 
-      /* 🔐 SAVE */
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      /* 🔥 FINAL FIX */
+      login(res.data);
 
       console.log("✅ LOGIN SUCCESS");
 
@@ -63,7 +59,7 @@ function Login() {
 
     } catch (err) {
 
-      console.error("❌ FULL ERROR:", err);
+      console.error("❌ Google Login Error:", err);
 
       setError(
         err.response?.data?.message ||
@@ -74,7 +70,7 @@ function Login() {
   };
 
   /* ===============================
-     🔥 EMAIL LOGIN
+     🔥 EMAIL LOGIN (FINAL)
   ============================== */
   const handleEmailLogin = async (e) => {
     e.preventDefault();
@@ -98,8 +94,12 @@ function Login() {
 
       console.log("📦 Email Response:", res.data);
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      if (!res.data?.token) {
+        throw new Error("Invalid response from server");
+      }
+
+      /* 🔥 FINAL FIX */
+      login(res.data);
 
       navigate(redirectPath, { replace: true });
 
@@ -124,14 +124,14 @@ function Login() {
           Login to Rohit Academy
         </h1>
 
-        {/* 🔥 ERROR */}
+        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">
             {error}
           </div>
         )}
 
-        {/* 🔥 GOOGLE LOGIN */}
+        {/* GOOGLE LOGIN */}
         <button
           onClick={handleGoogleLogin}
           className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl mb-4 font-medium transition"
@@ -143,7 +143,7 @@ function Login() {
           OR
         </div>
 
-        {/* 🔥 EMAIL LOGIN */}
+        {/* EMAIL LOGIN */}
         <form onSubmit={handleEmailLogin} className="space-y-4">
 
           <input
@@ -179,7 +179,6 @@ function Login() {
       </div>
 
     </div>
-
   );
 }
 
