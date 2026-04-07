@@ -8,14 +8,13 @@ import logger from "../utils/logger.js";
 import generateToken from "../utils/generateToken.js";
 
 /* =====================================
-   🔐 ADMIN LOGIN (FINAL SECURE VERSION)
+   🔐 ADMIN LOGIN (FINAL SECURE)
 ===================================== */
 export const adminLogin = async (req, res) => {
   try {
 
     const { email, password } = req.body;
 
-    /* ❌ VALIDATION */
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -23,7 +22,6 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    /* 🔍 FIND ADMIN + PASSWORD */
     const admin = await User.findOne({
       email: email.toLowerCase().trim(),
       role: "admin"
@@ -36,7 +34,6 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    /* ⛔ BLOCK CHECK */
     if (admin.isBlocked) {
       return res.status(403).json({
         success: false,
@@ -44,20 +41,29 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    /* 🔒 LOCK CHECK */
-    if (admin.isLocked()) {
+    /* 🔒 SAFE LOCK CHECK */
+    if (typeof admin.isLocked === "function" && admin.isLocked()) {
       return res.status(403).json({
         success: false,
-        message: "Too many attempts. Try after some time"
+        message: "Too many attempts. Try later"
       });
     }
 
-    /* 🔐 PASSWORD MATCH */
+    /* 🔐 PASSWORD SAFETY */
+    if (!admin.comparePassword) {
+      return res.status(500).json({
+        success: false,
+        message: "Password method missing"
+      });
+    }
+
     const isMatch = await admin.comparePassword(password);
 
     if (!isMatch) {
 
-      await admin.incrementLoginAttempts();
+      if (admin.incrementLoginAttempts) {
+        await admin.incrementLoginAttempts();
+      }
 
       return res.status(401).json({
         success: false,
@@ -65,30 +71,33 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    /* ✅ SUCCESS RESET */
-    await admin.updateLoginTime();
+    /* ✅ SUCCESS */
+    if (admin.updateLoginTime) {
+      await admin.updateLoginTime();
+    }
 
-    /* 🎟 TOKEN */
+    logger.info(`🟢 Admin login: ${admin.email}`);
+
     const token = generateToken({
       id: admin._id,
-      role: admin.role
+      role: "admin"
     });
 
-    res.json({
+    return res.json({
       success: true,
       token,
-      admin: {
-        id: admin._id,
+      role: "admin",
+      user: {
+        _id: admin._id,
         email: admin.email,
         role: admin.role
       }
     });
 
   } catch (error) {
+    logger.error(`❌ Admin login error: ${error.message}`);
 
-    logger.error(`Admin login error: ${error.message}`);
-
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Admin login failed"
     });
@@ -97,7 +106,7 @@ export const adminLogin = async (req, res) => {
 
 
 /* =====================================
-   📊 DASHBOARD STATS
+   📊 DASHBOARD STATS (SAFE)
 ===================================== */
 export const getAdminStats = async (req, res) => {
   try {
@@ -113,13 +122,9 @@ export const getAdminStats = async (req, res) => {
     ] = await Promise.all([
 
       User.countDocuments({ isBlocked: false }),
-
       Class.countDocuments({ isActive: true }),
-
       Subject.countDocuments({ isActive: true }),
-
       Material.countDocuments({ isActive: true }),
-
       Order.countDocuments(),
 
       Order.aggregate([
@@ -132,6 +137,9 @@ export const getAdminStats = async (req, res) => {
       ])
     ]);
 
+    const totalRevenue = revenue.length ? revenue[0].total : 0;
+    const totalDownloads = downloads.length ? downloads[0].total : 0;
+
     res.json({
       success: true,
       data: {
@@ -140,13 +148,13 @@ export const getAdminStats = async (req, res) => {
         totalSubjects,
         totalMaterials,
         totalOrders,
-        totalRevenue: revenue[0]?.total || 0,
-        totalDownloads: downloads[0]?.total || 0
+        totalRevenue,
+        totalDownloads
       }
     });
 
   } catch (error) {
-    logger.error(`Admin stats error: ${error.message}`);
+    logger.error(`❌ Admin stats error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -157,7 +165,7 @@ export const getAdminStats = async (req, res) => {
 
 
 /* =====================================
-   👥 GET USERS (PAGINATION)
+   👥 GET USERS (SAFE PAGINATION)
 ===================================== */
 export const getAllUsers = async (req, res) => {
   try {
@@ -188,7 +196,7 @@ export const getAllUsers = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error(`Get users error: ${error.message}`);
+    logger.error(`❌ Get users error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -199,7 +207,7 @@ export const getAllUsers = async (req, res) => {
 
 
 /* =====================================
-   🔁 BLOCK / UNBLOCK USER (SMART)
+   🔁 BLOCK / UNBLOCK USER
 ===================================== */
 export const toggleUserBlock = async (req, res) => {
   try {
@@ -213,7 +221,7 @@ export const toggleUserBlock = async (req, res) => {
       });
     }
 
-    if (req.user.id === id) {
+    if (req.user?._id?.toString() === id) {
       return res.status(400).json({
         success: false,
         message: "You cannot modify yourself"
@@ -238,7 +246,7 @@ export const toggleUserBlock = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error(`Toggle user error: ${error.message}`);
+    logger.error(`❌ Toggle user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -263,7 +271,7 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    if (req.user.id === id) {
+    if (req.user?._id?.toString() === id) {
       return res.status(400).json({
         success: false,
         message: "Cannot delete yourself"
@@ -276,11 +284,11 @@ export const deleteUser = async (req, res) => {
 
     res.json({
       success: true,
-      message: "User removed"
+      message: "User deactivated"
     });
 
   } catch (error) {
-    logger.error(`Delete user error: ${error.message}`);
+    logger.error(`❌ Delete user error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -291,12 +299,12 @@ export const deleteUser = async (req, res) => {
 
 
 /* =====================================
-   📄 GET MATERIALS (ADMIN)
+   📄 GET MATERIALS
 ===================================== */
 export const getAllMaterials = async (req, res) => {
   try {
 
-    const page = Number(req.query.page) || 1;
+    const page = Math.max(1, Number(req.query.page) || 1);
     const limit = 20;
     const skip = (page - 1) * limit;
 
@@ -322,7 +330,7 @@ export const getAllMaterials = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error(`Get materials error: ${error.message}`);
+    logger.error(`❌ Get materials error: ${error.message}`);
 
     res.status(500).json({
       success: false,
@@ -333,23 +341,38 @@ export const getAllMaterials = async (req, res) => {
 
 
 /* =====================================
-   📦 GET ALL ORDERS
+   📦 GET ALL ORDERS (PAGINATED)
 ===================================== */
 export const getAllOrders = async (req, res) => {
   try {
 
-    const orders = await Order.find()
-      .populate("user", "name phone email")
-      .populate("materials", "title price")
-      .sort({ createdAt: -1 });
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Number(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      Order.find()
+        .populate("user", "name phone email")
+        .populate("materials", "title price")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      Order.countDocuments()
+    ]);
 
     res.json({
       success: true,
-      data: orders
+      data: orders,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
     });
 
   } catch (error) {
-    logger.error(`Get orders error: ${error.message}`);
+    logger.error(`❌ Get orders error: ${error.message}`);
 
     res.status(500).json({
       success: false,
