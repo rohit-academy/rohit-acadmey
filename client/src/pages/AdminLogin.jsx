@@ -25,15 +25,20 @@ function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
 
   /* =====================================
-     🔐 AUTO REDIRECT IF LOGGED IN
+     🔐 AUTO REDIRECT IF LOGGED IN (SAFE)
   ===================================== */
   useEffect(() => {
     try {
-      const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+      const raw = localStorage.getItem("admin");
+
+      if (!raw) return;
+
+      const admin = JSON.parse(raw);
 
       if (admin?.token) {
         navigate("/admin", { replace: true });
       }
+
     } catch {
       localStorage.removeItem("admin");
     }
@@ -52,7 +57,7 @@ function AdminLogin() {
   };
 
   /* =====================================
-     🔐 LOGIN (FINAL PRO 🔥)
+     🔐 LOGIN (FINAL CLEAN 🔥)
   ===================================== */
   const handleLogin = async (e) => {
 
@@ -77,21 +82,21 @@ function AdminLogin() {
 
       const data = res.data;
 
-      /* 🔥 CLEAN OLD DATA FIRST */
-      localStorage.removeItem("admin");
-      localStorage.removeItem("token");
-
-      /* 🔥 SAVE ADMIN (IMPORTANT) */
-      localStorage.setItem("admin", JSON.stringify(data));
-
-      /* 🔥 EXTRA SAFETY TOKEN STORE */
-      if (data?.token) {
-        localStorage.setItem("token", data.token);
+      if (!data?.token) {
+        throw new Error("Invalid admin response");
       }
+
+      /* 🔥 CLEAN OLD ADMIN ONLY */
+      localStorage.removeItem("admin");
+
+      /* ✅ SAVE CLEAN ADMIN */
+      localStorage.setItem("admin", JSON.stringify({
+        token: data.token,
+        role: "admin"
+      }));
 
       setSuccess(true);
 
-      /* 🔥 SMALL DELAY FOR UX */
       setTimeout(() => {
         navigate("/admin", { replace: true });
       }, 800);
@@ -102,6 +107,7 @@ function AdminLogin() {
 
       const msg =
         err.response?.data?.message ||
+        err.message ||
         "❌ Invalid email or password";
 
       setError(msg);
