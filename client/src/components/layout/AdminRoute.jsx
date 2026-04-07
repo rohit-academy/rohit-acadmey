@@ -6,14 +6,16 @@ function AdminRoute() {
   const location = useLocation();
 
   /* =====================================
-     🔐 GET ADMIN DATA
+     🔐 SAFE ADMIN READ
   ===================================== */
   let admin = null;
 
   try {
-    admin = JSON.parse(localStorage.getItem("admin") || "{}");
+    const raw = localStorage.getItem("admin");
+    admin = raw ? JSON.parse(raw) : null;
   } catch {
     localStorage.removeItem("admin");
+    admin = null;
   }
 
   const token = admin?.token;
