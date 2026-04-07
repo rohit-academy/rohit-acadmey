@@ -17,7 +17,7 @@ function Login() {
   const [error, setError] = useState("");
 
   /* ===============================
-     🔥 GOOGLE LOGIN
+     🔥 GOOGLE LOGIN (FINAL DEBUG VERSION)
   ============================== */
   const handleGoogleLogin = async () => {
     try {
@@ -26,25 +26,50 @@ function Login() {
 
       const provider = new GoogleAuthProvider();
 
+      console.log("🚀 Opening Google popup...");
+
       const result = await signInWithPopup(auth, provider);
 
       const user = result.user;
 
+      console.log("✅ Google User:", user);
+
+      /* 🔥 GET TOKEN */
       const idToken = await user.getIdToken();
 
+      console.log("🔥 Firebase Token:", idToken);
+
       /* 🔥 BACKEND LOGIN */
+      console.log("📡 Calling backend...");
+
       const res = await API.post("/auth/firebase-login", {
         token: idToken
       });
 
+      console.log("📦 Backend Response:", res.data);
+
+      /* ❌ SAFETY CHECK */
+      if (!res.data?.token) {
+        throw new Error("Token not received from backend");
+      }
+
+      /* 🔐 SAVE */
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      console.log("✅ LOGIN SUCCESS");
 
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
-      console.error(err);
-      setError("Google login failed");
+
+      console.error("❌ FULL ERROR:", err);
+
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        "Google login failed"
+      );
     }
   };
 
@@ -64,10 +89,14 @@ function Login() {
       setLoading(true);
       setError("");
 
+      console.log("📡 Email login...");
+
       const res = await API.post("/auth/login", {
         email,
         password
       });
+
+      console.log("📦 Email Response:", res.data);
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -75,8 +104,11 @@ function Login() {
       navigate(redirectPath, { replace: true });
 
     } catch (err) {
-      console.error(err);
+
+      console.error("❌ Email Login Error:", err);
+
       setError(err.response?.data?.message || "Login failed");
+
     } finally {
       setLoading(false);
     }
