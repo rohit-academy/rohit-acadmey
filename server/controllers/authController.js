@@ -12,7 +12,7 @@ const safeUser = (user) => ({
   email: user.email,
   name: user.name,
   avatar: user.avatar,
-  role: user.role,
+  role: user.role || "user",
   authProvider: user.authProvider,
 });
 
@@ -30,7 +30,7 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔐 VERIFY FIREBASE TOKEN */
+    /* 🔐 VERIFY TOKEN */
     let decoded;
     try {
       decoded = await admin.auth().verifyIdToken(token);
@@ -59,42 +59,33 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       🔍 FIND USER
+       🔍 FIND USER (🔥 DUPLICATE SAFE FIX)
     ===================================== */
-    let user = await User.findOne({ firebaseId });
+    let user = await User.findOne({
+      $or: [
+        { firebaseId },
+        ...(email ? [{ email }] : []),
+        ...(phone ? [{ phone }] : [])
+      ]
+    });
 
-    /* 🔗 LINK WITH EMAIL */
-    if (!user && email) {
-      const existingUser = await User.findOne({ email });
+    /* =====================================
+       🔗 LINK / UPDATE EXISTING USER
+    ===================================== */
+    if (user) {
+      user.firebaseId = firebaseId;
+      user.authProvider = "firebase";
+      user.isVerified = true;
+      user.lastLogin = new Date();
 
-      if (existingUser) {
-        existingUser.firebaseId = firebaseId;
-        existingUser.authProvider = "firebase";
-        existingUser.avatar = avatar || existingUser.avatar;
-        existingUser.isVerified = true;
-        existingUser.lastLogin = new Date();
+      if (avatar) user.avatar = avatar;
 
-        await existingUser.save();
-        user = existingUser;
-      }
+      await user.save();
     }
 
-    /* 🔗 LINK WITH PHONE */
-    if (!user && phone) {
-      const existingUser = await User.findOne({ phone });
-
-      if (existingUser) {
-        existingUser.firebaseId = firebaseId;
-        existingUser.authProvider = "firebase";
-        existingUser.isVerified = true;
-        existingUser.lastLogin = new Date();
-
-        await existingUser.save();
-        user = existingUser;
-      }
-    }
-
-    /* ➕ CREATE USER */
+    /* =====================================
+       ➕ CREATE NEW USER
+    ===================================== */
     if (!user) {
       user = await User.create({
         firebaseId,
@@ -103,14 +94,17 @@ export const firebaseLogin = async (req, res, next) => {
         avatar,
         authProvider: "firebase",
         isVerified: true,
+        role: "user",
         name: "user" + Math.floor(Math.random() * 10000),
         lastLogin: new Date(),
       });
 
-      logger.info(`New Firebase user: ${email || phone}`);
+      logger.info(`🆕 New Firebase user: ${email || phone}`);
     }
 
-    /* 🚫 BLOCK CHECK */
+    /* =====================================
+       🚫 BLOCK CHECK
+    ===================================== */
     if (user.isBlocked) {
       return res.status(403).json({
         success: false,
@@ -118,16 +112,12 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    /* 🔄 UPDATE LOGIN */
-    await User.updateOne(
-      { _id: user._id },
-      { $set: { lastLogin: new Date() } }
-    );
-
-    /* 🎟 JWT TOKEN (IMPORTANT FIX) */
+    /* =====================================
+       🎟 JWT TOKEN (FINAL FIX)
+    ===================================== */
     const jwtToken = generateToken({
-      id: user._id.toString(), // 🔥 STRING FIX
-      role: user.role,
+      id: user._id.toString(),
+      role: user.role || "user",
     });
 
     console.log("✅ LOGIN SUCCESS:", user._id);
@@ -135,7 +125,7 @@ export const firebaseLogin = async (req, res, next) => {
     return res.json({
       success: true,
       token: jwtToken,
-      user: safeUser(user), // 🔥 includes _id
+      user: safeUser(user),
     });
 
   } catch (error) {
@@ -144,12 +134,14 @@ export const firebaseLogin = async (req, res, next) => {
   }
 };
 
+
 /* =====================================
    👤 GET CURRENT USER
 ===================================== */
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).lean(); // 🔥 FIXED
+
+    const user = await User.findById(req.user._id).lean();
 
     if (!user) {
       return res.status(404).json({
@@ -168,11 +160,13 @@ export const getMe = async (req, res, next) => {
   }
 };
 
+
 /* =====================================
    🆕 SET USERNAME
 ===================================== */
 export const setUsername = async (req, res, next) => {
   try {
+
     let { name } = req.body;
 
     if (!name || !name.trim()) {
@@ -229,11 +223,13 @@ export const setUsername = async (req, res, next) => {
   }
 };
 
+
 /* =====================================
-   🛠 ADMIN LOGIN
+   🛠 ADMIN LOGIN (CONSISTENT FIX)
 ===================================== */
 export const adminLogin = async (req, res, next) => {
   try {
+
     const { email, password } = req.body;
 
     if (
@@ -247,8 +243,13 @@ export const adminLogin = async (req, res, next) => {
 
       return res.json({
         success: true,
-        admin: true,
         token,
+        role: "admin",
+        user: {
+          id: "admin",
+          email,
+          role: "admin"
+        }
       });
     }
 
