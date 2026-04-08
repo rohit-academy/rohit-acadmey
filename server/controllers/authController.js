@@ -186,6 +186,7 @@ export const firebaseLogin = async (req, res, next) => {
 
       } catch (err) {
 
+        /* 🔥 DUPLICATE KEY SAFE FIX */
         if (err.code === 11000) {
 
           logger.warn("Duplicate user detected during creation");
