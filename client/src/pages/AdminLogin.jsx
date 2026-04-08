@@ -25,7 +25,7 @@ function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
 
   /* =====================================
-     🔐 AUTO REDIRECT IF LOGGED IN (SAFE)
+     🔐 AUTO REDIRECT (SAFE + CLEAN)
   ===================================== */
   useEffect(() => {
     try {
@@ -35,7 +35,7 @@ function AdminLogin() {
 
       const admin = JSON.parse(raw);
 
-      if (admin?.token) {
+      if (admin?.token && admin?.role === "admin") {
         navigate("/admin", { replace: true });
       }
 
@@ -57,7 +57,7 @@ function AdminLogin() {
   };
 
   /* =====================================
-     🔐 LOGIN (FINAL CLEAN 🔥)
+     🔐 LOGIN (FINAL HARDENED)
   ===================================== */
   const handleLogin = async (e) => {
 
@@ -82,24 +82,27 @@ function AdminLogin() {
 
       const data = res.data;
 
+      /* ❌ INVALID RESPONSE */
       if (!data?.token) {
         throw new Error("Invalid admin response");
       }
 
-      /* 🔥 CLEAN OLD ADMIN ONLY */
+      /* 🔥 CLEAN ONLY ADMIN (NOT USER DATA) */
       localStorage.removeItem("admin");
 
-      /* ✅ SAVE CLEAN ADMIN */
+      /* 🔥 SAVE ADMIN (NO TOKEN CONFLICT) */
       localStorage.setItem("admin", JSON.stringify({
         token: data.token,
         role: "admin"
       }));
 
+      console.log("✅ ADMIN LOGIN SUCCESS");
+
       setSuccess(true);
 
       setTimeout(() => {
         navigate("/admin", { replace: true });
-      }, 800);
+      }, 700);
 
     } catch (err) {
 
