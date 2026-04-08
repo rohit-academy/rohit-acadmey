@@ -34,6 +34,7 @@ export const firebaseLogin = async (req, res, next) => {
     /* =====================================
        🔐 VERIFY TOKEN
     ===================================== */
+
     let decoded;
 
     try {
@@ -152,6 +153,17 @@ export const firebaseLogin = async (req, res, next) => {
           throw err;
         }
       }
+    }
+
+    /* =====================================
+       🚨 SAFETY CHECK
+    ===================================== */
+
+    if (!user) {
+      return res.status(500).json({
+        success: false,
+        message: "User creation failed"
+      });
     }
 
     /* =====================================
