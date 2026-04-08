@@ -48,8 +48,16 @@ function AppRoutes() {
 
   const { user, loading } = useAuth();
 
-  /* 🔥 ADMIN DETECT (IMPORTANT) */
-  const admin = JSON.parse(localStorage.getItem("admin") || "null");
+  /* 🔥 SAFE ADMIN DETECT */
+  let admin = null;
+
+  try {
+    const raw = localStorage.getItem("admin");
+    admin = raw ? JSON.parse(raw) : null;
+  } catch {
+    localStorage.removeItem("admin");
+    admin = null;
+  }
 
   /* =====================================
      ⏳ GLOBAL LOADER
@@ -73,7 +81,7 @@ function AppRoutes() {
         element={user ? <Navigate to="/account" replace /> : <Login />}
       />
 
-      {/* 🔐 ADMIN LOGIN (🔥 FIXED REDIRECT) */}
+      {/* 🔐 ADMIN LOGIN */}
       <Route
         path="/admin-login"
         element={
