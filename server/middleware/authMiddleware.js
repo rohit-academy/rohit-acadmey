@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 /* =====================================
-   🔐 PROTECT MIDDLEWARE (FINAL)
+   🔐 PROTECT MIDDLEWARE (FINAL SECURE)
 ===================================== */
 export const protect = async (req, res, next) => {
   try {
@@ -54,18 +54,7 @@ export const protect = async (req, res, next) => {
     }
 
     /* =====================================
-       🛠 ADMIN SHORTCUT
-    ===================================== */
-    if (decoded.role === "admin") {
-      req.user = {
-        _id: "admin",
-        role: "admin"
-      };
-      return next();
-    }
-
-    /* =====================================
-       👤 FETCH USER
+       👤 ALWAYS VERIFY USER FROM DB
     ===================================== */
     const user = await User.findById(decoded.id)
       .select("_id name phone email role isBlocked authProvider avatar lastLogin")
@@ -89,11 +78,11 @@ export const protect = async (req, res, next) => {
     }
 
     /* =====================================
-       📌 ATTACH USER (FINAL FIX)
+       📌 ATTACH USER (FINAL)
     ===================================== */
     req.user = {
-      _id: user._id,   // 🔥 MAIN FIX
-      id: user._id,    // backward compatibility
+      _id: user._id,
+      id: user._id, // backward compatibility
       name: user.name,
       phone: user.phone,
       email: user.email,
@@ -103,7 +92,7 @@ export const protect = async (req, res, next) => {
       lastLogin: user.lastLogin
     };
 
-    next();
+    return next();
 
   } catch (error) {
 
@@ -117,7 +106,4 @@ export const protect = async (req, res, next) => {
   }
 };
 
-/* =====================================
-   🔁 EXPORT DEFAULT (OPTIONAL)
-===================================== */
 export default protect;
