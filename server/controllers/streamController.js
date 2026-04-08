@@ -26,7 +26,17 @@ export const createStream = async (req, res) => {
       });
     }
 
-    name = name.trim().toLowerCase(); // 🔥 normalize
+    name = name.trim().toLowerCase();
+
+    if (name.length < 2 || name.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid stream name"
+      });
+    }
+
+    order = Number(order) || 0;
+    if (order < 0) order = 0;
 
     /* 🔍 CHECK CLASS */
     const cls = await Class.findById(classId);
@@ -39,16 +49,18 @@ export const createStream = async (req, res) => {
     }
 
     /* 🔥 STREAM ONLY FOR 11+ */
-    if (!cls.requiresStream) {
+    const classNumber = Number(cls.name);
+
+    if (classNumber < 11) {
       return res.status(400).json({
         success: false,
-        message: "Streams not allowed for this class"
+        message: "Streams only allowed for class 11 and 12"
       });
     }
 
     /* ❌ DUPLICATE CHECK */
     const exists = await Stream.findOne({
-      name,
+      name: name.toLowerCase(),
       classId
     });
 
@@ -62,10 +74,10 @@ export const createStream = async (req, res) => {
     const stream = await Stream.create({
       name,
       classId,
-      order: order || 0
+      order
     });
 
-    logger.info(`Stream created: ${name}`);
+    logger.info(`Stream created: ${name} for class ${cls.name}`);
 
     res.status(201).json({
       success: true,
@@ -80,12 +92,13 @@ export const createStream = async (req, res) => {
       success: false,
       message: "Failed to create stream"
     });
+
   }
 };
 
 
 /* =====================================
-   📄 GET ALL STREAMS (🔥 NEW)
+   📄 GET ALL STREAMS
 ===================================== */
 export const getAllStreams = async (req, res) => {
   try {
@@ -107,6 +120,7 @@ export const getAllStreams = async (req, res) => {
       success: false,
       message: "Failed to fetch streams"
     });
+
   }
 };
 
@@ -130,6 +144,7 @@ export const getStreamsByClass = async (req, res) => {
       classId,
       isActive: true
     })
+      .populate("classId", "name classNumber")
       .sort({ order: 1, createdAt: 1 });
 
     res.json({
@@ -145,6 +160,7 @@ export const getStreamsByClass = async (req, res) => {
       success: false,
       message: "Failed to fetch streams"
     });
+
   }
 };
 
@@ -174,10 +190,48 @@ export const updateStream = async (req, res) => {
       });
     }
 
-    /* 🔥 SAFE UPDATE */
-    if (name) stream.name = name.trim().toLowerCase();
-    if (order !== undefined) stream.order = order;
-    if (isActive !== undefined) stream.isActive = isActive;
+    /* 🔥 NAME UPDATE */
+    if (name) {
+
+      name = name.trim().toLowerCase();
+
+      if (name.length < 2 || name.length > 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid stream name"
+        });
+      }
+
+      /* ❌ DUPLICATE CHECK */
+      const exists = await Stream.findOne({
+        name,
+        classId: stream.classId,
+        _id: { $ne: id }
+      });
+
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          message: "Stream already exists"
+        });
+      }
+
+      stream.name = name;
+    }
+
+    /* 🔢 ORDER UPDATE */
+    if (order !== undefined) {
+
+      order = Number(order) || 0;
+      if (order < 0) order = 0;
+
+      stream.order = order;
+    }
+
+    /* ACTIVE STATUS */
+    if (isActive !== undefined) {
+      stream.isActive = isActive;
+    }
 
     await stream.save();
 
@@ -196,12 +250,13 @@ export const updateStream = async (req, res) => {
       success: false,
       message: "Failed to update stream"
     });
+
   }
 };
 
 
 /* =====================================
-   ❌ DELETE STREAM (SOFT DELETE 🔥)
+   ❌ DELETE STREAM (SOFT DELETE)
 ===================================== */
 export const deleteStream = async (req, res) => {
   try {
@@ -224,8 +279,8 @@ export const deleteStream = async (req, res) => {
       });
     }
 
-    /* 🔥 SOFT DELETE */
     stream.isActive = false;
+
     await stream.save();
 
     logger.warn(`Stream deactivated: ${stream.name}`);
@@ -243,5 +298,6 @@ export const deleteStream = async (req, res) => {
       success: false,
       message: "Failed to delete stream"
     });
+
   }
 };

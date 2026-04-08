@@ -1,109 +1,125 @@
 import mongoose from "mongoose";
 
 const classSchema = new mongoose.Schema(
-  {
-    /* 📘 CLASS NAME */
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-      unique: true,
-      minlength: 1,
-      maxlength: 50,
-      index: true
-    },
-
-    /* 🔢 CLASS NUMBER (IMPORTANT 🔥) */
-    classNumber: {
-      type: Number,
-      required: true,
-      unique: true,
-      min: 1,
-      max: 20,
-      index: true
-    },
-
-    /* 🎓 LEVEL */
-    level: {
-      type: String,
-      enum: ["School", "College"],
-      default: "School",
-      index: true
-    },
-
-    /* 🔥 STREAM ENABLE FLAG */
-    hasStreams: {
-      type: Boolean,
-      default: false,
-      index: true
-    },
-
-    /* 🔢 ORDER */
-    order: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-
-    /* 📝 DESCRIPTION */
-    description: {
-      type: String,
-      default: "",
-      maxlength: 500
-    },
-
-    /* 🔥 ACTIVE */
-    isActive: {
-      type: Boolean,
-      default: true,
-      index: true
-    }
+{
+  /* 🔢 CLASS NUMBER (PRIMARY IDENTIFIER) */
+  classNumber: {
+    type: Number,
+    required: true,
+    unique: true,
+    min: 1,
+    max: 12
   },
-  { timestamps: true }
+
+  /* 📘 CLASS NAME (DISPLAY) */
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true,
+    match: /^\d+$/, // only numeric names like "9", "10"
+  },
+
+  /* 🎓 LEVEL */
+  level: {
+    type: String,
+    enum: ["School", "College"],
+    default: "School",
+    index: true
+  },
+
+  /* 🔥 STREAM FLAG */
+  hasStreams: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  /* 🔢 ORDER (AUTO SORT) */
+  order: {
+    type: Number,
+    default: function () {
+      return this.classNumber;
+    },
+    min: 0
+  },
+
+  /* 📝 DESCRIPTION */
+  description: {
+    type: String,
+    default: "",
+    maxlength: 500
+  },
+
+  /* 🔥 ACTIVE FLAG */
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  }
+
+},
+{ timestamps: true }
 );
 
 /* =====================================
-   🔥 AUTO STREAM LOGIC
+   🔥 AUTO LOGIC
 ===================================== */
+
 classSchema.pre("save", function (next) {
 
-  /* 🔹 NAME CLEAN */
+  /* 🔹 CLEAN NAME */
   if (this.name) {
     this.name = this.name.trim().toLowerCase();
   }
 
-  /* 🔥 AUTO STREAM ENABLE (11+ CLASS) */
-  if (this.classNumber >= 11) {
-    this.hasStreams = true;
-  } else {
-    this.hasStreams = false;
+  /* 🔥 AUTO STREAM ENABLE */
+  this.hasStreams = this.classNumber >= 11;
+
+  /* 🔥 AUTO ORDER */
+  if (!this.order) {
+    this.order = this.classNumber;
   }
 
   next();
 });
 
+
 /* =====================================
    🔥 INDEXES
 ===================================== */
+
 classSchema.index({ level: 1, order: 1 });
 classSchema.index({ classNumber: 1, isActive: 1 });
 
+
 /* =====================================
-   🔥 STATIC METHODS (PRO 🔥)
+   🔥 STATIC METHODS
 ===================================== */
 
-/* 📄 GET ALL CLASSES SORTED */
+/* 📄 GET ACTIVE CLASSES */
+
 classSchema.statics.getAllActive = function () {
+
   return this.find({ isActive: true })
-    .sort({ order: 1 })
+    .select("_id name classNumber hasStreams order")
+    .sort({ order: 1, classNumber: 1 })
     .lean();
 };
 
-/* 📄 CHECK IF STREAM REQUIRED */
+
+/* 📄 CHECK STREAM REQUIRED */
+
 classSchema.statics.requiresStream = async function (classId) {
-  const cls = await this.findById(classId).select("classNumber");
-  return cls?.classNumber >= 11;
+
+  const cls = await this.findById(classId)
+    .select("classNumber")
+    .lean();
+
+  if (!cls) return false;
+
+  return cls.classNumber >= 11;
 };
+
 
 export default mongoose.model("Class", classSchema);

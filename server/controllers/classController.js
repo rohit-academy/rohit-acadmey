@@ -1,12 +1,20 @@
 import Class from "../models/Class.js";
+import Stream from "../models/Stream.js";
 import logger from "../utils/logger.js";
 
 /* =====================================
    🔧 HELPER: EXTRACT CLASS NUMBER
 ===================================== */
 const extractClassNumber = (name) => {
-  const num = parseInt(name);
-  return isNaN(num) ? null : num;
+
+  if (!name) return null;
+
+  const sanitized = name.replace(/[^\d]/g, "");
+  const num = Number(sanitized);
+
+  if (!num || num < 1 || num > 12) return null;
+
+  return num;
 };
 
 /* =====================================
@@ -17,10 +25,10 @@ export const addClass = async (req, res) => {
 
     let { name } = req.body;
 
-    if (!name || name.trim().length < 1) {
+    if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Valid class name required",
+        message: "Class name required"
       });
     }
 
@@ -32,47 +40,54 @@ export const addClass = async (req, res) => {
     if (!classNumber) {
       return res.status(400).json({
         success: false,
-        message: "Class name must include a number (e.g., 10, 11, 12)",
+        message: "Class must be between 1 and 12"
       });
     }
 
     /* ❌ DUPLICATE CHECK */
     const existing = await Class.findOne({
-      $or: [{ name }, { classNumber }]
+      $or: [
+        { name },
+        { classNumber }
+      ],
+      isActive: true
     });
 
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: "Class already exists",
+        message: "Class already exists"
       });
     }
 
-    /* 🔥 STREAM LOGIC */
     const hasStreams = classNumber >= 11;
 
     const newClass = await Class.create({
-      name,
+      name: String(classNumber),
       classNumber,
-      hasStreams
+      hasStreams,
+      order: classNumber
     });
 
-    logger.info(`✅ Class created: ${name} (${classNumber})`);
+    logger.info(`Class created: ${classNumber}`);
 
     res.status(201).json({
       success: true,
-      data: newClass,
+      data: newClass
     });
 
   } catch (error) {
-    logger.error(`❌ Add class error: ${error.message}`);
+
+    logger.error(`Add class error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Server Error"
     });
+
   }
 };
+
 
 /* =====================================
    📄 GET CLASSES
@@ -81,22 +96,26 @@ export const getClasses = async (req, res) => {
   try {
 
     const classes = await Class.find({ isActive: true })
-      .sort({ order: 1, classNumber: 1 });
+      .select("_id name classNumber hasStreams order")
+      .sort({ classNumber: 1 });
 
     res.json({
       success: true,
-      data: classes,
+      data: classes
     });
 
   } catch (error) {
+
     logger.error(`Get classes error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Server Error"
     });
+
   }
 };
+
 
 /* =====================================
    🔥 GET STREAM CLASSES (11 & 12 ONLY)
@@ -105,9 +124,11 @@ export const getStreamClasses = async (req, res) => {
   try {
 
     const classes = await Class.find({
-      hasStreams: true,   // ✅ FIXED
+      hasStreams: true,
       isActive: true
-    }).sort({ classNumber: 1 });
+    })
+      .select("_id name classNumber")
+      .sort({ classNumber: 1 });
 
     res.json({
       success: true,
@@ -115,14 +136,17 @@ export const getStreamClasses = async (req, res) => {
     });
 
   } catch (error) {
+
     logger.error(`Get stream classes error: ${error.message}`);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch stream classes"
     });
+
   }
 };
+
 
 /* =====================================
    🔍 GET CLASS BY ID
@@ -130,29 +154,33 @@ export const getStreamClasses = async (req, res) => {
 export const getClassById = async (req, res) => {
   try {
 
-    const classDoc = await Class.findById(req.params.id);
+    const classDoc = await Class.findById(req.params.id)
+      .select("_id name classNumber hasStreams order isActive");
 
     if (!classDoc || !classDoc.isActive) {
       return res.status(404).json({
         success: false,
-        message: "Class not found",
+        message: "Class not found"
       });
     }
 
     res.json({
       success: true,
-      data: classDoc,
+      data: classDoc
     });
 
   } catch (error) {
+
     logger.error(`Get class error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Server Error"
     });
+
   }
 };
+
 
 /* =====================================
    ✏ UPDATE CLASS
@@ -167,7 +195,7 @@ export const updateClass = async (req, res) => {
     if (!classDoc) {
       return res.status(404).json({
         success: false,
-        message: "Class not found",
+        message: "Class not found"
       });
     }
 
@@ -175,55 +203,79 @@ export const updateClass = async (req, res) => {
     if (name) {
 
       const newName = name.trim().toLowerCase();
+
       const classNumber = extractClassNumber(newName);
 
       if (!classNumber) {
         return res.status(400).json({
           success: false,
-          message: "Invalid class number",
+          message: "Class must be between 1 and 12"
         });
       }
 
       const exists = await Class.findOne({
-        $or: [{ name: newName }, { classNumber }]
+        $or: [
+          { name: String(classNumber) },
+          { classNumber }
+        ],
+        isActive: true
       });
 
       if (exists && exists._id.toString() !== req.params.id) {
         return res.status(400).json({
           success: false,
-          message: "Class already exists",
+          message: "Class already exists"
         });
       }
 
-      classDoc.name = newName;
+      classDoc.name = String(classNumber);
       classDoc.classNumber = classNumber;
       classDoc.hasStreams = classNumber >= 11;
     }
 
-    if (order !== undefined) classDoc.order = order;
-    if (isActive !== undefined) classDoc.isActive = isActive;
+    /* 🔢 ORDER VALIDATION */
+    if (order !== undefined) {
+
+      order = Number(order);
+
+      if (isNaN(order) || order < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid order"
+        });
+      }
+
+      classDoc.order = order;
+    }
+
+    if (isActive !== undefined) {
+      classDoc.isActive = isActive;
+    }
 
     await classDoc.save();
 
-    logger.info(`✏️ Class updated: ${classDoc.name}`);
+    logger.info(`Class updated: ${classDoc.classNumber}`);
 
     res.json({
       success: true,
-      data: classDoc,
+      data: classDoc
     });
 
   } catch (error) {
+
     logger.error(`Update class error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Server Error"
     });
+
   }
 };
 
+
 /* =====================================
-   ❌ DELETE CLASS (SOFT)
+   ❌ DELETE CLASS (SAFE SOFT DELETE)
 ===================================== */
 export const deleteClass = async (req, res) => {
   try {
@@ -233,26 +285,42 @@ export const deleteClass = async (req, res) => {
     if (!classDoc) {
       return res.status(404).json({
         success: false,
-        message: "Class not found",
+        message: "Class not found"
+      });
+    }
+
+    /* 🔒 CHECK STREAM DEPENDENCY */
+    const streamExists = await Stream.findOne({
+      classId: classDoc._id,
+      isActive: true
+    });
+
+    if (streamExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete class with streams"
       });
     }
 
     classDoc.isActive = false;
+
     await classDoc.save();
 
-    logger.warn(`🗑 Class deactivated: ${classDoc.name}`);
+    logger.warn(`Class deactivated: ${classDoc.classNumber}`);
 
     res.json({
       success: true,
-      message: "Class deactivated",
+      message: "Class deactivated"
     });
 
   } catch (error) {
+
     logger.error(`Delete class error: ${error.message}`);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Server Error"
     });
+
   }
 };
