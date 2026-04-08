@@ -41,7 +41,7 @@ export const firebaseLogin = async (req, res, next) => {
       decoded = await admin.auth().verifyIdToken(token);
     } catch (err) {
 
-      console.error("Firebase verify failed:", err.message);
+      logger.error("Firebase verify failed:", err.message);
 
       return res.status(401).json({
         success: false,
@@ -152,13 +152,20 @@ export const firebaseLogin = async (req, res, next) => {
 
       let username;
       let exists = true;
+      let attempts = 0;
 
       while (exists) {
 
         username = "user_" + Math.random().toString(36).substring(2, 8);
 
-        exists = await User.findOne({ name: username });
+        exists = await User.exists({ name: username });
 
+        attempts++;
+
+        if (attempts > 10) {
+          username = "user_" + Date.now().toString().slice(-6);
+          exists = false;
+        }
       }
 
       try {
@@ -179,11 +186,13 @@ export const firebaseLogin = async (req, res, next) => {
 
       } catch (err) {
 
-        /* 🔥 DUPLICATE KEY SAFE */
         if (err.code === 11000) {
+
+          logger.warn("Duplicate user detected during creation");
 
           user = await User.findOne({
             $or: [
+              { firebaseId },
               ...(email ? [{ email }] : []),
               ...(phone ? [{ phone }] : [])
             ]
@@ -202,6 +211,7 @@ export const firebaseLogin = async (req, res, next) => {
     ===================================== */
 
     if (!user) {
+      logger.error("User creation failed unexpectedly");
       return res.status(500).json({
         success: false,
         message: "User creation failed"
@@ -236,7 +246,7 @@ export const firebaseLogin = async (req, res, next) => {
 
   } catch (error) {
 
-    console.error("Firebase login error:", error);
+    logger.error("Firebase login error:", error);
 
     return next(error);
   }
