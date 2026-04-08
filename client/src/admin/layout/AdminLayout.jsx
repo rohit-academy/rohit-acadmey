@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,35 +19,20 @@ function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   /* =========================
-     🔐 AUTH CHECK (FINAL FIX 🔥)
-  ========================= */
-  useEffect(() => {
-    try {
-      const admin = JSON.parse(localStorage.getItem("admin") || "{}");
-
-      if (!admin?.token) {
-        navigate("/admin-login", { replace: true });
-      }
-    } catch (err) {
-      console.error("Admin auth error:", err);
-      navigate("/admin-login", { replace: true });
-    }
-  }, [navigate]);
-
-  /* =========================
-     🚪 LOGOUT
+     🚪 LOGOUT (SAFE)
   ========================= */
   const handleLogout = () => {
 
     if (!window.confirm("Logout from admin panel?")) return;
 
-    localStorage.clear();
+    /* 🔥 REMOVE ONLY ADMIN SESSION */
+    localStorage.removeItem("admin");
 
     navigate("/admin-login", { replace: true });
   };
 
   /* =========================
-     🧠 PAGE TITLE (SMART)
+     🧠 PAGE TITLE
   ========================= */
   const getPageTitle = () => {
 
@@ -58,7 +43,7 @@ function AdminLayout() {
     if (path.includes("/users")) return "Users";
     if (path.includes("/orders")) return "Orders";
     if (path.includes("/academics/classes")) return "Manage Classes";
-    if (path.includes("/academics/streams")) return "Manage Streams"; // ✅ added
+    if (path.includes("/academics/streams")) return "Manage Streams";
     if (path.includes("/academics/subjects")) return "Manage Subjects";
     if (path.includes("/academics")) return "Academics";
 
@@ -68,7 +53,7 @@ function AdminLayout() {
   const pageTitle = getPageTitle();
 
   /* =========================
-     🔗 NAV CONFIG (CLEAN 🔥)
+     🔗 NAV LINKS
   ========================= */
   const navLinks = [
     {
@@ -86,7 +71,7 @@ function AdminLayout() {
           path: "/admin/academics/classes"
         },
         {
-          title: "🌿 Manage Streams", // ✅ visible highlight
+          title: "Manage Streams",
           path: "/admin/academics/streams"
         },
         {
@@ -154,6 +139,7 @@ function AdminLayout() {
             <h2 className="text-xl font-bold text-blue-600">
               Rohit Academy
             </h2>
+
             <p className="text-xs text-gray-500 mb-6">
               Admin Panel
             </p>
@@ -189,7 +175,6 @@ function AdminLayout() {
                   {item.title}
                 </NavLink>
 
-                {/* CHILD LINKS */}
                 {item.children && (
                   <div className="ml-6 mt-1 flex flex-col gap-1">
 
