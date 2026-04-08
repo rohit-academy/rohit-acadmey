@@ -7,14 +7,16 @@ const userSchema = new mongoose.Schema(
     firebaseId: {
       type: String,
       trim: true,
-      default: undefined
+      unique: true,
+      sparse: true
     },
 
     /* 📱 PHONE */
     phone: {
       type: String,
       match: [/^[6-9]\d{9}$/, "Invalid phone number"],
-      default: undefined
+      unique: true,
+      sparse: true
     },
 
     /* 📧 EMAIL */
@@ -22,7 +24,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
       trim: true,
-      default: undefined
+      unique: true,
+      sparse: true
     },
 
     /* 🔐 PASSWORD */
@@ -40,7 +43,8 @@ const userSchema = new mongoose.Schema(
       minlength: 3,
       maxlength: 20,
       match: [/^[a-z0-9_]+$/, "Invalid username"],
-      default: undefined
+      unique: true,
+      sparse: true
     },
 
     /* 👤 DISPLAY NAME */
@@ -59,7 +63,7 @@ const userSchema = new mongoose.Schema(
     /* 🔐 AUTH PROVIDER */
     authProvider: {
       type: String,
-      enum: ["firebase", "google", "phone", "email"],
+      enum: ["firebase", "email"],
       default: "firebase"
     },
 
@@ -84,11 +88,14 @@ const userSchema = new mongoose.Schema(
       index: true
     },
 
-    /* 🕒 LAST LOGIN */
+    /* 🕒 LOGIN INFO */
     lastLogin: {
       type: Date,
       default: Date.now
     },
+
+    lastLoginIP: String,
+    lastDevice: String,
 
     /* 🔐 SECURITY */
     loginAttempts: {
@@ -106,50 +113,57 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 INDEXES
+   🔥 INDEXES (PERFORMANCE BOOST)
 ===================================== */
-userSchema.index({ firebaseId: 1 }, { unique: true, sparse: true });
-userSchema.index({ phone: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ username: 1 }, { unique: true, sparse: true });
+userSchema.index({ role: 1, isBlocked: 1 });
 
 /* =====================================
-   🔥 PRE SAVE (NO NEXT - CLEAN)
+   🔥 PRE SAVE (SAFE VERSION)
 ===================================== */
 userSchema.pre("save", async function () {
+  try {
 
-  /* 🔹 USERNAME CLEAN */
-  if (this.username) {
-    this.username = this.username
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
+    /* 🔹 USERNAME CLEAN */
+    if (this.username) {
+      this.username = this.username
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+
+      /* 🔥 EMPTY USERNAME FIX */
+      if (!this.username) {
+        this.username = "user" + Math.floor(Math.random() * 10000);
+      }
+    }
+
+    /* 🔹 PHONE CLEAN */
+    if (this.phone) {
+      this.phone = this.phone.replace(/\D/g, "").slice(-10);
+    }
+
+    /* 🔹 EMAIL CLEAN */
+    if (this.email) {
+      this.email = this.email.toLowerCase().trim();
+    }
+
+    /* 🔐 PASSWORD HASH */
+    if (this.isModified("password") && this.password) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
+
+  } catch (err) {
+    throw err;
   }
-
-  /* 🔹 PHONE CLEAN */
-  if (this.phone) {
-    this.phone = this.phone.replace(/\D/g, "").slice(-10);
-  }
-
-  /* 🔹 EMAIL CLEAN */
-  if (this.email) {
-    this.email = this.email.toLowerCase().trim();
-  }
-
-  /* 🔐 PASSWORD HASH */
-  if (this.isModified("password") && this.password) {
-    this.password = await bcrypt.hash(this.password, 10);
-  }
-
 });
 
 /* =====================================
    🔐 METHODS
 ===================================== */
 
-/* 🔑 COMPARE PASSWORD */
+/* 🔑 COMPARE PASSWORD (SAFE) */
 userSchema.methods.comparePassword = async function (enteredPassword) {
+  if (!this.password) return false;
   return bcrypt.compare(enteredPassword, this.password);
 };
 
@@ -171,7 +185,7 @@ userSchema.methods.incrementLoginAttempts = function () {
   this.loginAttempts += 1;
 
   if (this.loginAttempts >= 5) {
-    this.lockUntil = Date.now() + 15 * 60 * 1000;
+    this.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 🔥 FIX
   }
 
   return this.save();
