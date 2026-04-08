@@ -16,19 +16,26 @@ export function AuthProvider({ children }) {
 
       const token = localStorage.getItem("token");
 
-      if (!token) {
+      /* 🔥 ADMIN LOGIN KO IGNORE KARO */
+      const admin = JSON.parse(localStorage.getItem("admin") || "null");
+
+      if (!token || admin?.token) {
         setUser(null);
         setLoading(false);
         return;
       }
 
-      /* ⚡ INSTANT UI LOAD (CACHE) */
-      const cachedUser = localStorage.getItem("user");
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser));
+      /* ⚡ FAST CACHE LOAD */
+      try {
+        const cachedUser = localStorage.getItem("user");
+        if (cachedUser) {
+          setUser(JSON.parse(cachedUser));
+        }
+      } catch {
+        localStorage.removeItem("user");
       }
 
-      /* 🔥 VERIFY FROM SERVER */
+      /* 🔐 VERIFY FROM SERVER */
       const res = await API.get("/auth/me");
 
       const userData = res.data?.user;
@@ -42,9 +49,9 @@ export function AuthProvider({ children }) {
 
       console.error("❌ AUTH ERROR:", err.response?.data || err.message);
 
-      /* 🔥 AUTO LOGOUT */
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
       setUser(null);
 
     } finally {
@@ -53,23 +60,34 @@ export function AuthProvider({ children }) {
   };
 
   /* =====================================
-     🚀 INITIAL LOAD + SYNC
+     🚀 INITIAL LOAD + MULTI TAB SYNC
   ===================================== */
   useEffect(() => {
 
-    /* ✅ INSTANT LOAD FROM LOCAL (FAST UX) */
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    /* ⚡ FAST LOCAL LOAD */
+    try {
+      const storedUser = localStorage.getItem("user");
+
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch {
+      localStorage.removeItem("user");
     }
 
     loadUser();
 
     /* 🔥 MULTI TAB LOGOUT SYNC */
     const syncLogout = (e) => {
+
       if (e.key === "token" && !e.newValue) {
         setUser(null);
       }
+
+      if (e.key === "user" && !e.newValue) {
+        setUser(null);
+      }
+
     };
 
     window.addEventListener("storage", syncLogout);
@@ -81,7 +99,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /* =====================================
-     🔐 LOGIN (SIMPLIFIED 🔥)
+     🔐 LOGIN (USER ONLY)
   ===================================== */
   const login = (data) => {
 
@@ -90,26 +108,40 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    try {
 
-    setUser(data.user);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setUser(data.user);
+
+    } catch (error) {
+      console.error("Login storage error:", error);
+    }
   };
 
   /* =====================================
      🚪 LOGOUT
   ===================================== */
   const logout = () => {
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     setUser(null);
 
-    /* 🔥 OPTIONAL REDIRECT */
     window.location.href = "/";
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -119,6 +151,7 @@ export function AuthProvider({ children }) {
    🔹 HOOK
 ===================================== */
 export const useAuth = () => {
+
   const context = useContext(AuthContext);
 
   if (!context) {
