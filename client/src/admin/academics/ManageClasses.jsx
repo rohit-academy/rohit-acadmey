@@ -13,7 +13,7 @@ function ManageClasses() {
 
   const [classes, setClasses] = useState([]);
   const [newClass, setNewClass] = useState("");
-  const [requiresStream, setRequiresStream] = useState(false); // 🔥 NEW
+  const [requiresStream, setRequiresStream] = useState(false);
 
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState("");
@@ -24,6 +24,7 @@ function ManageClasses() {
 
   /* ================= FETCH ================= */
   const fetchClasses = async () => {
+
     try {
 
       setLoading(true);
@@ -32,17 +33,21 @@ function ManageClasses() {
 
       const list = res.data?.data || [];
 
-      const sorted = list.sort((a, b) =>
-        Number(a.name) - Number(b.name)
+      const sorted = [...list].sort(
+        (a, b) => Number(a.name) - Number(b.name)
       );
 
       setClasses(sorted);
 
     } catch (err) {
+
       console.error(err);
       setError("Failed to load classes");
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -50,8 +55,10 @@ function ManageClasses() {
     fetchClasses();
   }, []);
 
-  /* ================= CLASS CHANGE ================= */
+  /* ================= INPUT CHANGE ================= */
   const handleClassInput = (value) => {
+
+    setError("");
 
     setNewClass(value);
 
@@ -71,6 +78,12 @@ function ManageClasses() {
 
     if (!name) return;
 
+    /* 🔥 NUMERIC VALIDATION */
+    if (!/^\d+$/.test(name)) {
+      setError("Class must be numeric (e.g. 9, 10, 11)");
+      return;
+    }
+
     const exists = classes.find(
       (c) => c.name.toLowerCase() === name.toLowerCase()
     );
@@ -87,7 +100,7 @@ function ManageClasses() {
 
       await API.post("/classes", {
         name,
-        requiresStream // 🔥 SEND TO BACKEND
+        requiresStream
       });
 
       setNewClass("");
@@ -96,9 +109,16 @@ function ManageClasses() {
       fetchClasses();
 
     } catch (err) {
-      setError(err.response?.data?.message || "Add failed");
+
+      setError(
+        err.response?.data?.message ||
+        "Add failed"
+      );
+
     } finally {
+
       setAdding(false);
+
     }
   };
 
@@ -111,25 +131,39 @@ function ManageClasses() {
 
       await API.delete(`/classes/${id}`);
 
-      setClasses((prev) => prev.filter((c) => c._id !== id));
+      setClasses((prev) =>
+        prev.filter((c) => c._id !== id)
+      );
 
     } catch (err) {
+
       console.error(err);
       setError("Delete failed");
+
     }
   };
 
-  /* ================= EDIT ================= */
+  /* ================= EDIT START ================= */
   const handleEditStart = (cls) => {
+
+    setError("");
     setEditingId(cls._id);
     setEditingValue(cls.name);
+
   };
 
+  /* ================= EDIT SAVE ================= */
   const handleEditSave = async () => {
 
     const name = editingValue.trim();
 
     if (!name) return;
+
+    /* 🔥 NUMERIC VALIDATION */
+    if (!/^\d+$/.test(name)) {
+      setError("Class must be numeric");
+      return;
+    }
 
     const exists = classes.find(
       (c) =>
@@ -164,8 +198,10 @@ function ManageClasses() {
       setEditingValue("");
 
     } catch (err) {
+
       console.error(err);
       setError("Update failed");
+
     }
   };
 
@@ -178,21 +214,23 @@ function ManageClasses() {
         Manage Classes
       </h1>
 
-      {/* ERROR */}
       {error && (
         <p className="text-red-500 mb-4">{error}</p>
       )}
 
       {/* ================= ADD ================= */}
+
       <div className="flex flex-col gap-3 mb-8">
 
         <div className="flex gap-3">
 
           <input
-            type="text"
-            placeholder="Enter class (e.g. 10, 11, 12)"
+            type="number"
+            placeholder="Enter class (e.g. 9, 10, 11, 12)"
             value={newClass}
-            onChange={(e) => handleClassInput(e.target.value)}
+            onChange={(e) =>
+              handleClassInput(e.target.value)
+            }
             className="border p-3 rounded-lg flex-1"
           />
 
@@ -201,6 +239,7 @@ function ManageClasses() {
             disabled={adding}
             className="bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center gap-2"
           >
+
             {adding ? (
               <Loader2 className="animate-spin" size={18} />
             ) : (
@@ -208,11 +247,11 @@ function ManageClasses() {
                 <Plus size={18} /> Add
               </>
             )}
+
           </button>
 
         </div>
 
-        {/* 🔥 STREAM INFO UI */}
         {requiresStream && (
           <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
             ⚠️ This class will require stream selection (11th+ rule)
@@ -222,6 +261,7 @@ function ManageClasses() {
       </div>
 
       {/* ================= LIST ================= */}
+
       {loading ? (
 
         <div className="text-center py-10 text-gray-500">
@@ -233,7 +273,9 @@ function ManageClasses() {
         <div className="space-y-4">
 
           {classes.length === 0 && (
-            <div className="text-gray-500">No classes found</div>
+            <div className="text-gray-500">
+              No classes found
+            </div>
           )}
 
           {classes.map((cls) => (
@@ -244,11 +286,15 @@ function ManageClasses() {
             >
 
               <div>
+
                 {editingId === cls._id ? (
 
                   <input
+                    type="number"
                     value={editingValue}
-                    onChange={(e) => setEditingValue(e.target.value)}
+                    onChange={(e) =>
+                      setEditingValue(e.target.value)
+                    }
                     className="border p-2 rounded w-40"
                     autoFocus
                   />
@@ -257,7 +303,7 @@ function ManageClasses() {
 
                   <>
                     <span className="font-semibold text-lg">
-                      Class {cls.name}
+                      {cls.name}
                     </span>
 
                     {cls.requiresStream && (
@@ -265,10 +311,10 @@ function ManageClasses() {
                         Stream Required
                       </span>
                     )}
-
                   </>
 
                 )}
+
               </div>
 
               <div className="flex gap-4">
@@ -294,7 +340,9 @@ function ManageClasses() {
                 )}
 
                 <button
-                  onClick={() => handleDelete(cls._id, cls.name)}
+                  onClick={() =>
+                    handleDelete(cls._id, cls.name)
+                  }
                   className="text-red-500"
                 >
                   <Trash2 size={20} />

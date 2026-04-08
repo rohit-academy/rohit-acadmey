@@ -6,6 +6,7 @@ function ManageStreams() {
 
   const [streams, setStreams] = useState([]);
   const [classes, setClasses] = useState([]);
+
   const [form, setForm] = useState({
     name: "",
     classId: ""
@@ -26,17 +27,21 @@ function ManageStreams() {
 
       const [streamRes, classRes] = await Promise.all([
         API.get("/streams"),
-        API.get("/classes/streams") // 🔥 FIXED
+        API.get("/classes")   // ✅ FIXED ENDPOINT
       ]);
 
       setStreams(streamRes.data?.data || []);
       setClasses(classRes.data?.data || []);
 
     } catch (err) {
-      console.error(err);
+
+      console.error("Streams load error:", err);
       setError("Failed to load streams");
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -48,6 +53,7 @@ function ManageStreams() {
      ➕ ADD STREAM
   ========================= */
   const handleAdd = async (e) => {
+
     e.preventDefault();
 
     if (!form.name.trim() || !form.classId) {
@@ -65,15 +71,26 @@ function ManageStreams() {
         classId: form.classId
       });
 
-      setForm({ name: "", classId: "" });
+      setForm({
+        name: "",
+        classId: ""
+      });
 
       fetchData();
 
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || "Failed to add stream");
+
+      console.error("Add stream error:", err);
+
+      setError(
+        err.response?.data?.message ||
+        "Failed to add stream"
+      );
+
     } finally {
+
       setAdding(false);
+
     }
   };
 
@@ -93,8 +110,10 @@ function ManageStreams() {
       );
 
     } catch (err) {
-      console.error(err);
+
+      console.error("Delete stream error:", err);
       setError("Delete failed");
+
     }
   };
 
@@ -135,24 +154,33 @@ function ManageStreams() {
           placeholder="Stream Name (e.g. PCB)"
           value={form.name}
           onChange={(e) =>
-            setForm({ ...form, name: e.target.value })
+            setForm({
+              ...form,
+              name: e.target.value
+            })
           }
           className="border p-3 rounded-lg flex-1"
         />
 
-        {/* CLASS SELECT (ONLY 11 & 12 🔥) */}
+        {/* CLASS SELECT */}
         <select
           value={form.classId}
           onChange={(e) =>
-            setForm({ ...form, classId: e.target.value })
+            setForm({
+              ...form,
+              classId: e.target.value
+            })
           }
           className="border p-3 rounded-lg"
         >
-          <option value="">Select Class</option>
+
+          <option value="">
+            Select Class
+          </option>
 
           {classes.map((cls) => (
             <option key={cls._id} value={cls._id}>
-              Class {cls.name}
+              {cls.name} {/* ✅ double Class fix */}
             </option>
           ))}
 
@@ -164,8 +192,11 @@ function ManageStreams() {
           disabled={adding}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60"
         >
+
           <Plus size={18} />
+
           {adding ? "Adding..." : "Add"}
+
         </button>
 
       </form>
@@ -182,11 +213,13 @@ function ManageStreams() {
           <table className="w-full">
 
             <thead className="bg-gray-100 text-left">
+
               <tr>
                 <th className="p-3">Stream</th>
                 <th className="p-3">Class</th>
                 <th className="p-3 text-right">Action</th>
               </tr>
+
             </thead>
 
             <tbody>
@@ -200,7 +233,7 @@ function ManageStreams() {
                   </td>
 
                   <td className="p-3">
-                    Class {stream.classId?.name || "-"}
+                    {stream.classId?.name || "-"} {/* ✅ double Class fix */}
                   </td>
 
                   <td className="p-3 text-right">
@@ -229,7 +262,6 @@ function ManageStreams() {
     </div>
 
   );
-
 }
 
 export default ManageStreams;
