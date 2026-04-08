@@ -5,14 +5,14 @@ import { authLimiter } from "../middleware/rateLimitMiddleware.js";
 const router = express.Router();
 
 /* =====================================
-   🔍 VALIDATION MIDDLEWARE
+   🔍 VALIDATION MIDDLEWARE (FINAL)
 ===================================== */
 const validateAdminLogin = (req, res, next) => {
   try {
 
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
-    /* ❌ REQUIRED CHECK */
+    /* ❌ REQUIRED */
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -28,31 +28,44 @@ const validateAdminLogin = (req, res, next) => {
       });
     }
 
-    /* 🔹 NORMALIZE INPUT */
-    req.body.email = email.toLowerCase().trim();
-    req.body.password = password.trim();
+    /* 🔹 NORMALIZE EMAIL ONLY */
+    email = email.toLowerCase().trim();
 
-    /* ❌ BASIC EMAIL FORMAT CHECK */
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(req.body.email)) {
+    /* ❌ BASIC EMAIL CHECK */
+    if (!email.includes("@")) {
       return res.status(400).json({
         success: false,
         message: "Invalid email format"
       });
     }
 
-    /* ❌ PASSWORD LENGTH CHECK */
-    if (req.body.password.length < 6) {
+    /* ❌ PASSWORD LENGTH */
+    if (password.length < 6) {
       return res.status(400).json({
         success: false,
         message: "Password must be at least 6 characters"
       });
     }
 
+    /* 🔥 MAX LENGTH SECURITY */
+    if (email.length > 100 || password.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Input too long"
+      });
+    }
+
+    /* 🔥 SAVE CLEAN DATA */
+    req.body.email = email;
+    req.body.password = password; // ❌ NO TRIM
+
+    /* 🔥 LOG ATTEMPT */
+    console.warn(`⚠️ Admin login attempt: ${email}`);
+
     next();
 
   } catch (error) {
+
     console.error("Admin validation error:", error.message);
 
     return res.status(500).json({
@@ -67,9 +80,9 @@ const validateAdminLogin = (req, res, next) => {
 ===================================== */
 router.post(
   "/login",
-  authLimiter,          // 🔥 rate limit (anti brute force)
-  validateAdminLogin,   // 🔍 validation
-  adminLogin            // 🔐 controller
+  authLimiter,
+  validateAdminLogin,
+  adminLogin
 );
 
 export default router;
