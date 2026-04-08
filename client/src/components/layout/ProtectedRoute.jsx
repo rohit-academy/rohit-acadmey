@@ -11,7 +11,7 @@ function ProtectedRoute({ requiredRole }) {
   const token = localStorage.getItem("token");
 
   /* =====================================
-     ⏳ LOADING
+     ⏳ LOADING STATE
   ===================================== */
   if (loading) {
     return (
@@ -22,9 +22,22 @@ function ProtectedRoute({ requiredRole }) {
   }
 
   /* =====================================
-     🔒 USER NOT LOGGED IN
+     🔒 NOT LOGGED IN (SMART FIX 🔥)
   ===================================== */
   if (!token || !user) {
+
+    /* 🔥 ADMIN ROUTES KO USER LOGIN PE MAT BHEJ */
+    if (location.pathname.startsWith("/admin")) {
+      return (
+        <Navigate
+          to="/admin-login"
+          replace
+          state={{ from: location.pathname }}
+        />
+      );
+    }
+
+    /* 🔐 NORMAL USER LOGIN */
     return (
       <Navigate
         to="/login"
