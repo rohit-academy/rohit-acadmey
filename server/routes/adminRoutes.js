@@ -7,22 +7,23 @@ import {
   deleteUser,
   getAllOrders,
   getAllMaterials,
-  toggleUserBlock // 🔥 NEW (single handler)
+  toggleUserBlock
 } from "../controllers/adminController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
 import { adminOnly } from "../middleware/adminMiddleware.js";
+import { adminLimiter } from "../middleware/rateLimitMiddleware.js";
 
 const router = express.Router();
 
 /* =====================================
-   🔍 OBJECT ID VALIDATION (REUSABLE)
+   🔍 OBJECT ID VALIDATION
 ===================================== */
 const validateId = (req, res, next) => {
   try {
     const { id } = req.params;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid ID format"
@@ -42,28 +43,33 @@ const validateId = (req, res, next) => {
 };
 
 /* =====================================
-   🔍 PAGINATION VALIDATION
+   🔍 PAGINATION VALIDATION (FIXED)
 ===================================== */
 const validatePagination = (req, res, next) => {
 
   let page = Number(req.query.page) || 1;
   let limit = Number(req.query.limit) || 20;
 
-  /* 🔥 SAFE LIMITS */
   if (page < 1) page = 1;
   if (limit < 1) limit = 20;
   if (limit > 100) limit = 100;
 
-  req.query.page = page;
-  req.query.limit = limit;
+  /* 🔥 SAFE ATTACH */
+  req.pagination = { page, limit };
 
   next();
 };
 
 /* =====================================
-   🔒 ALL ADMIN ROUTES PROTECTED
+   🔒 SECURITY LAYER
 ===================================== */
-router.use(protect, adminOnly);
+router.use(protect, adminOnly, adminLimiter);
+
+/* 🔥 LOGGING */
+router.use((req, res, next) => {
+  console.warn(`⚠️ Admin route: ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 /* =====================================
    📊 DASHBOARD
@@ -73,22 +79,11 @@ router.get("/stats", getAdminStats);
 /* =====================================
    👨‍🎓 USERS
 ===================================== */
-
-/* 📄 GET USERS */
 router.get("/users", validatePagination, getAllUsers);
 
-/* ❌ DELETE USER */
 router.delete("/users/:id", validateId, deleteUser);
 
-/* 🔁 BLOCK / UNBLOCK (SMART API) */
 router.patch("/users/:id/toggle-block", validateId, toggleUserBlock);
-
-/*
-  🔥 REQUEST BODY:
-  {
-    action: "block" | "unblock"
-  }
-*/
 
 /* =====================================
    📦 ORDERS
