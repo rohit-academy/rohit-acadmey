@@ -2,15 +2,17 @@ import User from "../models/User.js";
 import logger from "../utils/logger.js";
 
 /* =====================================
-   🔐 ADMIN ONLY MIDDLEWARE (PRO VERSION)
+   🔐 ADMIN ONLY MIDDLEWARE (FINAL SECURE)
 ===================================== */
 const adminOnly = async (req, res, next) => {
   try {
 
     /* =====================================
-       🔍 BASIC AUTH CHECK
+       🔍 AUTH CHECK (STRICT)
     ===================================== */
-    if (!req.user?.id) {
+    const userId = req.user?._id || req.user?.id;
+
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized access"
@@ -18,17 +20,9 @@ const adminOnly = async (req, res, next) => {
     }
 
     /* =====================================
-       ⚡ FAST PATH (TOKEN ROLE)
-       👉 agar already admin hai token me
+       🔐 ALWAYS VERIFY FROM DB (NO TRUST TOKEN)
     ===================================== */
-    if (req.user.role === "admin") {
-      return next();
-    }
-
-    /* =====================================
-       🔍 DB VERIFY (FALLBACK)
-    ===================================== */
-    const user = await User.findById(req.user.id)
+    const user = await User.findById(userId)
       .select("role isBlocked")
       .lean();
 
@@ -50,7 +44,7 @@ const adminOnly = async (req, res, next) => {
     }
 
     /* =====================================
-       🔐 ROLE CHECK
+       🔐 ROLE CHECK (FINAL)
     ===================================== */
     if (user.role !== "admin") {
       return res.status(403).json({
@@ -60,15 +54,19 @@ const adminOnly = async (req, res, next) => {
     }
 
     /* =====================================
-       🔥 ATTACH CLEAN USER
+       🔥 ATTACH VERIFIED USER (CLEAN)
     ===================================== */
-    req.user.role = user.role;
+    req.user = {
+      ...req.user,
+      _id: userId,
+      role: user.role
+    };
 
-    next();
+    return next();
 
   } catch (error) {
 
-    logger.error(`Admin middleware error: ${error.message}`);
+    logger.error(`❌ Admin middleware error: ${error.message}`);
 
     return res.status(500).json({
       success: false,
