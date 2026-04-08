@@ -32,7 +32,7 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       🔐 VERIFY TOKEN
+       🔐 VERIFY FIREBASE TOKEN
     ===================================== */
 
     let decoded;
@@ -116,10 +116,50 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       ➕ CREATE USER (RACE SAFE)
+       🔎 EMAIL BASED ACCOUNT LINK
+    ===================================== */
+
+    if (!user && email) {
+
+      const existingByEmail = await User.findOne({ email });
+
+      if (existingByEmail) {
+
+        user = existingByEmail;
+
+        if (!user.firebaseId) {
+          user.firebaseId = firebaseId;
+        }
+
+        user.lastLogin = new Date();
+        user.authProvider = "firebase";
+        user.isVerified = true;
+
+        if (avatar && user.avatar !== avatar) {
+          user.avatar = avatar;
+        }
+
+        await user.save();
+      }
+
+    }
+
+    /* =====================================
+       🆕 GENERATE UNIQUE USERNAME
     ===================================== */
 
     if (!user) {
+
+      let username;
+      let exists = true;
+
+      while (exists) {
+
+        username = "user_" + Math.random().toString(36).substring(2, 8);
+
+        exists = await User.findOne({ name: username });
+
+      }
 
       try {
 
@@ -131,11 +171,11 @@ export const firebaseLogin = async (req, res, next) => {
           authProvider: "firebase",
           role: "user",
           isVerified: true,
-          name: "user" + Date.now().toString().slice(-6),
+          name: username,
           lastLogin: new Date()
         });
 
-        logger.info(`New Firebase user: ${email || phone}`);
+        logger.info(`New Firebase user created: ${email || phone}`);
 
       } catch (err) {
 
@@ -152,7 +192,9 @@ export const firebaseLogin = async (req, res, next) => {
         } else {
           throw err;
         }
+
       }
+
     }
 
     /* =====================================
