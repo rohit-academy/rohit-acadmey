@@ -289,6 +289,46 @@ if (!user) {
     }
 
     /* =====================================
+   🔐 ADMIN LOGIN
+===================================== */
+export const adminLogin = async (req, res, next) => {
+  try {
+
+    const { email, password } = req.body;
+
+    if (
+      email === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+
+      const token = generateToken({
+        id: "admin",
+        role: "admin"
+      });
+
+      return res.json({
+        success: true,
+        token,
+        role: "admin",
+        user: {
+          id: "admin",
+          email,
+          role: "admin"
+        }
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: "Invalid admin credentials"
+    });
+
+  } catch (error) {
+    return next(error);
+  }
+};
+
+    /* =====================================
        GENERATE JWT
     ===================================== */
 
