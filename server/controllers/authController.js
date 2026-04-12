@@ -359,3 +359,31 @@ export const adminLogin = async (req, res, next) => {
     return next(error);
   }
 };
+
+
+/* =====================================
+   👤 GET CURRENT USER
+===================================== */
+export const getMe = async (req, res, next) => {
+  try {
+
+    const user = await User.findById(req.user._id)
+      .select("_id name email phone avatar role authProvider")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    return next(error);
+  }
+};
