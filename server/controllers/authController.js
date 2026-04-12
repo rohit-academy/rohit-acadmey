@@ -387,3 +387,66 @@ export const getMe = async (req, res, next) => {
     return next(error);
   }
 };
+
+/* =====================================
+   🆕 SET USERNAME
+===================================== */
+export const setUsername = async (req, res, next) => {
+  try {
+
+    let { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Username required"
+      });
+    }
+
+    name = name.trim().toLowerCase();
+
+    if (!/^[a-z0-9_]+$/.test(name)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid username format"
+      });
+    }
+
+    if (name.length < 3 || name.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must be 3–20 characters"
+      });
+    }
+
+    const existing = await User.findOne({ name });
+
+    if (existing && existing._id.toString() !== req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Username already taken"
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.name = name;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    return next(error);
+  }
+};
