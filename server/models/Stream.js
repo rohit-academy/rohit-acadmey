@@ -6,8 +6,7 @@ const streamSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true,
-      enum: ["PCB", "PCM", "Arts"], // 🔥 fixed streams
+      trim: true
     },
 
     /* 🏫 CLASS REFERENCE */
@@ -37,7 +36,7 @@ const streamSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 UNIQUE COMBINATION (IMPORTANT)
+   🔥 UNIQUE COMBINATION
 ===================================== */
 streamSchema.index(
   { name: 1, classId: 1 },
@@ -45,12 +44,12 @@ streamSchema.index(
 );
 
 /* =====================================
-   🔥 CLEAN DATA
+   🔥 CLEAN DATA (IMPORTANT)
 ===================================== */
 streamSchema.pre("save", function (next) {
 
   if (this.name) {
-    this.name = this.name.trim();
+    this.name = this.name.trim().toUpperCase(); // 🔥 FIX: consistent format
   }
 
   next();

@@ -26,7 +26,8 @@ export const createStream = async (req, res) => {
       });
     }
 
-    name = name.trim().toLowerCase();
+    /* ✅ FIX: uppercase normalization */
+    name = name.trim().toUpperCase();
 
     if (name.length < 2 || name.length > 20) {
       return res.status(400).json({
@@ -58,9 +59,9 @@ export const createStream = async (req, res) => {
       });
     }
 
-    /* ❌ DUPLICATE CHECK */
+    /* ✅ FIX: duplicate check */
     const exists = await Stream.findOne({
-      name: name.toLowerCase(),
+      name,
       classId
     });
 
@@ -193,7 +194,7 @@ export const updateStream = async (req, res) => {
     /* 🔥 NAME UPDATE */
     if (name) {
 
-      name = name.trim().toLowerCase();
+      name = name.trim().toUpperCase();
 
       if (name.length < 2 || name.length > 20) {
         return res.status(400).json({
