@@ -19,15 +19,15 @@ const safeUser = (user) => ({
 /* =====================================
    FIREBASE LOGIN
 ===================================== */
-export const firebaseLogin = async (req, res, next) => {
+export const firebaseLogin = async (req, res) => {
   try {
 
-    logger.info("🔥 FIREBASE LOGIN REQUEST RECEIVED");
+    logger.info("🔥 FIREBASE LOGIN REQUEST");
 
     const { token } = req.body;
 
     if (!token) {
-      logger.warn("❌ Firebase token missing");
+      logger.warn("❌ No token");
       return res.status(400).json({
         success: false,
         message: "Firebase token required"
@@ -35,16 +35,15 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       VERIFY FIREBASE TOKEN
+       VERIFY TOKEN
     ===================================== */
-
     let decoded;
 
     try {
       decoded = await admin.auth().verifyIdToken(token);
-      logger.info("✅ Firebase token verified");
+      logger.info("✅ Token verified", decoded.uid);
     } catch (err) {
-      logger.error("❌ Firebase verify failed:", err);
+      logger.error("❌ Token verify failed", err);
       return res.status(401).json({
         success: false,
         message: "Invalid Firebase token"
@@ -70,18 +69,17 @@ export const firebaseLogin = async (req, res, next) => {
 
     const avatar = decoded.picture || "";
 
-    logger.info(`📧 Email: ${email}`);
-    logger.info(`📱 Phone: ${phone}`);
+    logger.info("Parsed:", { email, phone, firebaseId });
 
     if (!email && !phone) {
       return res.status(400).json({
         success: false,
-        message: "No email or phone found in token"
+        message: "No email or phone found"
       });
     }
 
     /* =====================================
-       FIND EXISTING USER
+       FIND USER
     ===================================== */
 
     let user = await User.findOne({
@@ -93,10 +91,12 @@ export const firebaseLogin = async (req, res, next) => {
     });
 
     /* =====================================
-       UPDATE EXISTING USER
+       UPDATE USER
     ===================================== */
 
     if (user) {
+
+      logger.info("✅ Existing user", user._id);
 
       let changed = false;
 
@@ -114,11 +114,7 @@ export const firebaseLogin = async (req, res, next) => {
       user.authProvider = "firebase";
       user.isVerified = true;
 
-      if (changed) {
-        await user.save();
-      }
-
-      logger.info("✅ Existing user login");
+      if (changed) await user.save();
     }
 
     /* =====================================
@@ -127,11 +123,13 @@ export const firebaseLogin = async (req, res, next) => {
 
     if (!user && email) {
 
-      const existingByEmail = await User.findOne({ email });
+      const existing = await User.findOne({ email });
 
-      if (existingByEmail) {
+      if (existing) {
 
-        user = existingByEmail;
+        logger.info("🔗 Linking email user");
+
+        user = existing;
 
         if (!user.firebaseId) {
           user.firebaseId = firebaseId;
@@ -141,18 +139,14 @@ export const firebaseLogin = async (req, res, next) => {
         user.authProvider = "firebase";
         user.isVerified = true;
 
-        if (avatar && user.avatar !== avatar) {
-          user.avatar = avatar;
-        }
+        if (avatar) user.avatar = avatar;
 
         await user.save();
-
-        logger.info("🔗 Email account linked");
       }
     }
 
     /* =====================================
-       CREATE NEW USER (FINAL FIX 🔥)
+       CREATE USER (FINAL FIX)
     ===================================== */
 
     if (!user) {
@@ -161,54 +155,43 @@ export const firebaseLogin = async (req, res, next) => {
 
       let username;
       let exists = true;
-      let attempts = 0;
 
       while (exists) {
-
-        username = "user_" + Math.random().toString(36).substring(2, 8);
-
+        username = "user_" + Math.random().toString(36).slice(2, 8);
         exists = await User.exists({ name: username });
-
-        attempts++;
-
-        if (attempts > 10) {
-          username = "user_" + Date.now().toString().slice(-6);
-          exists = false;
-        }
       }
 
-      logger.info(`Generated username: ${username}`);
-
-      /* 🔥 SAFE CREATE OBJECT */
-      const newUserData = {
-        firebaseId,
-        avatar,
-        authProvider: "firebase",
-        role: "user",
-        isVerified: true,
-        name: username,
-        lastLogin: new Date()
-      };
-
-      if (email) newUserData.email = email;
-      if (phone) newUserData.phone = phone;
-
-      logger.info("📦 Creating user with data:", newUserData);
+      logger.info("Generated username:", username);
 
       try {
 
+        /* 🔥 SMART CREATE (MAIN FIX) */
+        const newUserData = {
+          firebaseId,
+          avatar,
+          authProvider: "firebase",
+          role: "user",
+          isVerified: true,
+          name: username,
+          lastLogin: new Date()
+        };
+
+        if (email) newUserData.email = email;
+        if (phone) newUserData.phone = phone;
+
+        logger.info("🔥 Creating user:", newUserData);
+
         user = await User.create(newUserData);
 
-        logger.info(`✅ New user created: ${user._id}`);
+        logger.info("✅ User created:", user._id);
 
       } catch (err) {
 
-        logger.error("❌ Create error:", err);
+        logger.error("❌ CREATE ERROR:", err);
 
-        /* 🔥 DUPLICATE SAFE RECOVERY */
         if (err.code === 11000) {
 
-          logger.warn("⚠️ Duplicate detected, recovering user");
+          logger.warn("⚠️ Duplicate detected, recovering");
 
           user = await User.findOne({
             $or: [
@@ -229,7 +212,7 @@ export const firebaseLogin = async (req, res, next) => {
     ===================================== */
 
     if (!user) {
-      logger.error("❌ User creation failed");
+      logger.error("❌ FINAL USER NULL");
       return res.status(500).json({
         success: false,
         message: "User creation failed"
@@ -248,15 +231,15 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       GENERATE TOKEN
+       TOKEN
     ===================================== */
 
     const jwtToken = generateToken({
       id: user._id.toString(),
-      role: user.role || "user"
+      role: user.role
     });
 
-    logger.info(`🎉 LOGIN SUCCESS: ${user._id}`);
+    logger.info("✅ LOGIN SUCCESS");
 
     return res.json({
       success: true,
@@ -266,7 +249,7 @@ export const firebaseLogin = async (req, res, next) => {
 
   } catch (error) {
 
-    logger.error("🔥 FIREBASE LOGIN CRASH:", error);
+    logger.error("🔥 FINAL CRASH:", error);
 
     return res.status(500).json({
       success: false,
