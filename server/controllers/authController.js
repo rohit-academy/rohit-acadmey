@@ -17,9 +17,9 @@ const safeUser = (user) => ({
 });
 
 /* =====================================
-   FIREBASE LOGIN (FINAL)
+   FIREBASE LOGIN
 ===================================== */
-export const firebaseLogin = async (req, res) => {
+export const firebaseLogin = async (req, res, next) => {
   try {
 
     logger.info("🔥 FIREBASE LOGIN REQUEST RECEIVED");
@@ -37,14 +37,15 @@ export const firebaseLogin = async (req, res) => {
     logger.info("✅ Token received");
 
     /* =====================================
-       🔐 VERIFY TOKEN
+       VERIFY FIREBASE TOKEN
     ===================================== */
 
     let decoded;
 
     try {
       decoded = await admin.auth().verifyIdToken(token);
-      logger.info(`✅ Firebase token verified | UID: ${decoded.uid}`);
+      logger.info("✅ Firebase token verified");
+      logger.info(`Firebase UID: ${decoded.uid}`);
     } catch (err) {
 
       logger.error("❌ Firebase verify failed:", err);
@@ -56,7 +57,7 @@ export const firebaseLogin = async (req, res) => {
     }
 
     /* =====================================
-       🔧 NORMALIZE DATA
+       NORMALIZE DATA
     ===================================== */
 
     const firebaseId = decoded.uid;
@@ -74,8 +75,8 @@ export const firebaseLogin = async (req, res) => {
 
     const avatar = decoded.picture || "";
 
-    logger.info(`📧 Email: ${email}`);
-    logger.info(`📱 Phone: ${phone}`);
+    logger.info(`Parsed Email: ${email}`);
+    logger.info(`Parsed Phone: ${phone}`);
 
     if (!email && !phone) {
       logger.warn("❌ No email or phone found in Firebase token");
@@ -87,7 +88,7 @@ export const firebaseLogin = async (req, res) => {
     }
 
     /* =====================================
-       🔍 FIND USER
+       FIND EXISTING USER
     ===================================== */
 
     logger.info("🔍 Searching user in database");
@@ -107,7 +108,7 @@ export const firebaseLogin = async (req, res) => {
     }
 
     /* =====================================
-       🔄 UPDATE EXISTING USER
+       UPDATE EXISTING USER
     ===================================== */
 
     if (user) {
@@ -136,10 +137,11 @@ export const firebaseLogin = async (req, res) => {
         await user.save();
         logger.info("✅ User updated in DB");
       }
+
     }
 
     /* =====================================
-       🔗 EMAIL LINK
+       EMAIL ACCOUNT LINK
     ===================================== */
 
     if (!user && email) {
@@ -150,7 +152,7 @@ export const firebaseLogin = async (req, res) => {
 
       if (existingByEmail) {
 
-        logger.info(`🔗 Linking Firebase with existing email user: ${existingByEmail._id}`);
+        logger.info(`🔗 Linking firebase to existing email user: ${existingByEmail._id}`);
 
         user = existingByEmail;
 
@@ -168,88 +170,104 @@ export const firebaseLogin = async (req, res) => {
 
         await user.save();
 
-        logger.info("✅ Email account linked successfully");
+        logger.info("✅ Email account linked with Firebase");
       }
+
     }
 
     /* =====================================
-       🆕 CREATE USER (SMART SAFE)
+   CREATE NEW USER (FINAL FIX)
+===================================== */
+
+if (!user) {
+
+  logger.info("🆕 Creating new user");
+
+  let username;
+  let exists = true;
+  let attempts = 0;
+
+  while (exists) {
+
+    username = "user_" + Math.random().toString(36).substring(2, 8);
+
+    // ⚠️ IMPORTANT: name field use हो रहा है (username नहीं)
+    exists = await User.exists({ name: username });
+
+    attempts++;
+
+    if (attempts > 10) {
+      username = "user_" + Date.now().toString().slice(-6);
+      exists = false;
+    }
+  }
+
+  logger.info(`Generated username: ${username}`);
+
+  try {
+
+    /* 🔥 SMART CREATE (NULL SAFE) */
+    const newUserData = {
+      firebaseId,
+      avatar,
+      authProvider: "firebase",
+      role: "user",
+      isVerified: true,
+      name: username,
+      lastLogin: new Date()
+    };
+
+    // ✅ NULL fields DB में मत भेज
+    if (email) newUserData.email = email;
+    if (phone) newUserData.phone = phone;
+
+    logger.info("🔥 Creating user with data:");
+    logger.info(JSON.stringify(newUserData, null, 2));
+
+    user = await User.create(newUserData);
+
+    logger.info(`✅ New Firebase user created: ${user._id}`);
+
+  } catch (err) {
+
+    logger.error("❌ User creation failed FULL ERROR:");
+    console.error(err);
+
+    /* 🔥 DUPLICATE KEY SAFE RECOVERY */
+    if (err.code === 11000) {
+
+      logger.warn("⚠️ Duplicate key error, trying recovery");
+
+      user = await User.findOne({
+        $or: [
+          { firebaseId },
+          ...(email ? [{ email }] : []),
+          ...(phone ? [{ phone }] : [])
+        ]
+      });
+
+      if (user) {
+        logger.info("✅ Recovered existing user after duplicate error");
+      } else {
+        logger.error("❌ Duplicate recovery failed — user still null");
+      }
+
+    } else {
+      throw err;
+    }
+
+  }
+
+}
+
+    /* =====================================
+       SAFETY CHECK
     ===================================== */
 
     if (!user) {
 
-      logger.info("🆕 Creating new user");
+      logger.error("❌ User creation failed unexpectedly");
 
-      let username;
-      let exists = true;
-      let attempts = 0;
-
-      while (exists) {
-
-        username = "user_" + Math.random().toString(36).substring(2, 8);
-
-        exists = await User.exists({ name: username });
-
-        attempts++;
-
-        if (attempts > 10) {
-          username = "user_" + Date.now().toString().slice(-6);
-          exists = false;
-        }
-      }
-
-      logger.info(`👤 Generated username: ${username}`);
-
-      try {
-
-        const newUserData = {
-          firebaseId,
-          avatar,
-          authProvider: "firebase",
-          role: "user",
-          isVerified: true,
-          name: username,
-          lastLogin: new Date()
-        };
-
-        if (email) newUserData.email = email;
-        if (phone) newUserData.phone = phone;
-
-        logger.info("📦 Creating user with data:", newUserData);
-
-        user = await User.create(newUserData);
-
-        logger.info(`✅ New Firebase user created: ${user._id}`);
-
-      } catch (err) {
-
-        logger.error("❌ CREATE ERROR FULL:", err);
-
-        if (err.code === 11000) {
-
-          logger.warn("⚠️ Duplicate key → recovering existing user");
-
-          user = await User.findOne({
-            $or: [
-              { firebaseId },
-              ...(email ? [{ email }] : []),
-              ...(phone ? [{ phone }] : [])
-            ]
-          });
-
-          logger.info("✅ Duplicate user recovered");
-        } else {
-          throw err;
-        }
-      }
-    }
-
-    /* =====================================
-       🚨 FINAL SAFETY CHECK
-    ===================================== */
-
-    if (!user) {
-      logger.error("❌ FINAL USER NULL");
       return res.status(500).json({
         success: false,
         message: "User creation failed"
@@ -257,11 +275,13 @@ export const firebaseLogin = async (req, res) => {
     }
 
     /* =====================================
-       🚫 BLOCK CHECK
+       BLOCK CHECK
     ===================================== */
 
     if (user.isBlocked) {
-      logger.warn(`🚫 Blocked user login attempt: ${user._id}`);
+
+      logger.warn(`🚫 Blocked user tried login: ${user._id}`);
+
       return res.status(403).json({
         success: false,
         message: "Account blocked"
@@ -269,7 +289,7 @@ export const firebaseLogin = async (req, res) => {
     }
 
     /* =====================================
-       🎟 GENERATE TOKEN
+       GENERATE JWT
     ===================================== */
 
     logger.info("🎟 Generating JWT token");
@@ -279,7 +299,7 @@ export const firebaseLogin = async (req, res) => {
       role: user.role || "user"
     });
 
-    logger.info(`🎉 LOGIN SUCCESS: ${user._id}`);
+    logger.info(`✅ Login success for user ${user._id}`);
 
     return res.json({
       success: true,
