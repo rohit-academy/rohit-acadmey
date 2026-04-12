@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true
     },
 
     /* 📱 PHONE */
@@ -16,7 +17,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       match: [/^[6-9]\d{9}$/, "Invalid phone number"],
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true
     },
 
     /* 📧 EMAIL */
@@ -25,7 +27,8 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true
     },
 
     /* 🔐 PASSWORD */
@@ -35,7 +38,7 @@ const userSchema = new mongoose.Schema(
       select: false
     },
 
-    /* 👤 USERNAME */
+    /* 👤 USERNAME (LOGIN HANDLE) */
     username: {
       type: String,
       lowercase: true,
@@ -44,14 +47,16 @@ const userSchema = new mongoose.Schema(
       maxlength: 20,
       match: [/^[a-z0-9_]+$/, "Invalid username"],
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true
     },
 
     /* 👤 DISPLAY NAME */
     name: {
       type: String,
       trim: true,
-      maxlength: 50
+      maxlength: 50,
+      default: ""
     },
 
     /* 🖼 AVATAR */
@@ -64,7 +69,8 @@ const userSchema = new mongoose.Schema(
     authProvider: {
       type: String,
       enum: ["firebase", "email"],
-      default: "firebase"
+      default: "firebase",
+      index: true
     },
 
     /* 👑 ROLE */
@@ -78,7 +84,8 @@ const userSchema = new mongoose.Schema(
     /* ✅ VERIFIED */
     isVerified: {
       type: Boolean,
-      default: true
+      default: true,
+      index: true
     },
 
     /* 🚫 BLOCK */
@@ -94,8 +101,15 @@ const userSchema = new mongoose.Schema(
       default: Date.now
     },
 
-    lastLoginIP: String,
-    lastDevice: String,
+    lastLoginIP: {
+      type: String,
+      default: ""
+    },
+
+    lastDevice: {
+      type: String,
+      default: ""
+    },
 
     /* 🔐 SECURITY */
     loginAttempts: {
@@ -113,12 +127,13 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================
-   🔥 INDEXES (PERFORMANCE BOOST)
+   🔥 COMPOUND INDEXES
 ===================================== */
 userSchema.index({ role: 1, isBlocked: 1 });
+userSchema.index({ email: 1, phone: 1 });
 
 /* =====================================
-   🔥 PRE SAVE (SAFE VERSION)
+   🔥 PRE SAVE (ULTRA SAFE)
 ===================================== */
 userSchema.pre("save", async function () {
   try {
@@ -131,9 +146,8 @@ userSchema.pre("save", async function () {
         .replace(/\s+/g, "_")
         .replace(/[^a-z0-9_]/g, "");
 
-      /* 🔥 EMPTY USERNAME FIX */
       if (!this.username) {
-        this.username = "user" + Math.floor(Math.random() * 10000);
+        this.username = "user_" + Date.now().toString().slice(-6);
       }
     }
 
@@ -153,6 +167,7 @@ userSchema.pre("save", async function () {
     }
 
   } catch (err) {
+    console.error("❌ Pre-save error:", err);
     throw err;
   }
 });
@@ -161,7 +176,7 @@ userSchema.pre("save", async function () {
    🔐 METHODS
 ===================================== */
 
-/* 🔑 COMPARE PASSWORD (SAFE) */
+/* 🔑 COMPARE PASSWORD */
 userSchema.methods.comparePassword = async function (enteredPassword) {
   if (!this.password) return false;
   return bcrypt.compare(enteredPassword, this.password);
@@ -185,7 +200,7 @@ userSchema.methods.incrementLoginAttempts = function () {
   this.loginAttempts += 1;
 
   if (this.loginAttempts >= 5) {
-    this.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 🔥 FIX
+    this.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
   }
 
   return this.save();

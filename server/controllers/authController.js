@@ -34,8 +34,6 @@ export const firebaseLogin = async (req, res, next) => {
       });
     }
 
-    logger.info("✅ Token received");
-
     /* =====================================
        VERIFY FIREBASE TOKEN
     ===================================== */
@@ -45,11 +43,8 @@ export const firebaseLogin = async (req, res, next) => {
     try {
       decoded = await admin.auth().verifyIdToken(token);
       logger.info("✅ Firebase token verified");
-      logger.info(`Firebase UID: ${decoded.uid}`);
     } catch (err) {
-
       logger.error("❌ Firebase verify failed:", err);
-
       return res.status(401).json({
         success: false,
         message: "Invalid Firebase token"
@@ -75,12 +70,10 @@ export const firebaseLogin = async (req, res, next) => {
 
     const avatar = decoded.picture || "";
 
-    logger.info(`Parsed Email: ${email}`);
-    logger.info(`Parsed Phone: ${phone}`);
+    logger.info(`📧 Email: ${email}`);
+    logger.info(`📱 Phone: ${phone}`);
 
     if (!email && !phone) {
-      logger.warn("❌ No email or phone found in Firebase token");
-
       return res.status(400).json({
         success: false,
         message: "No email or phone found in token"
@@ -91,8 +84,6 @@ export const firebaseLogin = async (req, res, next) => {
        FIND EXISTING USER
     ===================================== */
 
-    logger.info("🔍 Searching user in database");
-
     let user = await User.findOne({
       $or: [
         { firebaseId },
@@ -101,30 +92,20 @@ export const firebaseLogin = async (req, res, next) => {
       ]
     });
 
-    if (user) {
-      logger.info(`✅ Existing user found: ${user._id}`);
-    } else {
-      logger.info("⚠️ No user found in DB");
-    }
-
     /* =====================================
        UPDATE EXISTING USER
     ===================================== */
 
     if (user) {
 
-      logger.info("🔄 Updating existing user");
-
       let changed = false;
 
       if (!user.firebaseId) {
-        logger.info("Linking firebaseId");
         user.firebaseId = firebaseId;
         changed = true;
       }
 
       if (avatar && user.avatar !== avatar) {
-        logger.info("Updating avatar");
         user.avatar = avatar;
         changed = true;
       }
@@ -135,24 +116,20 @@ export const firebaseLogin = async (req, res, next) => {
 
       if (changed) {
         await user.save();
-        logger.info("✅ User updated in DB");
       }
 
+      logger.info("✅ Existing user login");
     }
 
     /* =====================================
-       EMAIL ACCOUNT LINK
+       EMAIL LINK
     ===================================== */
 
     if (!user && email) {
 
-      logger.info("🔎 Searching user by email");
-
       const existingByEmail = await User.findOne({ email });
 
       if (existingByEmail) {
-
-        logger.info(`🔗 Linking firebase to existing email user: ${existingByEmail._id}`);
 
         user = existingByEmail;
 
@@ -170,13 +147,12 @@ export const firebaseLogin = async (req, res, next) => {
 
         await user.save();
 
-        logger.info("✅ Email account linked with Firebase");
+        logger.info("🔗 Email account linked");
       }
-
     }
 
     /* =====================================
-       CREATE NEW USER
+       CREATE NEW USER (FINAL FIX 🔥)
     ===================================== */
 
     if (!user) {
@@ -203,29 +179,36 @@ export const firebaseLogin = async (req, res, next) => {
 
       logger.info(`Generated username: ${username}`);
 
+      /* 🔥 SAFE CREATE OBJECT */
+      const newUserData = {
+        firebaseId,
+        avatar,
+        authProvider: "firebase",
+        role: "user",
+        isVerified: true,
+        name: username,
+        lastLogin: new Date()
+      };
+
+      if (email) newUserData.email = email;
+      if (phone) newUserData.phone = phone;
+
+      logger.info("📦 Creating user with data:", newUserData);
+
       try {
 
-        user = await User.create({
-          firebaseId,
-          email,
-          phone,
-          avatar,
-          authProvider: "firebase",
-          role: "user",
-          isVerified: true,
-          name: username,
-          lastLogin: new Date()
-        });
+        user = await User.create(newUserData);
 
-        logger.info(`✅ New Firebase user created: ${user._id}`);
+        logger.info(`✅ New user created: ${user._id}`);
 
       } catch (err) {
 
-        logger.error("❌ User creation failed:", err);
+        logger.error("❌ Create error:", err);
 
+        /* 🔥 DUPLICATE SAFE RECOVERY */
         if (err.code === 11000) {
 
-          logger.warn("⚠️ Duplicate key error, trying to recover");
+          logger.warn("⚠️ Duplicate detected, recovering user");
 
           user = await User.findOne({
             $or: [
@@ -235,14 +218,10 @@ export const firebaseLogin = async (req, res, next) => {
             ]
           });
 
-          logger.info("Recovered duplicate user");
-
         } else {
           throw err;
         }
-
       }
-
     }
 
     /* =====================================
@@ -250,9 +229,7 @@ export const firebaseLogin = async (req, res, next) => {
     ===================================== */
 
     if (!user) {
-
-      logger.error("❌ User creation failed unexpectedly");
-
+      logger.error("❌ User creation failed");
       return res.status(500).json({
         success: false,
         message: "User creation failed"
@@ -264,9 +241,6 @@ export const firebaseLogin = async (req, res, next) => {
     ===================================== */
 
     if (user.isBlocked) {
-
-      logger.warn(`🚫 Blocked user tried login: ${user._id}`);
-
       return res.status(403).json({
         success: false,
         message: "Account blocked"
@@ -274,17 +248,15 @@ export const firebaseLogin = async (req, res, next) => {
     }
 
     /* =====================================
-       GENERATE JWT
+       GENERATE TOKEN
     ===================================== */
-
-    logger.info("🎟 Generating JWT token");
 
     const jwtToken = generateToken({
       id: user._id.toString(),
       role: user.role || "user"
     });
 
-    logger.info(`✅ Login success for user ${user._id}`);
+    logger.info(`🎉 LOGIN SUCCESS: ${user._id}`);
 
     return res.json({
       success: true,
