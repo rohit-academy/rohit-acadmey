@@ -9,10 +9,14 @@ import logger from "../utils/logger.js";
 export const createStream = async (req, res) => {
   try {
 
+    logger.info("🔥 CREATE STREAM API HIT");
+    logger.info("BODY:", JSON.stringify(req.body));
+
     let { name, classId, order } = req.body;
 
     /* ❌ VALIDATION */
     if (!name || !classId) {
+      logger.warn("❌ Missing name or classId");
       return res.status(400).json({
         success: false,
         message: "Name & classId required"
@@ -20,6 +24,7 @@ export const createStream = async (req, res) => {
     }
 
     if (!mongoose.Types.ObjectId.isValid(classId)) {
+      logger.warn("❌ Invalid classId:", classId);
       return res.status(400).json({
         success: false,
         message: "Invalid classId"
@@ -28,8 +33,10 @@ export const createStream = async (req, res) => {
 
     /* ✅ FIX: uppercase normalization */
     name = name.trim().toUpperCase();
+    logger.info("Normalized name:", name);
 
     if (name.length < 2 || name.length > 20) {
+      logger.warn("❌ Invalid name length:", name);
       return res.status(400).json({
         success: false,
         message: "Invalid stream name"
@@ -38,11 +45,17 @@ export const createStream = async (req, res) => {
 
     order = Number(order) || 0;
     if (order < 0) order = 0;
+    logger.info("Final order:", order);
 
     /* 🔍 CHECK CLASS */
+    logger.info("🔍 Fetching class:", classId);
+
     const cls = await Class.findById(classId);
 
+    logger.info("Class result:", cls);
+
     if (!cls) {
+      logger.error("❌ Class not found");
       return res.status(404).json({
         success: false,
         message: "Class not found"
@@ -51,8 +64,10 @@ export const createStream = async (req, res) => {
 
     /* 🔥 STREAM ONLY FOR 11+ */
     const classNumber = Number(cls.name);
+    logger.info("Parsed classNumber:", classNumber);
 
     if (classNumber < 11) {
+      logger.warn("❌ Class < 11 restriction hit");
       return res.status(400).json({
         success: false,
         message: "Streams only allowed for class 11 and 12"
@@ -60,17 +75,24 @@ export const createStream = async (req, res) => {
     }
 
     /* ✅ FIX: duplicate check */
+    logger.info("🔍 Checking duplicate stream");
+
     const exists = await Stream.findOne({
       name,
       classId
     });
 
+    logger.info("Duplicate result:", exists);
+
     if (exists) {
+      logger.warn("❌ Stream already exists");
       return res.status(400).json({
         success: false,
         message: "Stream already exists for this class"
       });
     }
+
+    logger.info("🆕 Creating stream...");
 
     const stream = await Stream.create({
       name,
@@ -78,7 +100,7 @@ export const createStream = async (req, res) => {
       order
     });
 
-    logger.info(`Stream created: ${name} for class ${cls.name}`);
+    logger.info("✅ Stream created:", stream);
 
     res.status(201).json({
       success: true,
@@ -87,11 +109,13 @@ export const createStream = async (req, res) => {
 
   } catch (error) {
 
-    logger.error(`Create stream error: ${error.message}`);
+    logger.error("🔥 CREATE STREAM ERROR FULL:");
+    console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to create stream"
+      message: "Failed to create stream",
+      error: error.message
     });
 
   }
@@ -104,9 +128,13 @@ export const createStream = async (req, res) => {
 export const getAllStreams = async (req, res) => {
   try {
 
+    logger.info("📄 GET ALL STREAMS");
+
     const streams = await Stream.find({ isActive: true })
       .populate("classId", "name classNumber")
       .sort({ order: 1, createdAt: 1 });
+
+    logger.info(`Fetched streams count: ${streams.length}`);
 
     res.json({
       success: true,
@@ -115,7 +143,8 @@ export const getAllStreams = async (req, res) => {
 
   } catch (error) {
 
-    logger.error(`Get all streams error: ${error.message}`);
+    logger.error("🔥 GET ALL STREAMS ERROR:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
@@ -134,7 +163,10 @@ export const getStreamsByClass = async (req, res) => {
 
     const { classId } = req.params;
 
+    logger.info("📄 GET STREAMS BY CLASS:", classId);
+
     if (!mongoose.Types.ObjectId.isValid(classId)) {
+      logger.warn("❌ Invalid classId");
       return res.status(400).json({
         success: false,
         message: "Invalid classId"
@@ -148,6 +180,8 @@ export const getStreamsByClass = async (req, res) => {
       .populate("classId", "name classNumber")
       .sort({ order: 1, createdAt: 1 });
 
+    logger.info(`Streams found: ${streams.length}`);
+
     res.json({
       success: true,
       data: streams
@@ -155,7 +189,8 @@ export const getStreamsByClass = async (req, res) => {
 
   } catch (error) {
 
-    logger.error(`Get streams error: ${error.message}`);
+    logger.error("🔥 GET STREAM ERROR:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
@@ -175,7 +210,10 @@ export const updateStream = async (req, res) => {
     const { id } = req.params;
     let { name, order, isActive } = req.body;
 
+    logger.info("✏ UPDATE STREAM:", id);
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      logger.warn("❌ Invalid stream ID");
       return res.status(400).json({
         success: false,
         message: "Invalid stream ID"
@@ -184,6 +222,8 @@ export const updateStream = async (req, res) => {
 
     const stream = await Stream.findById(id);
 
+    logger.info("Stream found:", stream);
+
     if (!stream) {
       return res.status(404).json({
         success: false,
@@ -191,19 +231,10 @@ export const updateStream = async (req, res) => {
       });
     }
 
-    /* 🔥 NAME UPDATE */
     if (name) {
-
       name = name.trim().toUpperCase();
+      logger.info("Updated name:", name);
 
-      if (name.length < 2 || name.length > 20) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid stream name"
-        });
-      }
-
-      /* ❌ DUPLICATE CHECK */
       const exists = await Stream.findOne({
         name,
         classId: stream.classId,
@@ -211,6 +242,7 @@ export const updateStream = async (req, res) => {
       });
 
       if (exists) {
+        logger.warn("❌ Duplicate stream update attempt");
         return res.status(400).json({
           success: false,
           message: "Stream already exists"
@@ -220,23 +252,19 @@ export const updateStream = async (req, res) => {
       stream.name = name;
     }
 
-    /* 🔢 ORDER UPDATE */
     if (order !== undefined) {
-
       order = Number(order) || 0;
       if (order < 0) order = 0;
-
       stream.order = order;
     }
 
-    /* ACTIVE STATUS */
     if (isActive !== undefined) {
       stream.isActive = isActive;
     }
 
     await stream.save();
 
-    logger.info(`Stream updated: ${stream.name}`);
+    logger.info("✅ Stream updated:", stream);
 
     res.json({
       success: true,
@@ -245,7 +273,8 @@ export const updateStream = async (req, res) => {
 
   } catch (error) {
 
-    logger.error(`Update stream error: ${error.message}`);
+    logger.error("🔥 UPDATE STREAM ERROR:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
@@ -257,12 +286,14 @@ export const updateStream = async (req, res) => {
 
 
 /* =====================================
-   ❌ DELETE STREAM (SOFT DELETE)
+   ❌ DELETE STREAM
 ===================================== */
 export const deleteStream = async (req, res) => {
   try {
 
     const { id } = req.params;
+
+    logger.info("❌ DELETE STREAM:", id);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -293,7 +324,8 @@ export const deleteStream = async (req, res) => {
 
   } catch (error) {
 
-    logger.error(`Delete stream error: ${error.message}`);
+    logger.error("🔥 DELETE STREAM ERROR:", error);
+    console.error(error);
 
     res.status(500).json({
       success: false,
