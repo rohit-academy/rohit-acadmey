@@ -288,7 +288,39 @@ if (!user) {
       });
     }
 
+    
     /* =====================================
+       GENERATE JWT
+    ===================================== */
+
+    logger.info("🎟 Generating JWT token");
+
+    const jwtToken = generateToken({
+      id: user._id.toString(),
+      role: user.role || "user"
+    });
+
+    logger.info(`✅ Login success for user ${user._id}`);
+
+    return res.json({
+      success: true,
+      token: jwtToken,
+      user: safeUser(user)
+    });
+
+  } catch (error) {
+
+    logger.error("🔥 FIREBASE LOGIN CRASH:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
+/* =====================================
    🔐 ADMIN LOGIN
 ===================================== */
 export const adminLogin = async (req, res, next) => {
@@ -325,36 +357,5 @@ export const adminLogin = async (req, res, next) => {
 
   } catch (error) {
     return next(error);
-  }
-};
-
-    /* =====================================
-       GENERATE JWT
-    ===================================== */
-
-    logger.info("🎟 Generating JWT token");
-
-    const jwtToken = generateToken({
-      id: user._id.toString(),
-      role: user.role || "user"
-    });
-
-    logger.info(`✅ Login success for user ${user._id}`);
-
-    return res.json({
-      success: true,
-      token: jwtToken,
-      user: safeUser(user)
-    });
-
-  } catch (error) {
-
-    logger.error("🔥 FIREBASE LOGIN CRASH:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message
-    });
   }
 };
